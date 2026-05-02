@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/mock_data.dart';
 import '../data/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -17,15 +18,27 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  // Identité
   late UserRole _role = widget.initialRole;
   Gender _gender = Gender.female;
+  DateTime? _birthDate;
   final _name = TextEditingController();
   final _email = TextEditingController();
+
+  // Profil pro (optionnels)
+  final _address = TextEditingController();
+  final _linkedin = TextEditingController();
+  final _bio = TextEditingController();
+  String _city = 'Dakar';
+  String _country = 'Sénégal';
+  final Set<String> _interests = {};
+
+  // Sécurité
   final _phone = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
 
-  int _step = 0; // 0 = identité, 1 = sécurité
+  int _step = 0; // 0..2
   bool _obscure = true;
   bool _accept = false;
   bool _loading = false;
@@ -34,44 +47,83 @@ class _SignUpPageState extends State<SignUpPage> {
   static final _emailRegex =
       RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
 
+  static const _cities = <String>[
+    'Dakar', 'Thiès', 'Saint-Louis', 'Ziguinchor',
+    'Kaolack', 'Mbour', 'Touba', 'Diaspora',
+  ];
+  static const _countries = <String>[
+    'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Mauritanie',
+    'Guinée', 'Guinée-Bissau', 'Gambie', 'Cap-Vert',
+    'France', 'Maroc', 'Tunisie', 'Canada', 'États-Unis', 'Autre',
+  ];
+
   @override
   void initState() {
     super.initState();
-    _name.addListener(() => setState(() {}));
-    _email.addListener(() => setState(() {}));
-    _phone.addListener(() => setState(() {}));
-    _password.addListener(() => setState(() {}));
-    _confirm.addListener(() => setState(() {}));
+    for (final c in [_name, _email, _phone, _password, _confirm]) {
+      c.addListener(() => setState(() {}));
+    }
   }
 
   @override
   void dispose() {
     _name.dispose();
     _email.dispose();
+    _address.dispose();
+    _linkedin.dispose();
+    _bio.dispose();
     _phone.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
   }
 
-  // ─────────── Validations ───────────
-  bool get _nameValid => _name.text.trim().split(RegExp(r'\s+')).length >= 2 &&
+  // ─── Validations ───
+  bool get _nameValid =>
+      _name.text.trim().split(RegExp(r'\s+')).length >= 2 &&
       _name.text.trim().length >= 4;
   bool get _emailValid => _emailRegex.hasMatch(_email.text.trim());
   String get _phoneDigits => _phone.text.replaceAll(RegExp(r'\D'), '');
-  bool get _phoneValid => _phoneDigits.length >= 8 && _phoneDigits.length <= 9;
+  bool get _phoneValid =>
+      _phoneDigits.length >= 8 && _phoneDigits.length <= 9;
   bool get _passwordsMatch =>
       _password.text.isNotEmpty && _password.text == _confirm.text;
   int get _passwordStrength => _computeStrength(_password.text);
 
-  bool get _step1Valid => _nameValid && _emailValid;
-  bool get _step2Valid =>
+  bool get _step1Valid =>
+      _nameValid && _emailValid && _birthDate != null;
+  bool get _step2Valid => true; // tout est optionnel
+  bool get _step3Valid =>
       _phoneValid &&
       _password.text.length >= 6 &&
       _passwordsMatch &&
       _accept;
 
-  // ─────────── Actions ───────────
+  bool get _stepValid {
+    switch (_step) {
+      case 0:
+        return _step1Valid;
+      case 1:
+        return _step2Valid;
+      case 2:
+        return _step3Valid;
+      default:
+        return false;
+    }
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
+      firstDate: DateTime(1940),
+      lastDate: DateTime(now.year - 13, 12, 31),
+      helpText: 'Ta date de naissance',
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
   String _roleLabel(UserRole r) {
     switch (r) {
       case UserRole.entrepreneur:
@@ -84,7 +136,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _submit() async {
-    if (!_step1Valid || !_step2Valid) return;
+    if (!_step1Valid || !_step3Valid) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -105,12 +157,15 @@ class _SignUpPageState extends State<SignUpPage> {
         email: _email.text.trim(),
         phone: '+221 ${_phone.text.trim()}',
         gender: _gender,
-        city: 'Dakar',
-        country: 'Sénégal',
+        birthDate: _birthDate,
+        address: _address.text.trim(),
+        city: _city,
+        country: _country,
         sector: 'Autre',
         role: _roleLabel(_role),
-        bio: '',
-        interests: const [],
+        bio: _bio.text.trim(),
+        linkedin: _linkedin.text.trim(),
+        interests: _interests.toList()..sort(),
         projects: const [],
       );
       await DatabaseService.createUserProfile(uid, profile);
@@ -129,7 +184,16 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  // ─────────── Build ───────────
+  void _next() {
+    if (!_stepValid) return;
+    if (_step < 2) {
+      setState(() => _step += 1);
+    } else {
+      _submit();
+    }
+  }
+
+  // ─── Build ───
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,8 +204,8 @@ class _SignUpPageState extends State<SignUpPage> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: () {
-            if (_step == 1) {
-              setState(() => _step = 0);
+            if (_step > 0) {
+              setState(() => _step -= 1);
             } else {
               Navigator.of(context).maybePop();
             }
@@ -149,7 +213,7 @@ class _SignUpPageState extends State<SignUpPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
         ),
         title: Text(
-          _step == 0 ? 'Créer un compte' : 'Sécurité du compte',
+          _stepTitle(),
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
@@ -160,13 +224,13 @@ class _SignUpPageState extends State<SignUpPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _StepBar(step: _step),
+            _StepBar(step: _step, total: 3),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
               child: Row(
                 children: [
                   Text(
-                    'Étape ${_step + 1} / 2',
+                    'Étape ${_step + 1} / 3',
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
@@ -176,7 +240,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _step == 0 ? '· Qui es-tu ?' : '· Sécurise ton compte',
+                    '· ${_stepSubtitle()}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.muted,
@@ -199,7 +263,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: c,
                   ),
                 ),
-                child: _step == 0 ? _buildStep1() : _buildStep2(),
+                child: _buildStep(),
               ),
             ),
             Padding(
@@ -215,7 +279,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _bottomCta(),
+                      onPressed:
+                          (_loading || !_stepValid) ? null : _next,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.navy,
                         foregroundColor: Colors.white,
@@ -233,7 +298,7 @@ class _SignUpPageState extends State<SignUpPage> {
                               ),
                             )
                           : Text(
-                              _step == 0 ? 'CONTINUER' : "S'INSCRIRE",
+                              _step == 2 ? "S'INSCRIRE" : 'CONTINUER',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.5,
@@ -251,15 +316,43 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  VoidCallback? _bottomCta() {
-    if (_loading) return null;
-    if (_step == 0) {
-      return _step1Valid ? () => setState(() => _step = 1) : null;
+  String _stepTitle() {
+    switch (_step) {
+      case 0:
+        return 'Créer un compte';
+      case 1:
+        return 'Profil professionnel';
+      case 2:
+        return 'Sécurité du compte';
     }
-    return _step2Valid ? _submit : null;
+    return '';
   }
 
-  // ─────────── Étape 1 ───────────
+  String _stepSubtitle() {
+    switch (_step) {
+      case 0:
+        return 'Qui es-tu ?';
+      case 1:
+        return 'En savoir plus sur toi (optionnel)';
+      case 2:
+        return 'Sécurise ton compte';
+    }
+    return '';
+  }
+
+  Widget _buildStep() {
+    switch (_step) {
+      case 0:
+        return _buildStep1();
+      case 1:
+        return _buildStep2();
+      case 2:
+        return _buildStep3();
+    }
+    return const SizedBox.shrink();
+  }
+
+  // ─── ÉTAPE 1 — Identité ───
   Widget _buildStep1() {
     return ListView(
       key: const ValueKey('step1'),
@@ -280,7 +373,8 @@ class _SignUpPageState extends State<SignUpPage> {
             prefixIcon: const Icon(Icons.person_outline_rounded,
                 color: AppColors.subtle, size: 20),
             hintText: 'Mariéme Tine',
-            suffixIcon: _name.text.isEmpty ? null : _ValidIcon(ok: _nameValid),
+            suffixIcon:
+                _name.text.isEmpty ? null : _ValidIcon(ok: _nameValid),
           ),
         ),
         if (_name.text.isNotEmpty && !_nameValid)
@@ -310,14 +404,158 @@ class _SignUpPageState extends State<SignUpPage> {
           onChanged: (g) => setState(() => _gender = g),
         ),
         const SizedBox(height: 14),
+        const _LabelRequired('Date de naissance'),
+        const SizedBox(height: 6),
+        _DatePickerField(
+          value: _birthDate,
+          onTap: _pickBirthDate,
+        ),
       ],
     );
   }
 
-  // ─────────── Étape 2 ───────────
+  // ─── ÉTAPE 2 — Profil pro (optionnel) ───
   Widget _buildStep2() {
     return ListView(
       key: const ValueKey('step2'),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      children: [
+        const _OptionalBanner(),
+        const SizedBox(height: 14),
+        const _Label('Adresse'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _address,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.home_outlined,
+                color: AppColors.subtle, size: 20),
+            hintText: 'Quartier, rue, n°…',
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _InlineDropdown(
+                label: 'Ville',
+                icon: Icons.place_outlined,
+                value: _city,
+                values: _cities,
+                onChanged: (v) => setState(() => _city = v),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _InlineDropdown(
+                label: 'Pays',
+                icon: Icons.public_rounded,
+                value: _country,
+                values: _countries,
+                onChanged: (v) => setState(() => _country = v),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const _Label('LinkedIn'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _linkedin,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.link_rounded,
+                color: AppColors.subtle, size: 20),
+            hintText: 'linkedin.com/in/...',
+          ),
+        ),
+        const SizedBox(height: 14),
+        const _Label('À propos de moi'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _bio,
+          maxLines: 4,
+          maxLength: 240,
+          decoration: const InputDecoration(
+            hintText: 'Présente-toi en quelques lignes…',
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Text(
+              "Centres d'intérêt",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${_interests.length} sélectionné${_interests.length > 1 ? "s" : ""}',
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: allSectors.map((s) {
+            final on = _interests.contains(s);
+            return GestureDetector(
+              onTap: () => setState(() {
+                if (on) {
+                  _interests.remove(s);
+                } else {
+                  _interests.add(s);
+                }
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: on ? AppColors.navy : AppColors.fieldBg,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: on ? AppColors.navy : AppColors.border,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (on) ...[
+                      const Icon(Icons.check_rounded,
+                          size: 13, color: AppColors.amber),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: on ? Colors.white : AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // ─── ÉTAPE 3 — Sécurité ───
+  Widget _buildStep3() {
+    return ListView(
+      key: const ValueKey('step3'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
         const _LabelRequired('Téléphone'),
@@ -426,47 +664,39 @@ class _SignUpPageState extends State<SignUpPage> {
           value: _accept,
           onChanged: (v) => setState(() => _accept = v ?? false),
         ),
-        const SizedBox(height: 14),
       ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Stepper bar
+// Stepper bar (3 segments)
 // ─────────────────────────────────────────────────────────────────
 class _StepBar extends StatelessWidget {
   final int step;
-  const _StepBar({required this.step});
+  final int total;
+  const _StepBar({required this.step, required this.total});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Row(
-        children: [
-          Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              height: 5,
-              decoration: BoxDecoration(
-                color: AppColors.amber,
-                borderRadius: BorderRadius.circular(99),
+        children: List.generate(total, (i) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i < total - 1 ? 6 : 0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                height: 5,
+                decoration: BoxDecoration(
+                  color: i <= step ? AppColors.amber : AppColors.border,
+                  borderRadius: BorderRadius.circular(99),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              height: 5,
-              decoration: BoxDecoration(
-                color: step >= 1 ? AppColors.amber : AppColors.border,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-          ),
-        ],
+          );
+        }),
       ),
     );
   }
@@ -592,6 +822,129 @@ class _ErrorBox extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _OptionalBanner extends StatelessWidget {
+  const _OptionalBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.blueTint,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.lightbulb_outline_rounded,
+              size: 18, color: AppColors.blue),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Tous les champs de cette étape sont optionnels — '
+              'tu peux les remplir maintenant ou plus tard depuis ton profil.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.navyDeep,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DatePickerField extends StatelessWidget {
+  final DateTime? value;
+  final VoidCallback onTap;
+  const _DatePickerField({required this.value, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final formatted = value == null
+        ? null
+        : '${value!.day.toString().padLeft(2, '0')}/${value!.month.toString().padLeft(2, '0')}/${value!.year}';
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cake_outlined,
+                color: AppColors.subtle, size: 19),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                formatted ?? 'JJ / MM / AAAA',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: formatted == null
+                      ? AppColors.subtle
+                      : AppColors.navyDeep,
+                  fontWeight: formatted == null
+                      ? FontWeight.w400
+                      : FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded,
+                color: AppColors.subtle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineDropdown extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value;
+  final List<String> values;
+  final ValueChanged<String> onChanged;
+  const _InlineDropdown({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = values.contains(value) ? value : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(label),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: safeValue,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppColors.subtle),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: AppColors.subtle, size: 19),
+          ),
+          items: values
+              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onChanged(v);
+          },
+        ),
+      ],
     );
   }
 }
@@ -846,7 +1199,6 @@ class _PhoneFormatter extends TextInputFormatter {
     final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     final buf = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
-      // Groupe : 2 - 3 - 2 - 2  →  "XX XXX XX XX"
       if (i == 2 || i == 5 || i == 7) buf.write(' ');
       buf.write(digits[i]);
     }
