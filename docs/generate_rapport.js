@@ -1,9 +1,18 @@
 const fs = require("fs");
+const sharp = require("sharp");
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   Header, Footer, ImageRun, AlignmentType, LevelFormat, ExternalHyperlink,
   HeadingLevel, BorderStyle, WidthType, ShadingType, PageNumber, PageBreak,
 } = require("docx");
+
+// Convertit un SVG (string) en buffer PNG via sharp.
+async function svgToPng(svg, width = 1600, height = 700) {
+  return await sharp(Buffer.from(svg, "utf8"), { density: 240 })
+    .resize({ width, height, fit: "inside" })
+    .png()
+    .toBuffer();
+}
 
 // ─── Couleurs DIAPALER ────────────────────────────────────────────────────
 const NAVY = "0A234B";
@@ -399,20 +408,22 @@ const svgReco = SVG_HDR + `<svg xmlns="http://www.w3.org/2000/svg" width="900" h
   <path class="arrow" d="M 560 220 L 688 230"/>
 </svg>`;
 
-const svgImage = (svg, h = 280) =>
+const pngImage = (pngBuffer, w = 600, h = 280) =>
   p([new ImageRun({
-    type: "svg",
-    data: Buffer.from(svg, "utf8"),
-    transformation: { width: 600, height: h },
-    fallback: {
-      type: "png",
-      data: Buffer.from(svg, "utf8"),
-    },
+    type: "png",
+    data: pngBuffer,
+    transformation: { width: w, height: h },
     altText: { title: "Schéma", description: "Schéma DIAPALER", name: "Schéma" },
   })], { align: AlignmentType.CENTER, spacing: { before: 200, after: 200 } });
 
-// ─── Document ─────────────────────────────────────────────────────────────
-const doc = new Document({
+// ─── Génération PNG des schémas avant construction du doc ─────────────────
+async function build() {
+  const pngArch = await svgToPng(svgArch, 1600, 680);
+  const pngNavFlow = await svgToPng(svgNavFlow, 1600, 960);
+  const pngSignup = await svgToPng(svgSignup, 1600, 500);
+  const pngReco = await svgToPng(svgReco, 1600, 680);
+
+  const doc = new Document({
   creator: "Équipe DIAPALER AFRICA",
   title: "Rapport technique — DIAPALER AFRICA",
   styles: {
@@ -552,7 +563,7 @@ const doc = new Document({
         "avec deux services Firebase. La logique d'accès aux services est isolée dans des " +
         "wrappers (services/) pour pouvoir évoluer ou tester indépendamment de l'UI."
       ),
-      svgImage(svgArch, 250),
+      pngImage(pngArch, 600, 255),
 
       h2("2.2 Flow de navigation des écrans"),
       para(
@@ -560,7 +571,7 @@ const doc = new Document({
         "FAB central pour le pitch). Le splash effectue une auto-login si la session est " +
         "active, sinon route vers la sélection de rôle."
       ),
-      svgImage(svgNavFlow, 360),
+      pngImage(pngNavFlow, 600, 360),
 
       h2("2.3 Inscription en 4 étapes"),
       para(
@@ -568,7 +579,7 @@ const doc = new Document({
         "thématiques. Chaque étape valide localement avant de débloquer la suivante. " +
         "Centres d'intérêt obligatoires (≥ 1) pour permettre le matching personnalisé."
       ),
-      svgImage(svgSignup, 200),
+      pngImage(pngSignup, 600, 188),
 
       h2("2.4 Algorithme de recommandation"),
       para(
@@ -576,7 +587,7 @@ const doc = new Document({
         "trois sources combinées dans le profil utilisateur : le secteur déclaré, les " +
         "secteurs des projets actifs et les centres d'intérêt."
       ),
-      svgImage(svgReco, 280),
+      pngImage(pngReco, 600, 255),
 
       // ───── 3. STACK TECHNIQUE ─────
       h1("3. Stack technique"),
@@ -964,10 +975,15 @@ const doc = new Document({
   }],
 });
 
-Packer.toBuffer(doc).then((buffer) => {
+  const buffer = await Packer.toBuffer(doc);
   fs.writeFileSync(
     "C:/Users/HP/entreprenariat/docs/Rapport_Technique_DIAPALER.docx",
     buffer
   );
   console.log("OK Rapport_Technique_DIAPALER.docx generated.");
+}
+
+build().catch((e) => {
+  console.error("FAILED:", e);
+  process.exit(1);
 });
