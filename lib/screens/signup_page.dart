@@ -394,13 +394,13 @@ class _SignUpPageState extends State<SignUpPage> {
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.mail_outline_rounded,
                 color: AppColors.subtle, size: 20),
-            hintText: 'nom@exemple.sn',
+            hintText: 'nom@téki.sn',
             suffixIcon:
                 _email.text.isEmpty ? null : _ValidIcon(ok: _emailValid),
           ),
         ),
         if (_email.text.isNotEmpty && !_emailValid)
-          const _Hint(text: 'Format e-mail invalide (ex. nom@exemple.sn).'),
+          const _Hint(text: 'Format e-mail invalide (ex. nom@téki.sn).'),
         const SizedBox(height: 14),
         const _Label('Sexe'),
         const SizedBox(height: 6),

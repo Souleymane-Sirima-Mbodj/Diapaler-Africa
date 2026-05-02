@@ -149,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       prefixIconConstraints: const BoxConstraints(
                           minWidth: 48, minHeight: 48),
-                      hintText: 'nom@exemple.sn',
+                      hintText: 'nom@téki.sn',
                     ),
                   ),
                   const SizedBox(height: 12),
