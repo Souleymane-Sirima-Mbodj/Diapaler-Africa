@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/diapaler_logo.dart';
 import '../widgets/flag_strip.dart';
-import '../widgets/quote_carousel.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
 
@@ -191,50 +190,41 @@ class _Header extends StatelessWidget {
             Color(0xFF14305E),
           ],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: SafeArea(
         bottom: false,
         child: Stack(
           children: [
-            // Pattern de points subtil pour un fond moins plat
             Positioned.fill(
               child: CustomPaint(painter: _DotsPattern()),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
               child: Column(
                 children: [
                   _fadeIn(
                     anim: staggered(0.0, 0.45),
-                    child: const DiapalerLogoTile(size: 68, onDark: true),
+                    child: const DiapalerLogoTile(size: 52, onDark: true),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 10),
                   _fadeIn(
                     anim: staggered(0.10, 0.55),
-                    child: const DiapalerWordmark(fontSize: 34, onDark: true),
+                    child: const DiapalerWordmark(fontSize: 26, onDark: true),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
                   _fadeIn(
                     anim: staggered(0.20, 0.65),
                     child: const Text(
                       '« Connecte ton idée à ton succès »',
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: 13,
+                        fontSize: 11.5,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _fadeIn(
-                    anim: staggered(0.30, 0.85),
-                    child: const SizedBox(
-                      height: 110,
-                      child: QuoteCarousel(onDark: true, height: 110),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   const SenegalFlagStrip(height: 3),
                 ],
               ),

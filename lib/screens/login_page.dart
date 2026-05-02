@@ -218,11 +218,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
               ),
             ),
-            const SizedBox(height: 24),
-            const _OrDivider(),
-            const SizedBox(height: 18),
-            const _SocialRow(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -266,75 +262,3 @@ class _Label extends StatelessWidget {
       );
 }
 
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: AppColors.border)),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'ou',
-            style: TextStyle(
-              color: AppColors.subtle,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: AppColors.border)),
-      ],
-    );
-  }
-}
-
-class _SocialRow extends StatelessWidget {
-  const _SocialRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(child: _SocialButton(label: 'G', color: Color(0xFFEA4335))),
-        SizedBox(width: 10),
-        Expanded(child: _SocialButton(label: 'f', color: Color(0xFF1877F2))),
-        SizedBox(width: 10),
-        Expanded(child: _SocialButton(label: 'A', color: AppColors.navyDeep)),
-        SizedBox(width: 10),
-        Expanded(child: _SocialButton(label: 'in', color: Color(0xFF0A66C2))),
-      ],
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _SocialButton({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w900,
-          fontSize: label.length == 1 ? 22 : 18,
-          fontStyle: label == 'f' ? FontStyle.italic : FontStyle.normal,
-        ),
-      ),
-    );
-  }
-}
