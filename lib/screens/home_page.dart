@@ -69,12 +69,7 @@ class _HomePageState extends State<HomePage> {
         action: 'Tout voir',
       ),
       const SizedBox(height: 10),
-      ...recommendedMentors.take(2).map(
-            (m) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: MentorCard(mentor: m),
-            ),
-          ),
+      const _RecommendedMentors(),
       const SizedBox(height: 4),
       const _DerCard(),
     ];
@@ -623,6 +618,81 @@ class _StatPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Mentors recommandés (réactif aux changements de profil)
+// ─────────────────────────────────────────────────────────────────
+class _RecommendedMentors extends StatelessWidget {
+  const _RecommendedMentors();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (_, p, __) {
+        final recos = recommendedMentorsFor(
+          userSector: p.sector,
+          userInterests: p.interests,
+          projectSectors: p.projects.map((pr) => pr.sector).toList(),
+        ).take(2).toList();
+
+        if (recos.isEmpty) {
+          return const _NoRecoState();
+        }
+        return Column(
+          children: [
+            for (final m in recos)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: MentorCard(mentor: m),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NoRecoState extends StatelessWidget {
+  const _NoRecoState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.amber.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.tune_rounded,
+                color: AppColors.amber, size: 20),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Choisis tes centres d\'intérêt dans ton profil pour voir des mentors adaptés.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: AppColors.muted,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
