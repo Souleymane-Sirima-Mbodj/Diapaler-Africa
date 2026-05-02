@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../data/user_profile.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import 'login_page.dart';
 import 'onboarding_page.dart';
@@ -14,13 +17,16 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   late UserRole _role = widget.initialRole;
-  final _name = TextEditingController(text: 'Mariéme Tine');
-  final _email = TextEditingController(text: 'marieme.tine@esp.sn');
-  final _phone = TextEditingController(text: '77 123 45 67');
-  final _password = TextEditingController(text: '••••••••••');
-  final _confirm = TextEditingController(text: '••••••••••');
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  Gender _gender = Gender.undisclosed;
   bool _obscure = true;
-  bool _accept = true;
+  bool _accept = false;
+  bool _loading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -42,15 +48,73 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  void _submit() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const OnboardingPage()),
-      (_) => false,
-    );
+  String _roleLabel(UserRole r) {
+    switch (r) {
+      case UserRole.entrepreneur:
+        return 'Entrepreneur';
+      case UserRole.mentor:
+        return 'Mentor';
+      case UserRole.investor:
+        return 'Investisseur';
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_accept || !_passwordsMatch || _name.text.trim().isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final cred = await AuthService.signUp(
+        email: _email.text,
+        password: _password.text,
+      );
+      final uid = cred.user!.uid;
+
+      // Construit le profil initial.
+      final parts = _name.text.trim().split(RegExp(r'\s+'));
+      final firstName = parts.first;
+      final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+      final profile = UserProfile(
+        firstName: firstName,
+        lastName: lastName,
+        email: _email.text.trim(),
+        phone: '+221 ${_phone.text.trim()}',
+        gender: _gender,
+        city: 'Dakar',
+        country: 'Sénégal',
+        sector: 'Autre',
+        role: _roleLabel(_role),
+        bio: '',
+        interests: const [],
+        projects: const [],
+      );
+
+      await DatabaseService.createUserProfile(uid, profile);
+      UserProfileController.update(profile);
+
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const OnboardingPage()),
+        (_) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = AuthService.humanError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final canSubmit =
+        _accept && _passwordsMatch && _name.text.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -82,9 +146,11 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 6),
             TextField(
               controller: _name,
+              onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.person_outline_rounded,
                     color: AppColors.subtle, size: 20),
+                hintText: 'Mariéme Tine',
               ),
             ),
             const SizedBox(height: 12),
@@ -93,34 +159,53 @@ class _SignUpPageState extends State<SignUpPage> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline_rounded,
                     color: AppColors.subtle, size: 20),
+                hintText: 'nom@exemple.sn',
               ),
             ),
             const SizedBox(height: 12),
             const _Label('Téléphone'),
             const SizedBox(height: 6),
-            TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                prefixIcon: Container(
-                  margin: const EdgeInsets.only(left: 12, right: 8),
+            Row(
+              children: [
+                Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.fieldBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: const Text(
-                    '+221',
+                    '🇸🇳  +221',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: AppColors.blue,
-                      fontSize: 14,
+                      color: AppColors.navy,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 0, minHeight: 0),
-                hintText: '77 123 45 67',
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      hintText: '77 123 45 67',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const _Label('Sexe'),
+            const SizedBox(height: 6),
+            _GenderRow(
+              value: _gender,
+              onChanged: (g) => setState(() => _gender = g),
             ),
             const SizedBox(height: 12),
             const _LabelRequired('Mot de passe'),
@@ -141,6 +226,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     size: 20,
                   ),
                 ),
+                hintText: '6 caractères minimum',
               ),
             ),
             const SizedBox(height: 12),
@@ -179,15 +265,42 @@ class _SignUpPageState extends State<SignUpPage> {
               value: _accept,
               onChanged: (v) => setState(() => _accept = v ?? false),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: AppColors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed:
-                    _accept && _passwordsMatch && _name.text.isNotEmpty
-                        ? _submit
-                        : null,
+                onPressed: (canSubmit && !_loading) ? _submit : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.navy,
                   foregroundColor: Colors.white,
@@ -195,14 +308,23 @@ class _SignUpPageState extends State<SignUpPage> {
                       AppColors.navy.withValues(alpha: 0.35),
                   disabledForegroundColor: Colors.white,
                 ),
-                child: const Text(
-                  "S'INSCRIRE",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    fontSize: 14,
-                  ),
-                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        "S'INSCRIRE",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 28),
@@ -263,10 +385,7 @@ class _LabelRequired extends StatelessWidget {
           color: AppColors.navyDeep,
         ),
         children: const [
-          TextSpan(
-            text: ' *',
-            style: TextStyle(color: AppColors.red),
-          ),
+          TextSpan(text: ' *', style: TextStyle(color: AppColors.red)),
         ],
       ),
     );
@@ -308,6 +427,54 @@ class _RolePills extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: value == items[i].$1
+                        ? Colors.white
+                        : AppColors.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (i < items.length - 1) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _GenderRow extends StatelessWidget {
+  final Gender value;
+  final ValueChanged<Gender> onChanged;
+  const _GenderRow({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      Gender.female,
+      Gender.male,
+      Gender.other,
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(items[i]),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: value == items[i]
+                      ? AppColors.navy
+                      : AppColors.fieldBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  items[i].label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: value == items[i]
                         ? Colors.white
                         : AppColors.muted,
                   ),

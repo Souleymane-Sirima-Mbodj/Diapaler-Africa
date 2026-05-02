@@ -4,6 +4,7 @@ class Mentor {
   final String title;
   final String city;
   final List<String> sectors;
+  final List<String> companies;
   final double rating;
   final int reviews;
   final int years;
@@ -16,6 +17,7 @@ class Mentor {
     required this.title,
     required this.city,
     required this.sectors,
+    required this.companies,
     required this.rating,
     required this.reviews,
     required this.years,
@@ -42,6 +44,11 @@ const mentors = <Mentor>[
     title: 'CEO · Diama Cooking',
     city: 'Dakar',
     sectors: ['Gastronomie', 'Food'],
+    companies: [
+      'Diama Cooking',
+      'Diama Catering Services',
+      'École Diama Cooking Academy',
+    ],
     rating: 4.9,
     reviews: 47,
     years: 15,
@@ -54,6 +61,14 @@ const mentors = <Mentor>[
     title: 'Fondateur · Groupe Teyliom',
     city: 'Dakar',
     sectors: ['Télécoms', 'Immobilier', 'Finance'],
+    companies: [
+      'Groupe Teyliom (52 sociétés)',
+      'Eden Roc Hotel & Spa',
+      'Elton Oil Company',
+      'CCBM (Compagnie Commerciale Bancaire et Mobilière)',
+      'Teyliom Properties',
+      'Teyliom Industries',
+    ],
     rating: 4.8,
     reviews: 62,
     years: 25,
@@ -66,6 +81,16 @@ const mentors = <Mentor>[
     title: 'PDG · Mansour Ndao Holding',
     city: 'Dakar',
     sectors: ['Automobile', 'Lifestyle'],
+    companies: [
+      'Mansour Ndao Holding',
+      'Mansour Motors',
+      'TRAMCO',
+      'Champs de Luxe',
+      'Man Cave',
+      'Asma Lounge',
+      'Contrap',
+      'Secusen',
+    ],
     rating: 4.7,
     reviews: 28,
     years: 8,
@@ -78,6 +103,13 @@ const mentors = <Mentor>[
     title: 'Président · Groupe Sedima',
     city: 'Dakar',
     sectors: ['Agro-industrie', 'Avicole'],
+    companies: [
+      'Groupe Sedima',
+      'Sedima Holding',
+      'Sedima Services',
+      'Yobante Express',
+      'Banque Nationale du Sénégal (administrateur)',
+    ],
     rating: 4.9,
     reviews: 81,
     years: 30,
@@ -90,6 +122,10 @@ const mentors = <Mentor>[
     title: 'Fondatrice · Mossane Cosmetics',
     city: 'Thiès',
     sectors: ['Cosmétique', 'Beauté', 'Mode & Textile'],
+    companies: [
+      'Mossane Cosmetics',
+      'Mossane Beauty Lab',
+    ],
     rating: 4.7,
     reviews: 34,
     years: 7,
@@ -101,6 +137,11 @@ const mentors = <Mentor>[
     title: 'CEO · Sahel Digital',
     city: 'Dakar',
     sectors: ['Tech & Digital', 'E-commerce'],
+    companies: [
+      'Sahel Digital',
+      'Téranga Tech Hub',
+      'Niane Capital Partners',
+    ],
     rating: 4.8,
     reviews: 51,
     years: 12,
@@ -113,6 +154,12 @@ const mentors = <Mentor>[
     title: 'PDG · Locafrique Holding',
     city: 'Dakar',
     sectors: ['BTP', 'Logistique'],
+    companies: [
+      'Locafrique Holding',
+      'Locafrique Sénégal',
+      'African Trade Logistics',
+      'Bâ & Associés Construction',
+    ],
     rating: 4.6,
     reviews: 26,
     years: 18,
@@ -125,6 +172,11 @@ const mentors = <Mentor>[
     title: 'Designer · Aïssa Dione Tissus',
     city: 'Saint-Louis',
     sectors: ['Mode & Textile', 'Artisanat'],
+    companies: [
+      'Aïssa Dione Tissus',
+      'Manufactures Sénégalaises des Arts Décoratifs',
+      'Atelier Tissage de Rufisque',
+    ],
     rating: 4.9,
     reviews: 42,
     years: 22,
@@ -136,6 +188,10 @@ const mentors = <Mentor>[
     title: 'Fondateur · Wave Sénégal',
     city: 'Dakar',
     sectors: ['FinTech', 'Mobile Money'],
+    companies: [
+      'Wave Sénégal',
+      'Wave Mobile Money International',
+    ],
     rating: 4.8,
     reviews: 58,
     years: 9,
@@ -148,6 +204,11 @@ const mentors = <Mentor>[
     title: 'Fondatrice · SkinIsSkin',
     city: 'Dakar',
     sectors: ['Cosmétique', 'Beauté'],
+    companies: [
+      'SkinIsSkin',
+      'Adina World Beat Beverages',
+      'Tiossan',
+    ],
     rating: 4.7,
     reviews: 39,
     years: 14,
@@ -159,6 +220,10 @@ const mentors = <Mentor>[
     title: 'CEO · Téranga Energy',
     city: 'Ziguinchor',
     sectors: ['Énergie', 'Renouvelable'],
+    companies: [
+      'Téranga Energy',
+      'Casamance Solar',
+    ],
     rating: 4.6,
     reviews: 21,
     years: 10,
@@ -170,6 +235,10 @@ const mentors = <Mentor>[
     title: 'Directrice · MedTech Dakar',
     city: 'Dakar',
     sectors: ['Santé', 'E-santé'],
+    companies: [
+      'MedTech Dakar',
+      'TéléSanté Sénégal',
+    ],
     rating: 4.8,
     reviews: 33,
     years: 11,

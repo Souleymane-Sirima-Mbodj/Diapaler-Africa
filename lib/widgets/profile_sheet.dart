@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/user_profile.dart';
 import '../screens/profile_page.dart';
 import '../screens/role_selection_page.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'avatar.dart';
 
@@ -133,8 +134,10 @@ class _ProfileSheet extends StatelessWidget {
             ),
             const Divider(height: 24),
             _LogoutTile(
-              onLogout: () {
+              onLogout: () async {
                 Navigator.of(context).pop();
+                await AuthService.signOut();
+                if (!context.mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   PageRouteBuilder(
                     pageBuilder: (_, a, __) => FadeTransition(

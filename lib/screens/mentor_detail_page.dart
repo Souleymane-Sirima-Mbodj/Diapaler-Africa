@@ -141,6 +141,16 @@ class MentorDetailPage extends StatelessWidget {
                   }).toList(),
                 ),
               ),
+              if (mentor.companies.isNotEmpty) ...[
+                const SizedBox(height: 22),
+                _SectionTitle(
+                    'Entreprises (${mentor.companies.length})'),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _CompaniesList(companies: mentor.companies),
+                ),
+              ],
               const SizedBox(height: 22),
               const _SectionTitle('Créneaux disponibles'),
               const SizedBox(height: 10),
@@ -346,6 +356,60 @@ class _Stat extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompaniesList extends StatelessWidget {
+  final List<String> companies;
+  const _CompaniesList({required this.companies});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < companies.length; i++) ...[
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.business_rounded,
+                        size: 15, color: AppColors.amber),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      companies[i],
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i < companies.length - 1)
+              const Divider(height: 1, indent: 56, endIndent: 14),
+          ],
         ],
       ),
     );
