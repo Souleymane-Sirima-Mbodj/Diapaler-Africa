@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/countries.dart';
 import '../data/mock_data.dart';
 import '../data/user_profile.dart';
 import '../services/auth_service.dart';
@@ -47,15 +48,6 @@ class _SignUpPageState extends State<SignUpPage> {
   static final _emailRegex =
       RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
 
-  static const _cities = <String>[
-    'Dakar', 'Thiès', 'Saint-Louis', 'Ziguinchor',
-    'Kaolack', 'Mbour', 'Touba', 'Diaspora',
-  ];
-  static const _countries = <String>[
-    'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Mauritanie',
-    'Guinée', 'Guinée-Bissau', 'Gambie', 'Cap-Vert',
-    'France', 'Maroc', 'Tunisie', 'Canada', 'États-Unis', 'Autre',
-  ];
 
   @override
   void initState() {
@@ -92,7 +84,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   bool get _step1Valid =>
       _nameValid && _emailValid && _birthDate != null;
-  bool get _step2Valid => true; // tout est optionnel
+  bool get _step2Valid =>
+      supportedCountries.contains(_country) &&
+      citiesOf(_country).contains(_city);
   bool get _step3Valid =>
       _phoneValid &&
       _password.text.length >= 6 &&
@@ -422,6 +416,36 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         const _OptionalBanner(),
         const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _InlineDropdown(
+                label: 'Pays',
+                required: true,
+                icon: Icons.public_rounded,
+                value: _country,
+                values: supportedCountries,
+                onChanged: (v) => setState(() {
+                  _country = v;
+                  // Reset la ville sur la 1re du nouveau pays.
+                  _city = citiesOf(v).first;
+                }),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _InlineDropdown(
+                label: 'Ville',
+                required: true,
+                icon: Icons.place_outlined,
+                value: _city,
+                values: citiesOf(_country),
+                onChanged: (v) => setState(() => _city = v),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         const _Label('Adresse'),
         const SizedBox(height: 6),
         TextField(
@@ -431,30 +455,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 color: AppColors.subtle, size: 20),
             hintText: 'Quartier, rue, n°…',
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _InlineDropdown(
-                label: 'Ville',
-                icon: Icons.place_outlined,
-                value: _city,
-                values: _cities,
-                onChanged: (v) => setState(() => _city = v),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InlineDropdown(
-                label: 'Pays',
-                icon: Icons.public_rounded,
-                value: _country,
-                values: _countries,
-                onChanged: (v) => setState(() => _country = v),
-              ),
-            ),
-          ],
         ),
         const SizedBox(height: 14),
         const _Label('LinkedIn'),
@@ -869,6 +869,7 @@ class _DatePickerField extends StatelessWidget {
     final formatted = value == null
         ? null
         : '${value!.day.toString().padLeft(2, '0')}/${value!.month.toString().padLeft(2, '0')}/${value!.year}';
+    final age = ageFromBirthDate(value);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -898,6 +899,24 @@ class _DatePickerField extends StatelessWidget {
                 ),
               ),
             ),
+            if (age != null)
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$age ans',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.amber,
+                  ),
+                ),
+              ),
             const Icon(Icons.keyboard_arrow_down_rounded,
                 color: AppColors.subtle),
           ],
@@ -913,12 +932,14 @@ class _InlineDropdown extends StatelessWidget {
   final String value;
   final List<String> values;
   final ValueChanged<String> onChanged;
+  final bool required;
   const _InlineDropdown({
     required this.label,
     required this.icon,
     required this.value,
     required this.values,
     required this.onChanged,
+    this.required = false,
   });
 
   @override
@@ -927,7 +948,7 @@ class _InlineDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Label(label),
+        if (required) _LabelRequired(label) else _Label(label),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           initialValue: safeValue,

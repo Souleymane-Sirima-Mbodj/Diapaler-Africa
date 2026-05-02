@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/countries.dart';
 import '../data/mock_data.dart';
 import '../data/user_profile.dart';
 import '../services/auth_service.dart';
@@ -28,34 +29,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   DateTime? _birthDate;
   late Set<String> _interests;
 
-  static const _cities = <String>[
-    'Dakar',
-    'Thiès',
-    'Saint-Louis',
-    'Ziguinchor',
-    'Kaolack',
-    'Mbour',
-    'Touba',
-    'Diaspora',
-  ];
-
-  static const _countries = <String>[
-    'Sénégal',
-    'Mali',
-    'Côte d\'Ivoire',
-    'Mauritanie',
-    'Guinée',
-    'Guinée-Bissau',
-    'Gambie',
-    'Cap-Vert',
-    'France',
-    'Maroc',
-    'Tunisie',
-    'Canada',
-    'États-Unis',
-    'Autre',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -66,8 +39,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _address = TextEditingController(text: _initial.address);
     _linkedin = TextEditingController(text: _initial.linkedin);
     _bio = TextEditingController(text: _initial.bio);
-    _city = _initial.city;
-    _country = _initial.country;
+    // Si le pays courant n'est pas dans la liste supportée, on défaut à Sénégal.
+    _country = supportedCountries.contains(_initial.country)
+        ? _initial.country
+        : 'Sénégal';
+    final cities = citiesOf(_country);
+    _city = cities.contains(_initial.city) ? _initial.city : cities.first;
     _sector = _initial.sector;
     _gender = _initial.gender;
     _birthDate = _initial.birthDate;
@@ -257,27 +234,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           const SizedBox(height: 22),
           const _Section('Localisation'),
+          _Dropdown(
+            label: 'Pays *',
+            icon: Icons.public_rounded,
+            value: _country,
+            values: supportedCountries,
+            onChanged: (v) => setState(() {
+              _country = v;
+              _city = citiesOf(v).first;
+            }),
+          ),
+          const SizedBox(height: 12),
+          _Dropdown(
+            label: 'Ville *',
+            icon: Icons.place_outlined,
+            value: _city,
+            values: citiesOf(_country),
+            onChanged: (v) => setState(() => _city = v),
+          ),
+          const SizedBox(height: 12),
           _Field(
             label: 'Adresse',
             icon: Icons.home_outlined,
             controller: _address,
             hint: 'Quartier, rue, n°…',
-          ),
-          const SizedBox(height: 12),
-          _Dropdown(
-            label: 'Ville',
-            icon: Icons.place_outlined,
-            value: _city,
-            values: _cities,
-            onChanged: (v) => setState(() => _city = v),
-          ),
-          const SizedBox(height: 12),
-          _Dropdown(
-            label: 'Pays',
-            icon: Icons.public_rounded,
-            value: _country,
-            values: _countries,
-            onChanged: (v) => setState(() => _country = v),
           ),
           const SizedBox(height: 22),
           const _Section('Profil professionnel'),
@@ -531,6 +511,7 @@ class _DateField extends StatelessWidget {
     final formatted = value == null
         ? null
         : '${value!.day.toString().padLeft(2, '0')}/${value!.month.toString().padLeft(2, '0')}/${value!.year}';
+    final age = ageFromBirthDate(value);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -564,6 +545,24 @@ class _DateField extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (age != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$age ans',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.amber,
+                      ),
+                    ),
+                  ),
                 if (onClear != null)
                   IconButton(
                     onPressed: onClear,
