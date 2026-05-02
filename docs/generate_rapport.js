@@ -1,7 +1,7 @@
 const fs = require("fs");
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  Header, Footer, AlignmentType, LevelFormat, ExternalHyperlink,
+  Header, Footer, ImageRun, AlignmentType, LevelFormat, ExternalHyperlink,
   HeadingLevel, BorderStyle, WidthType, ShadingType, PageNumber, PageBreak,
 } = require("docx");
 
@@ -9,7 +9,9 @@ const {
 const NAVY = "0A234B";
 const NAVY_DEEP = "0F1729";
 const BLUE = "1E50A0";
+const BLUE_TINT = "DCE6F5";
 const AMBER = "F59E0B";
+const AMBER_SOFT = "FCD5A0";
 const GREEN = "10B981";
 const RED = "E31B23";
 const PURPLE = "8B5CF6";
@@ -20,149 +22,394 @@ const FLAG_GREEN = "00853F";
 const FLAG_YELLOW = "FDEF42";
 const FLAG_RED = "E31B23";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// ─── Helpers texte / structure ────────────────────────────────────────────
 const p = (children, opts = {}) =>
   new Paragraph({
     children: Array.isArray(children) ? children : [children],
     spacing: opts.spacing ?? { before: 80, after: 80 },
     alignment: opts.align,
-    pageBreakBefore: opts.pageBreakBefore,
   });
 
 const text = (str, opts = {}) =>
   new TextRun({
-    text: str,
-    bold: opts.bold,
-    italics: opts.italics,
-    color: opts.color,
-    size: opts.size,
-    font: opts.font,
-    break: opts.break,
+    text: str, bold: opts.bold, italics: opts.italics, color: opts.color,
+    size: opts.size, font: opts.font, break: opts.break,
   });
 
-const h1 = (str) =>
-  new Paragraph({
-    heading: HeadingLevel.HEADING_1,
-    children: [new TextRun({ text: str, color: NAVY, bold: true })],
-    border: {
-      bottom: { style: BorderStyle.SINGLE, size: 8, color: AMBER, space: 4 },
-    },
-    spacing: { before: 360, after: 200 },
-  });
-
-const h2 = (str) =>
-  new Paragraph({
-    heading: HeadingLevel.HEADING_2,
-    children: [new TextRun({ text: str, color: NAVY, bold: true })],
-    spacing: { before: 280, after: 120 },
-  });
-
-const h3 = (str) =>
-  new Paragraph({
-    heading: HeadingLevel.HEADING_3,
-    children: [new TextRun({ text: str, color: BLUE, bold: true })],
-    spacing: { before: 200, after: 100 },
-  });
+const h1 = (str) => new Paragraph({
+  heading: HeadingLevel.HEADING_1,
+  children: [new TextRun({ text: str, color: NAVY, bold: true })],
+  border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: AMBER, space: 4 } },
+  spacing: { before: 360, after: 200 },
+});
+const h2 = (str) => new Paragraph({
+  heading: HeadingLevel.HEADING_2,
+  children: [new TextRun({ text: str, color: NAVY, bold: true })],
+  spacing: { before: 280, after: 120 },
+});
+const h3 = (str) => new Paragraph({
+  heading: HeadingLevel.HEADING_3,
+  children: [new TextRun({ text: str, color: BLUE, bold: true })],
+  spacing: { before: 200, after: 100 },
+});
 
 const para = (str, opts = {}) =>
   p(text(str, { color: NAVY_DEEP, ...opts }), { spacing: { before: 60, after: 80 } });
 
-const bullet = (str, level = 0) =>
-  new Paragraph({
-    numbering: { reference: "bullets", level },
-    children: [new TextRun({ text: str, color: NAVY_DEEP, size: 22 })],
-    spacing: { before: 40, after: 40 },
-  });
+const bullet = (str, level = 0) => new Paragraph({
+  numbering: { reference: "bullets", level },
+  children: [new TextRun({ text: str, color: NAVY_DEEP, size: 22 })],
+  spacing: { before: 40, after: 40 },
+});
 
-const code = (cmd) =>
-  new Paragraph({
-    children: [
-      new TextRun({ text: cmd, font: "Consolas", color: NAVY_DEEP, size: 20 }),
-    ],
-    spacing: { before: 60, after: 60 },
-    shading: { type: ShadingType.CLEAR, fill: SOFT },
-    indent: { left: 200, right: 200 },
-    border: {
-      top: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
-      bottom: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
-      left: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
-      right: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
+const code = (cmd) => new Paragraph({
+  children: [new TextRun({ text: cmd, font: "Consolas", color: NAVY_DEEP, size: 20 })],
+  spacing: { before: 60, after: 60 },
+  shading: { type: ShadingType.CLEAR, fill: SOFT },
+  indent: { left: 200, right: 200 },
+  border: {
+    top: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
+    left: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
+    right: { style: BorderStyle.SINGLE, size: 4, color: AMBER, space: 4 },
+  },
+});
+
+const tableRow = (cells, isHeader = false) => new TableRow({
+  tableHeader: isHeader,
+  children: cells.map(c => new TableCell({
+    width: { size: c.w, type: WidthType.DXA },
+    shading: isHeader ? { type: ShadingType.CLEAR, fill: NAVY }
+      : { type: ShadingType.CLEAR, fill: c.fill ?? "FFFFFF" },
+    margins: { top: 100, bottom: 100, left: 140, right: 140 },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      left: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      right: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
     },
-  });
+    children: [p(text(c.t, {
+      color: isHeader ? "FFFFFF" : NAVY_DEEP,
+      bold: isHeader || c.bold, size: 21,
+    }))],
+  })),
+});
 
-const tableRow = (cells, isHeader = false) =>
-  new TableRow({
-    tableHeader: isHeader,
-    children: cells.map(
-      (c) =>
-        new TableCell({
-          width: { size: c.w, type: WidthType.DXA },
-          shading: isHeader
-            ? { type: ShadingType.CLEAR, fill: NAVY }
-            : { type: ShadingType.CLEAR, fill: c.fill ?? "FFFFFF" },
-          margins: { top: 100, bottom: 100, left: 140, right: 140 },
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-            bottom: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-            left: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-            right: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-          },
-          children: [
-            p(
-              text(c.t, {
-                color: isHeader ? "FFFFFF" : NAVY_DEEP,
-                bold: isHeader || c.bold,
-                size: 21,
-              })
-            ),
-          ],
-        })
-    ),
-  });
+const calloutBlock = (label, content, fill, accent, emoji) => new Table({
+  width: { size: 9360, type: WidthType.DXA },
+  columnWidths: [9360],
+  rows: [new TableRow({
+    children: [new TableCell({
+      width: { size: 9360, type: WidthType.DXA },
+      shading: { type: ShadingType.CLEAR, fill },
+      margins: { top: 200, bottom: 200, left: 240, right: 240 },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 12, color: accent },
+        bottom: { style: BorderStyle.NIL },
+        left: { style: BorderStyle.NIL },
+        right: { style: BorderStyle.NIL },
+      },
+      children: [
+        p([text(emoji + " " + label, { bold: true, color: accent, size: 22 })]),
+        p(text(content, { color: NAVY_DEEP, size: 21 })),
+      ],
+    })],
+  })],
+});
 
-const status = (label, color) =>
-  new TextRun({
-    text: " " + label + " ",
-    color: "FFFFFF",
-    bold: true,
-    size: 18,
-    shading: { type: ShadingType.CLEAR, fill: color },
-  });
+const link = (label, url) => new ExternalHyperlink({
+  children: [new TextRun({ text: label, color: BLUE, underline: {} })],
+  link: url,
+});
 
-const calloutBlock = (label, content, fill, accent, emoji) =>
-  new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [9360],
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            shading: { type: ShadingType.CLEAR, fill },
-            margins: { top: 200, bottom: 200, left: 240, right: 240 },
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 12, color: accent },
-              bottom: { style: BorderStyle.NIL },
-              left: { style: BorderStyle.NIL },
-              right: { style: BorderStyle.NIL },
-            },
-            children: [
-              p([
-                text(emoji + " " + label, { bold: true, color: accent, size: 22 }),
-              ]),
-              p(text(content, { color: NAVY_DEEP, size: 21 })),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
+// ─── SVG schemas ──────────────────────────────────────────────────────────
+const SVG_HDR =
+  `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n` +
+  `<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n`;
 
-const link = (label, url) =>
-  new ExternalHyperlink({
-    children: [new TextRun({ text: label, color: BLUE, underline: {} })],
-    link: url,
-  });
+// 1) Navigation flow des écrans
+const svgNavFlow = SVG_HDR + `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540">
+  <style>
+    .box { fill: #fff; stroke: #${BLUE}; stroke-width: 2; rx: 10; }
+    .boxNavy { fill: #${NAVY}; stroke: #${AMBER}; stroke-width: 2; rx: 10; }
+    .boxAmber { fill: #${AMBER}; stroke: #${NAVY_DEEP}; stroke-width: 2; rx: 10; }
+    .boxGreen { fill: #${GREEN}; stroke: #${NAVY_DEEP}; stroke-width: 2; rx: 10; }
+    .label { font-family: Arial; font-weight: 700; font-size: 13px; fill: #${NAVY_DEEP}; text-anchor: middle; }
+    .labelW { font-family: Arial; font-weight: 700; font-size: 13px; fill: #fff; text-anchor: middle; }
+    .arrow { stroke: #${MUTED}; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .title { font-family: Arial; font-weight: 800; font-size: 18px; fill: #${NAVY}; }
+    .sub { font-family: Arial; font-size: 11px; fill: #${MUTED}; text-anchor: middle; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#${MUTED}"/>
+    </marker>
+  </defs>
+  <text x="20" y="26" class="title">Flow de navigation des écrans</text>
+
+  <!-- Top row: Splash -->
+  <rect class="boxNavy" x="380" y="55" width="140" height="50" rx="10"/>
+  <text class="labelW" x="450" y="85">SplashPage</text>
+
+  <!-- Role selection -->
+  <rect class="boxNavy" x="380" y="135" width="140" height="50" rx="10"/>
+  <text class="labelW" x="450" y="165">RoleSelection</text>
+
+  <!-- Login / Signup -->
+  <rect class="box" x="200" y="220" width="140" height="50" rx="10"/>
+  <text class="label" x="270" y="250">LoginPage</text>
+
+  <rect class="box" x="560" y="220" width="140" height="50" rx="10"/>
+  <text class="label" x="630" y="250">SignUpPage (4 étapes)</text>
+
+  <!-- Onboarding -->
+  <rect class="boxAmber" x="560" y="305" width="140" height="50" rx="10"/>
+  <text class="label" x="630" y="335">Onboarding</text>
+
+  <!-- RootShell -->
+  <rect class="boxGreen" x="380" y="395" width="140" height="50" rx="10"/>
+  <text class="labelW" x="450" y="425">RootShell</text>
+
+  <!-- Sub-screens -->
+  <rect class="box" x="50" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="110" y="500">HomePage</text>
+
+  <rect class="box" x="190" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="250" y="500">MatchingPage</text>
+
+  <rect class="box" x="330" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="390" y="500">PitchPage</text>
+
+  <rect class="box" x="470" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="530" y="500">ProfilePage</text>
+
+  <rect class="box" x="610" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="670" y="500">EditProfile</text>
+
+  <rect class="box" x="750" y="475" width="120" height="40" rx="8"/>
+  <text class="label" x="810" y="500">MentorDetail</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 450 105 L 450 130"/>
+  <path class="arrow" d="M 420 185 L 320 218"/>
+  <path class="arrow" d="M 480 185 L 580 218"/>
+  <path class="arrow" d="M 630 270 L 630 302"/>
+  <path class="arrow" d="M 270 270 L 415 393"/>
+  <path class="arrow" d="M 630 355 L 485 393"/>
+  <path class="arrow" d="M 420 445 L 110 472"/>
+  <path class="arrow" d="M 430 445 L 250 472"/>
+  <path class="arrow" d="M 440 445 L 390 472"/>
+  <path class="arrow" d="M 460 445 L 530 472"/>
+  <path class="arrow" d="M 470 445 L 670 472"/>
+  <path class="arrow" d="M 480 445 L 810 472"/>
+
+  <text class="sub" x="450" y="535">RootShell pivote vers les pages de détail, profil et pitch</text>
+</svg>`;
+
+// 2) Architecture client / Firebase
+const svgArch = SVG_HDR + `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="380" viewBox="0 0 900 380">
+  <style>
+    .col { fill: #fff; stroke: #${BORDER}; stroke-width: 1.5; rx: 14; }
+    .colHead { font-family: Arial; font-weight: 800; font-size: 14px; fill: #${NAVY}; text-anchor: middle; }
+    .item { fill: #${SOFT}; stroke: #${BLUE_TINT}; stroke-width: 1; rx: 8; }
+    .label { font-family: Arial; font-weight: 600; font-size: 12px; fill: #${NAVY_DEEP}; text-anchor: middle; }
+    .ctx { font-family: Arial; font-size: 10px; fill: #${MUTED}; text-anchor: middle; }
+    .firebase { fill: #${AMBER_SOFT}; stroke: #${AMBER}; stroke-width: 1; rx: 8; }
+    .arrow { stroke: #${BLUE}; stroke-width: 2; fill: none; marker-end: url(#a2); }
+    .title { font-family: Arial; font-weight: 800; font-size: 18px; fill: #${NAVY}; }
+  </style>
+  <defs>
+    <marker id="a2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#${BLUE}"/>
+    </marker>
+  </defs>
+  <text x="20" y="26" class="title">Architecture client / serveur</text>
+
+  <!-- Frontend -->
+  <rect class="col" x="30" y="60" width="240" height="290"/>
+  <text class="colHead" x="150" y="88">FRONTEND (Flutter)</text>
+  <rect class="item" x="50" y="105" width="200" height="40" rx="8"/>
+  <text class="label" x="150" y="130">Pages (11 écrans)</text>
+  <rect class="item" x="50" y="155" width="200" height="40" rx="8"/>
+  <text class="label" x="150" y="180">Widgets partagés (13)</text>
+  <rect class="item" x="50" y="205" width="200" height="40" rx="8"/>
+  <text class="label" x="150" y="230">UserProfileController</text>
+  <text class="ctx" x="150" y="252">(ValueNotifier)</text>
+  <rect class="item" x="50" y="275" width="200" height="40" rx="8"/>
+  <text class="label" x="150" y="300">Theme + AppColors</text>
+
+  <!-- Services -->
+  <rect class="col" x="330" y="60" width="240" height="290"/>
+  <text class="colHead" x="450" y="88">SERVICES</text>
+  <rect class="item" x="350" y="105" width="200" height="60" rx="8"/>
+  <text class="label" x="450" y="130">AuthService</text>
+  <text class="ctx" x="450" y="150">signIn / signUp / signOut</text>
+  <rect class="item" x="350" y="180" width="200" height="60" rx="8"/>
+  <text class="label" x="450" y="205">DatabaseService</text>
+  <text class="ctx" x="450" y="225">CRUD profil JSON</text>
+  <rect class="item" x="350" y="255" width="200" height="60" rx="8"/>
+  <text class="label" x="450" y="280">recommendedMentorsFor()</text>
+  <text class="ctx" x="450" y="300">algo de matching</text>
+
+  <!-- Firebase -->
+  <rect class="col" x="630" y="60" width="240" height="290"/>
+  <text class="colHead" x="750" y="88">FIREBASE</text>
+  <rect class="firebase" x="650" y="105" width="200" height="50" rx="8"/>
+  <text class="label" x="750" y="130">Firebase Auth</text>
+  <text class="ctx" x="750" y="148">email / password</text>
+  <rect class="firebase" x="650" y="170" width="200" height="80" rx="8"/>
+  <text class="label" x="750" y="195">Realtime Database</text>
+  <text class="ctx" x="750" y="215">/users/{uid}</text>
+  <text class="ctx" x="750" y="232">eur3 (Belgique)</text>
+  <rect class="firebase" x="650" y="265" width="200" height="50" rx="8" fill="#${SOFT}" stroke="#${MUTED}" stroke-dasharray="4,4"/>
+  <text class="label" x="750" y="290" fill="#${MUTED}">Storage / FCM</text>
+  <text class="ctx" x="750" y="308">à venir</text>
+
+  <!-- arrows -->
+  <path class="arrow" d="M 250 130 L 348 130"/>
+  <path class="arrow" d="M 250 180 L 348 200"/>
+  <path class="arrow" d="M 550 130 L 648 130"/>
+  <path class="arrow" d="M 550 200 L 648 195"/>
+</svg>`;
+
+// 3) Inscription en 4 étapes
+const svgSignup = SVG_HDR + `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
+  <style>
+    .step { fill: #${NAVY}; rx: 12; }
+    .stepInactive { fill: #${SOFT}; stroke: #${BORDER}; stroke-width: 1.5; rx: 12; }
+    .stepNum { font-family: Arial; font-weight: 900; font-size: 28px; fill: #${AMBER}; text-anchor: middle; }
+    .stepTitle { font-family: Arial; font-weight: 800; font-size: 13px; fill: #fff; text-anchor: middle; }
+    .stepDesc { font-family: Arial; font-size: 10.5px; fill: #${BLUE_TINT}; text-anchor: middle; }
+    .arrow { stroke: #${AMBER}; stroke-width: 3; fill: none; marker-end: url(#a3); }
+    .title { font-family: Arial; font-weight: 800; font-size: 18px; fill: #${NAVY}; }
+    .endbox { fill: #${GREEN}; rx: 12; }
+    .endTitle { font-family: Arial; font-weight: 900; font-size: 14px; fill: #fff; text-anchor: middle; }
+  </style>
+  <defs>
+    <marker id="a3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#${AMBER}"/>
+    </marker>
+  </defs>
+  <text x="20" y="26" class="title">Inscription en 4 étapes</text>
+
+  <rect class="step" x="40" y="70" width="170" height="170"/>
+  <text class="stepNum" x="125" y="115">1</text>
+  <text class="stepTitle" x="125" y="145">IDENTITÉ</text>
+  <text class="stepDesc" x="125" y="170">• Rôle</text>
+  <text class="stepDesc" x="125" y="185">• Nom complet</text>
+  <text class="stepDesc" x="125" y="200">• Email</text>
+  <text class="stepDesc" x="125" y="215">• Sexe</text>
+  <text class="stepDesc" x="125" y="230">• Date naissance + âge</text>
+
+  <path class="arrow" d="M 215 155 L 250 155"/>
+
+  <rect class="step" x="255" y="70" width="170" height="170"/>
+  <text class="stepNum" x="340" y="115">2</text>
+  <text class="stepTitle" x="340" y="145">LOCALISATION</text>
+  <text class="stepDesc" x="340" y="170">• Pays (3) *</text>
+  <text class="stepDesc" x="340" y="185">• Ville (cascade) *</text>
+  <text class="stepDesc" x="340" y="200">• Adresse (opt)</text>
+
+  <path class="arrow" d="M 430 155 L 465 155"/>
+
+  <rect class="step" x="470" y="70" width="170" height="170"/>
+  <text class="stepNum" x="555" y="115">3</text>
+  <text class="stepTitle" x="555" y="145">PROFIL PRO</text>
+  <text class="stepDesc" x="555" y="170">• À propos (opt)</text>
+  <text class="stepDesc" x="555" y="185">• LinkedIn (opt)</text>
+  <text class="stepDesc" x="555" y="200">• Centres d&apos;intérêt *</text>
+  <text class="stepDesc" x="555" y="215">(au moins 1)</text>
+
+  <path class="arrow" d="M 645 155 L 680 155"/>
+
+  <rect class="step" x="685" y="70" width="170" height="170"/>
+  <text class="stepNum" x="770" y="115">4</text>
+  <text class="stepTitle" x="770" y="145">SÉCURITÉ</text>
+  <text class="stepDesc" x="770" y="170">• Téléphone *</text>
+  <text class="stepDesc" x="770" y="185">• Mot de passe *</text>
+  <text class="stepDesc" x="770" y="200">• Confirmation</text>
+  <text class="stepDesc" x="770" y="215">• CGU (checkbox)</text>
+
+  <rect class="endbox" x="350" y="252" width="200" height="20" rx="6"/>
+  <text class="endTitle" x="450" y="266">→ S&apos;INSCRIRE → Realtime DB</text>
+</svg>`;
+
+// 4) Algo de recommandation
+const svgReco = SVG_HDR + `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="380" viewBox="0 0 900 380">
+  <style>
+    .src { fill: #${BLUE_TINT}; stroke: #${BLUE}; stroke-width: 1.5; rx: 10; }
+    .algo { fill: #${NAVY}; stroke: #${AMBER}; stroke-width: 2; rx: 12; }
+    .out { fill: #${AMBER_SOFT}; stroke: #${AMBER}; stroke-width: 1.5; rx: 10; }
+    .label { font-family: Arial; font-weight: 700; font-size: 13px; fill: #${NAVY_DEEP}; text-anchor: middle; }
+    .labelW { font-family: Arial; font-weight: 800; font-size: 14px; fill: #fff; text-anchor: middle; }
+    .ctx { font-family: Arial; font-size: 10.5px; fill: #${MUTED}; text-anchor: middle; }
+    .arrow { stroke: #${AMBER}; stroke-width: 2; fill: none; marker-end: url(#a4); }
+    .title { font-family: Arial; font-weight: 800; font-size: 18px; fill: #${NAVY}; }
+  </style>
+  <defs>
+    <marker id="a4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#${AMBER}"/>
+    </marker>
+  </defs>
+  <text x="20" y="26" class="title">Algorithme de recommandation des mentors</text>
+
+  <!-- 3 sources -->
+  <rect class="src" x="50" y="65" width="200" height="60"/>
+  <text class="label" x="150" y="92">Secteur principal</text>
+  <text class="ctx" x="150" y="110">profile.sector</text>
+
+  <rect class="src" x="50" y="160" width="200" height="60"/>
+  <text class="label" x="150" y="188">Projets actifs</text>
+  <text class="ctx" x="150" y="206">profile.projects.sectors</text>
+
+  <rect class="src" x="50" y="255" width="200" height="60"/>
+  <text class="label" x="150" y="283">Centres d&apos;intérêt</text>
+  <text class="ctx" x="150" y="301">profile.interests</text>
+
+  <!-- algo -->
+  <rect class="algo" x="380" y="120" width="180" height="140"/>
+  <text class="labelW" x="470" y="160">recommendedMentorsFor()</text>
+  <text class="ctx" x="470" y="180" fill="#${BLUE_TINT}">union des secteurs</text>
+  <text class="ctx" x="470" y="195" fill="#${BLUE_TINT}">filtre overlap &gt; 0</text>
+  <text class="ctx" x="470" y="210" fill="#${BLUE_TINT}">tri par overlap</text>
+  <text class="ctx" x="470" y="225" fill="#${BLUE_TINT}">puis compatibility</text>
+  <text class="ctx" x="470" y="245" fill="#${AMBER}">live (ValueListenable)</text>
+
+  <!-- output -->
+  <rect class="out" x="690" y="65" width="180" height="55"/>
+  <text class="label" x="780" y="92">Top mentor #1</text>
+  <text class="ctx" x="780" y="108">overlap × compat</text>
+
+  <rect class="out" x="690" y="135" width="180" height="55"/>
+  <text class="label" x="780" y="162">Top mentor #2</text>
+  <text class="ctx" x="780" y="178">→ HomePage</text>
+
+  <rect class="out" x="690" y="205" width="180" height="105"/>
+  <text class="label" x="780" y="240">Liste complète triée</text>
+  <text class="ctx" x="780" y="260">→ MatchingPage</text>
+  <text class="ctx" x="780" y="278">avec recherche</text>
+  <text class="ctx" x="780" y="294">+ filtres pills</text>
+
+  <!-- arrows -->
+  <path class="arrow" d="M 250 95 L 378 165"/>
+  <path class="arrow" d="M 250 190 L 378 190"/>
+  <path class="arrow" d="M 250 285 L 378 215"/>
+  <path class="arrow" d="M 560 165 L 688 92"/>
+  <path class="arrow" d="M 560 190 L 688 162"/>
+  <path class="arrow" d="M 560 220 L 688 230"/>
+</svg>`;
+
+const svgImage = (svg, h = 280) =>
+  p([new ImageRun({
+    type: "svg",
+    data: Buffer.from(svg, "utf8"),
+    transformation: { width: 600, height: h },
+    fallback: {
+      type: "png",
+      data: Buffer.from(svg, "utf8"),
+    },
+    altText: { title: "Schéma", description: "Schéma DIAPALER", name: "Schéma" },
+  })], { align: AlignmentType.CENTER, spacing: { before: 200, after: 200 } });
 
 // ─── Document ─────────────────────────────────────────────────────────────
 const doc = new Document({
@@ -202,27 +449,23 @@ const doc = new Document({
     },
     headers: {
       default: new Header({
-        children: [
-          p([
-            text("DIAPAL", { bold: true, color: FLAG_GREEN, size: 18 }),
-            text("ER", { bold: true, color: AMBER, size: 18 }),
-            text("  AFRICA", { bold: true, color: FLAG_RED, size: 18 }),
-            new TextRun({ text: "\tRapport technique", color: MUTED, size: 18 }),
-          ]),
-        ],
+        children: [p([
+          text("DIAPAL", { bold: true, color: FLAG_GREEN, size: 18 }),
+          text("ER", { bold: true, color: AMBER, size: 18 }),
+          text("  AFRICA", { bold: true, color: FLAG_RED, size: 18 }),
+          new TextRun({ text: "\tRapport technique", color: MUTED, size: 18 }),
+        ])],
       }),
     },
     footers: {
       default: new Footer({
-        children: [
-          p([
-            text("ESP Dakar  |  L3 GLSI/GLSIB  |  2025 – 2026", { color: MUTED, size: 18 }),
-            new TextRun({ text: "\tPage ", color: MUTED, size: 18 }),
-            new TextRun({ children: [PageNumber.CURRENT], color: MUTED, size: 18 }),
-            text(" / ", { color: MUTED, size: 18 }),
-            new TextRun({ children: [PageNumber.TOTAL_PAGES], color: MUTED, size: 18 }),
-          ]),
-        ],
+        children: [p([
+          text("ESP Dakar  |  L3 GLSI/GLSIB  |  2025 – 2026", { color: MUTED, size: 18 }),
+          new TextRun({ text: "\tPage ", color: MUTED, size: 18 }),
+          new TextRun({ children: [PageNumber.CURRENT], color: MUTED, size: 18 }),
+          text(" / ", { color: MUTED, size: 18 }),
+          new TextRun({ children: [PageNumber.TOTAL_PAGES], color: MUTED, size: 18 }),
+        ])],
       }),
     },
     children: [
@@ -231,9 +474,9 @@ const doc = new Document({
       p([
         text("DIAPAL", { bold: true, color: FLAG_GREEN, size: 96 }),
         text("ER", { bold: true, color: AMBER, size: 96 }),
-      ], { align: AlignmentType.CENTER, spacing: { before: 0, after: 0 } }),
+      ], { align: AlignmentType.CENTER }),
       p([text("AFRICA", { bold: true, color: FLAG_RED, size: 56 })],
-        { align: AlignmentType.CENTER, spacing: { before: 0, after: 200 } }),
+        { align: AlignmentType.CENTER, spacing: { after: 200 } }),
       p([text("« Connecte ton idée à ton succès »",
         { italics: true, color: MUTED, size: 24 })],
         { align: AlignmentType.CENTER }),
@@ -256,32 +499,26 @@ const doc = new Document({
               p(text("RAPPORT TECHNIQUE", { bold: true, color: AMBER, size: 30 }),
                 { align: AlignmentType.CENTER }),
               p(text("État du projet · Fonctionnalités livrées · Roadmap",
-                { color: "FFFFFF", size: 22 }),
-                { align: AlignmentType.CENTER }),
+                { color: "FFFFFF", size: 22 }), { align: AlignmentType.CENTER }),
             ],
           })],
         })],
       }),
       p([text(" ", { size: 22 })], { spacing: { before: 400 } }),
       p([text("Plateforme mobile Flutter de mentorat et de mise en relation ",
-        { color: NAVY_DEEP, size: 22 })],
-        { align: AlignmentType.CENTER }),
+        { color: NAVY_DEEP, size: 22 })], { align: AlignmentType.CENTER }),
       p([text("entrepreneuriale au Sénégal",
-        { color: NAVY_DEEP, size: 22, bold: true })],
-        { align: AlignmentType.CENTER }),
+        { color: NAVY_DEEP, size: 22, bold: true })], { align: AlignmentType.CENTER }),
       p([text(" ", { size: 22 })], { spacing: { before: 600 } }),
       p([text("Document destiné aux développeurs · Mai 2026",
-        { color: MUTED, size: 20, italics: true })],
-        { align: AlignmentType.CENTER }),
+        { color: MUTED, size: 20, italics: true })], { align: AlignmentType.CENTER }),
       p([text("ESP Dakar  ·  Département Génie Informatique  ·  L3 GLSI/GLSIB",
-        { color: MUTED, size: 20 })],
-        { align: AlignmentType.CENTER }),
+        { color: MUTED, size: 20 })], { align: AlignmentType.CENTER }),
       p([text(" ", { size: 24 })], { spacing: { before: 400 } }),
-      p([
-        text("Repo : ", { color: MUTED, size: 20 }),
+      p([text("Repo : ", { color: MUTED, size: 20 }),
         link("github.com/Souleymane-Sirima-Mbodj/Diapaler-Africa",
-          "https://github.com/Souleymane-Sirima-Mbodj/Diapaler-Africa"),
-      ], { align: AlignmentType.CENTER }),
+          "https://github.com/Souleymane-Sirima-Mbodj/Diapaler-Africa")],
+        { align: AlignmentType.CENTER }),
 
       // ───── 1. VUE D'ENSEMBLE ─────
       new Paragraph({ children: [new PageBreak()] }),
@@ -289,11 +526,11 @@ const doc = new Document({
       h2("1.1 Le projet"),
       para(
         "DIAPALER AFRICA est une application mobile Flutter de mise en relation " +
-          "entrepreneuriale destinée à l'écosystème sénégalais. Le mot « Diapaler » " +
-          "vient du wolof et signifie « accompagner, épauler, guider quelqu'un dans " +
-          "une démarche ». L'application connecte trois profils : les jeunes entrepreneurs, " +
-          "les mentors sectoriels (notamment du Club des Investisseurs Sénégalais — CIS) et " +
-          "les investisseurs privés."
+        "entrepreneuriale destinée à l'écosystème sénégalais. Le mot « Diapaler » " +
+        "vient du wolof et signifie « accompagner, épauler, guider quelqu'un dans " +
+        "une démarche ». L'application connecte trois profils : les jeunes entrepreneurs, " +
+        "les mentors sectoriels (notamment du Club des Investisseurs Sénégalais — CIS) et " +
+        "les investisseurs privés."
       ),
       h2("1.2 Problématique adressée"),
       bullet("Absence d'accompagnement qualifié — l'accès à un mentor reste conditionné au réseau"),
@@ -302,13 +539,47 @@ const doc = new Document({
       h2("1.3 Statut actuel"),
       para(
         "Le projet est dans la phase Livrable 0 — Proposition + maquettes fonctionnelles. " +
-          "L'application possède une UI complète, une vraie authentification Firebase et " +
-          "une base de données Realtime opérationnelle. Le périmètre actuel couvre " +
-          "l'inscription Entrepreneur uniquement (Mentor / Investisseur en attente)."
+        "L'application possède une UI complète, une vraie authentification Firebase et " +
+        "une base de données Realtime opérationnelle. Le périmètre actuel couvre " +
+        "l'inscription Entrepreneur uniquement (Mentor / Investisseur en attente)."
       ),
 
-      // ───── 2. STACK TECHNIQUE ─────
-      h1("2. Stack technique"),
+      // ───── 2. ARCHITECTURE ─────
+      h1("2. Architecture & schémas"),
+      h2("2.1 Architecture client / serveur"),
+      para(
+        "L'app Flutter (web Chrome pour la démo, Android prévu Livrable 1) communique " +
+        "avec deux services Firebase. La logique d'accès aux services est isolée dans des " +
+        "wrappers (services/) pour pouvoir évoluer ou tester indépendamment de l'UI."
+      ),
+      svgImage(svgArch, 250),
+
+      h2("2.2 Flow de navigation des écrans"),
+      para(
+        "Tous les écrans sont accessibles depuis le RootShell (bottom nav 2 onglets + " +
+        "FAB central pour le pitch). Le splash effectue une auto-login si la session est " +
+        "active, sinon route vers la sélection de rôle."
+      ),
+      svgImage(svgNavFlow, 360),
+
+      h2("2.3 Inscription en 4 étapes"),
+      para(
+        "Pour réduire la charge cognitive, l'inscription est découpée en 4 sections " +
+        "thématiques. Chaque étape valide localement avant de débloquer la suivante. " +
+        "Centres d'intérêt obligatoires (≥ 1) pour permettre le matching personnalisé."
+      ),
+      svgImage(svgSignup, 200),
+
+      h2("2.4 Algorithme de recommandation"),
+      para(
+        "Les mentors recommandés sur le dashboard sont calculés en live à partir de " +
+        "trois sources combinées dans le profil utilisateur : le secteur déclaré, les " +
+        "secteurs des projets actifs et les centres d'intérêt."
+      ),
+      svgImage(svgReco, 280),
+
+      // ───── 3. STACK TECHNIQUE ─────
+      h1("3. Stack technique"),
       new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [3000, 6360],
@@ -329,18 +600,17 @@ const doc = new Document({
       calloutBlock(
         "Choix d'architecture",
         "Pas de Provider, pas de Bloc, pas de GetX. On utilise les ValueNotifier natifs " +
-          "Flutter pour partager l'état (UserProfileController). Pour un projet de cette taille, " +
-          "c'est suffisant et garde le code lisible. À reconsidérer si on dépasse 30+ écrans.",
-        "DCE6F5", BLUE, "💡"
+        "Flutter pour partager l'état (UserProfileController). Pour un projet de cette taille, " +
+        "c'est suffisant et garde le code lisible. À reconsidérer si on dépasse 30+ écrans.",
+        BLUE_TINT, BLUE, "💡"
       ),
 
-      // ───── 3. STRUCTURE DU CODE ─────
-      h1("3. Structure du code"),
+      // ───── 4. STRUCTURE DU CODE ─────
+      h1("4. Structure du code"),
       para(
         "Tout est dans le dossier lib/. Pas de sur-engineering : un fichier par écran, " +
-          "un fichier par widget réutilisable. Les services Firebase sont isolés dans services/."
+        "un fichier par widget réutilisable. Les services Firebase sont isolés dans services/."
       ),
-      h2("3.1 Arborescence"),
       code(
         "lib/\n" +
         "├── main.dart                    Entry point + Firebase init parallèle au splash\n" +
@@ -348,46 +618,46 @@ const doc = new Document({
         "├── theme/\n" +
         "│   └── app_theme.dart           AppColors (drapeau Sénégal) + ThemeData light\n" +
         "├── data/\n" +
-        "│   ├── user_profile.dart        Modèle UserProfile, Project, Gender + UserProfileController\n" +
+        "│   ├── user_profile.dart        Modèle UserProfile, Project, Gender + Controller\n" +
         "│   ├── mock_data.dart           12 mentors sénégalais + recommendedMentorsFor()\n" +
-        "│   ├── countries.dart           Pays/villes (Sénégal/Gambie/Mali) + ageFromBirthDate()\n" +
-        "│   └── quotes.dart              8 citations (proverbes wolof + entrepreneurs panafricains)\n" +
+        "│   ├── countries.dart           Pays/villes (Sénégal/Gambie/Mali)\n" +
+        "│   └── quotes.dart              8 citations (proverbes wolof + entrepreneurs)\n" +
         "├── services/\n" +
         "│   ├── auth_service.dart        Wrapper FirebaseAuth + erreurs FR\n" +
         "│   └── database_service.dart    CRUD profil sur Realtime Database\n" +
         "├── screens/                     11 pages\n" +
-        "│   ├── splash_page.dart         Anim 1.1s + Firebase init + auto-login\n" +
-        "│   ├── role_selection_page.dart Choix du rôle (Entrepreneur / Mentor / Investor)\n" +
-        "│   ├── login_page.dart          Connexion (hero navy + gradient button)\n" +
-        "│   ├── signup_page.dart         Inscription en 4 étapes avec validations live\n" +
-        "│   ├── onboarding_page.dart     3 slides après signup\n" +
-        "│   ├── root_shell.dart          Bottom-nav + IndexedStack + FAB pitch\n" +
-        "│   ├── home_page.dart           Dashboard avec stats dynamiques\n" +
-        "│   ├── matching_page.dart       Recherche mentors + filtres\n" +
-        "│   ├── mentor_detail_page.dart  Hero + stats + entreprises + slots\n" +
-        "│   ├── profile_page.dart        Mon profil compact\n" +
-        "│   ├── edit_profile_page.dart   Modifier (cascade pays/ville)\n" +
-        "│   ├── add_project_page.dart    Nouveau projet (nom + secteur + desc)\n" +
-        "│   └── pitch_page.dart          Stepper 3 étapes pour déposer un pitch\n" +
+        "│   ├── splash_page.dart\n" +
+        "│   ├── role_selection_page.dart\n" +
+        "│   ├── login_page.dart\n" +
+        "│   ├── signup_page.dart\n" +
+        "│   ├── onboarding_page.dart\n" +
+        "│   ├── root_shell.dart\n" +
+        "│   ├── home_page.dart\n" +
+        "│   ├── matching_page.dart\n" +
+        "│   ├── mentor_detail_page.dart\n" +
+        "│   ├── profile_page.dart\n" +
+        "│   ├── edit_profile_page.dart\n" +
+        "│   ├── add_project_page.dart\n" +
+        "│   └── pitch_page.dart\n" +
         "└── widgets/                     13 widgets partagés\n" +
-        "    ├── animated_counter.dart    Compteur 0 → valeur (Tween 1.1s)\n" +
-        "    ├── avatar.dart              Avatar circulaire + indicateur en ligne\n" +
-        "    ├── bottom_nav.dart          BottomAppBar 2 onglets + notch FAB\n" +
-        "    ├── cursor_follower.dart     Traînée d'étoiles drapeau qui suit la souris\n" +
-        "    ├── diapaler_logo.dart       LogoTile (handshake + orbites) + Wordmark drapeau\n" +
-        "    ├── flag_strip.dart          3 lignes drapeau Sénégal\n" +
-        "    ├── hover_glow_card.dart     Scale + shadow ambre au hover\n" +
-        "    ├── mentor_card.dart         Card mentor avec badge CIS + score\n" +
-        "    ├── profile_sheet.dart       Bottom sheet profil + logout\n" +
-        "    ├── quote_carousel.dart      Carousel auto-rotatif (5s)\n" +
-        "    ├── rotating_tagline.dart    Citation alternée sous le greeting\n" +
-        "    ├── section_header.dart      Titre + lien d'action\n" +
-        "    └── skeleton.dart            Boîtes shimmer + MentorCardSkeleton"
+        "    ├── animated_counter.dart\n" +
+        "    ├── avatar.dart\n" +
+        "    ├── bottom_nav.dart\n" +
+        "    ├── cursor_follower.dart\n" +
+        "    ├── diapaler_logo.dart\n" +
+        "    ├── flag_strip.dart\n" +
+        "    ├── hover_glow_card.dart\n" +
+        "    ├── mentor_card.dart\n" +
+        "    ├── profile_sheet.dart\n" +
+        "    ├── quote_carousel.dart\n" +
+        "    ├── rotating_tagline.dart\n" +
+        "    ├── section_header.dart\n" +
+        "    └── skeleton.dart"
       ),
 
-      // ───── 4. FONCTIONNALITÉS LIVRÉES ─────
-      h1("4. Fonctionnalités livrées"),
-      h2("4.1 Authentification (Firebase Auth)"),
+      // ───── 5. FONCTIONNALITÉS LIVRÉES ─────
+      h1("5. Fonctionnalités livrées"),
+      h2("5.1 Authentification (Firebase Auth)"),
       bullet("Inscription email + mot de passe avec création du compte Firebase Auth réel"),
       bullet("Création automatique du node /users/{uid} dans Realtime Database avec le profil complet"),
       bullet("Connexion réelle avec lecture du profil distant à la connexion"),
@@ -395,53 +665,40 @@ const doc = new Document({
       bullet("Déconnexion via FirebaseAuth.signOut() — retour au splash"),
       bullet("12 erreurs Firebase traduites en français (email invalide, mdp faible, etc.)"),
 
-      h2("4.2 Inscription en 4 étapes"),
+      h2("5.2 Inscription Entrepreneur (4 étapes)"),
       new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [1500, 3000, 4860],
         rows: [
           tableRow([
-            { t: "Étape", w: 1500 },
-            { t: "Titre", w: 3000 },
-            { t: "Champs", w: 4860 },
+            { t: "Étape", w: 1500 }, { t: "Titre", w: 3000 }, { t: "Champs", w: 4860 },
           ], true),
           tableRow([
-            { t: "1 / 4", w: 1500, bold: true },
-            { t: "Identité", w: 3000 },
+            { t: "1 / 4", w: 1500, bold: true }, { t: "Identité", w: 3000 },
             { t: "Rôle, Nom, Email, Sexe, Date naissance (avec calcul d'âge live)", w: 4860 },
           ]),
           tableRow([
-            { t: "2 / 4", w: 1500, bold: true },
-            { t: "Localisation", w: 3000 },
+            { t: "2 / 4", w: 1500, bold: true }, { t: "Localisation", w: 3000 },
             { t: "Pays (3) + Ville en cascade + Adresse (optionnelle)", w: 4860 },
           ]),
           tableRow([
-            { t: "3 / 4", w: 1500, bold: true },
-            { t: "Profil pro", w: 3000 },
+            { t: "3 / 4", w: 1500, bold: true }, { t: "Profil pro", w: 3000 },
             { t: "À propos (opt), LinkedIn (opt), Centres d'intérêt (obligatoire ≥ 1)", w: 4860 },
           ]),
           tableRow([
-            { t: "4 / 4", w: 1500, bold: true },
-            { t: "Sécurité", w: 3000 },
+            { t: "4 / 4", w: 1500, bold: true }, { t: "Sécurité", w: 3000 },
             { t: "Téléphone (auto-format) + Mdp (force) + Confirmation + CGU", w: 4860 },
           ]),
         ],
       }),
-      p([text("", { size: 22 })], { spacing: { before: 200 } }),
       h3("Validations live"),
       bullet("Email : regex en temps réel, badge ✓ vert / ✗ rouge à droite du champ"),
       bullet("Téléphone : auto-format 'XX XXX XX XX' et limite à 9 chiffres"),
       bullet("Mot de passe : barre de force colorée (rouge / ambre / vert)"),
       bullet("Confirmation : pastille verte/rouge selon match"),
       bullet("Boutons CONTINUER / S'INSCRIRE désactivés tant que l'étape courante invalide"),
-      h3("Mentor / Investisseur"),
-      para(
-        "Pour limiter le périmètre du Livrable 0, l'inscription pour ces 2 rôles est " +
-          "désactivée : le formulaire devient vide quand le pill est sélectionné, et le bouton " +
-          "CONTINUER reste grisé. Implémentation à compléter au Livrable 1."
-      ),
 
-      h2("4.3 Profil utilisateur (Realtime Database)"),
+      h2("5.3 Profil utilisateur (Realtime Database)"),
       para("Stockage complet dans /users/{uid} avec les champs suivants :"),
       code(
         "{\n" +
@@ -459,14 +716,14 @@ const doc = new Document({
       bullet("EditProfilePage avec dropdowns cascading pays/ville + multi-select 31 secteurs"),
       bullet("ValueListenableBuilder<UserProfile> dans toutes les vues — refresh live"),
 
-      h2("4.4 Multi-projets"),
+      h2("5.4 Multi-projets"),
       bullet("Modèle Project avec id, nom, description, secteur, step, totalSteps"),
       bullet("Règle métier : « 1 actif à la fois » — canStartNewProject = tous les projets terminés"),
       bullet("Empty state : gros bouton + ambre dans le hero du dashboard et du profil"),
       bullet("AddProjectPage : nom + secteur (dropdown 31) + description"),
       bullet("Badges : EN COURS (ambre) / TERMINÉ (vert)"),
 
-      h2("4.5 Dashboard"),
+      h2("5.5 Dashboard Entrepreneur"),
       bullet("Greeting personnalisé « Bonjour [prénom] » + tagline rotative (citations 6s)"),
       bullet("Avatar tappable → bottom sheet profil"),
       bullet("Cloche avec badge non-lus"),
@@ -476,7 +733,7 @@ const doc = new Document({
       bullet("Card DER/FJ PAVIE 2"),
       bullet("Pull-to-refresh + skeletons shimmer 900ms au démarrage"),
 
-      h2("4.6 Matching"),
+      h2("5.6 Matching"),
       bullet("12 mentors sénégalais avec entreprises détaillées (3 à 8 par mentor)"),
       bullet("Recherche live (nom, secteur, ville)"),
       bullet("Pills filtres (10 secteurs) + dropdown ville"),
@@ -484,13 +741,13 @@ const doc = new Document({
       bullet("Empty state si 0 résultat"),
       bullet("Page détail mentor : SliverAppBar gradient + 4 stats + entreprises + créneaux + 2 CTA"),
 
-      h2("4.7 Pitch deck"),
+      h2("5.7 Pitch deck"),
       bullet("FAB ambre central pour y accéder depuis n'importe quel onglet"),
       bullet("Stepper 3 étapes : infos → secteur (dropdown) → documents"),
       bullet("Upload zones pointillées (PDF + vidéo)"),
       bullet("Snackbar succès vert au dépôt"),
 
-      h2("4.8 UX premium"),
+      h2("5.8 UX premium"),
       bullet("Splash 1.1s : logo handshake construit + 3 orbites drapeau Sénégal allumées en cascade"),
       bullet("Curseur étoiles drapeau qui suit la souris (web/desktop, no-op sur tactile)"),
       bullet("Hover glow sur cards : scale 1.015 + shadow ambré + bordure bleue"),
@@ -502,35 +759,43 @@ const doc = new Document({
       bullet("Bouton SE CONNECTER avec gradient navy → bleu + glow ambre"),
       bullet("Mode --release optimisé pour la démo (5× plus rapide que --debug)"),
 
-      h2("4.9 Branch protection GitHub"),
+      h2("5.9 Branch protection GitHub"),
       bullet("Require pull request before merging (1 approval required = owner)"),
       bullet("Dismiss stale approvals on new commits"),
       bullet("Require conversation resolution before merging"),
       bullet("Block force pushes + block deletions"),
       bullet("Workflow : feature branch → push → PR → review owner → merge"),
 
-      // ───── 5. RESTE À FAIRE ─────
-      h1("5. Reste à faire"),
+      // ───── 6. RESTE À FAIRE ─────
+      h1("6. Reste à faire"),
       para(
         "Périmètre découpé par échéance. Les TODO les plus urgents sont en haut. " +
-          "Les statuts utilisent un code couleur : rouge (bloquant pour la prochaine livraison), " +
-          "ambre (important), gris (nice to have)."
+        "Le code couleur du tableau : rouge = bloquant pour la prochaine livraison, " +
+        "ambre = important, gris = nice to have."
       ),
 
-      h2("5.1 Court terme — Livrable 1"),
+      h2("6.1 Court terme — Livrable 1"),
       new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [3500, 1700, 4160],
         rows: [
           tableRow([
-            { t: "Tâche", w: 3500 },
-            { t: "Priorité", w: 1700 },
-            { t: "Notes", w: 4160 },
+            { t: "Tâche", w: 3500 }, { t: "Priorité", w: 1700 }, { t: "Notes", w: 4160 },
           ], true),
           tableRow([
             { t: "Inscription Mentor + Investisseur", w: 3500 },
             { t: "HAUTE", w: 1700, bold: true, fill: "FEE2E2" },
             { t: "Champs spécifiques (expertise, ticket d'investissement, vérification CIS)", w: 4160 },
+          ]),
+          tableRow([
+            { t: "Dashboard Mentor (vue dédiée)", w: 3500 },
+            { t: "HAUTE", w: 1700, bold: true, fill: "FEE2E2" },
+            { t: "Mes mentees, demandes en attente, sessions à venir, mes pitchs reçus", w: 4160 },
+          ]),
+          tableRow([
+            { t: "Dashboard Investisseur (vue dédiée)", w: 3500 },
+            { t: "HAUTE", w: 1700, bold: true, fill: "FEE2E2" },
+            { t: "Pitchs à étudier, portefeuille, ROI, mes investissements en cours", w: 4160 },
           ]),
           tableRow([
             { t: "Vraie messagerie temps réel", w: 3500 },
@@ -540,7 +805,7 @@ const doc = new Document({
           tableRow([
             { t: "Dépôt de pitch persistant", w: 3500 },
             { t: "HAUTE", w: 1700, bold: true, fill: "FEE2E2" },
-            { t: "Stocker dans /pitches/{pitchId}, lier à user.projects, upload PDF via Firebase Storage", w: 4160 },
+            { t: "Stocker dans /pitches/{pitchId}, lier à user.projects, upload PDF via Storage", w: 4160 },
           ]),
           tableRow([
             { t: "Upload photo de profil", w: 3500 },
@@ -570,7 +835,7 @@ const doc = new Document({
         ],
       }),
 
-      h2("5.2 Moyen terme — Livrable 2"),
+      h2("6.2 Moyen terme — Livrable 2"),
       bullet("Configuration Android (google-services.json + plugin Gradle) pour APK"),
       bullet("Configuration iOS (GoogleService-Info.plist) si soumission App Store"),
       bullet("Déploiement Firebase Hosting pour la version web publique"),
@@ -580,7 +845,7 @@ const doc = new Document({
       bullet("Mode hors-ligne partiel (cache Hive ou Isar pour mentors et conversations)"),
       bullet("Page DER/FJ avec vraies fiches PAVIE 2 + Be Yes + check d'éligibilité"),
 
-      h2("5.3 Long terme — Vision Livrable 3+"),
+      h2("6.3 Long terme — Vision Livrable 3+"),
       bullet("Algorithme de matching avancé (scoring pondéré multi-critères ou ML léger)"),
       bullet("Intégration mobile money pour paiement de session (Wave / Orange Money / Free Money)"),
       bullet("Vidéoconférence intégrée (Jitsi Meet ou Daily.co)"),
@@ -590,9 +855,9 @@ const doc = new Document({
       bullet("Webhook Calendly / Google Calendar pour synchro des créneaux"),
       bullet("Export PDF du pitch deck à partager hors plateforme"),
 
-      // ───── 6. WORKFLOW ÉQUIPE ─────
-      h1("6. Workflow équipe"),
-      h2("6.1 Conventions de commit"),
+      // ───── 7. WORKFLOW ÉQUIPE ─────
+      h1("7. Workflow équipe"),
+      h2("7.1 Conventions de commit"),
       para("Utiliser un préfixe pour clarifier la nature du commit :"),
       new Table({
         width: { size: 9360, type: WidthType.DXA },
@@ -609,7 +874,7 @@ const doc = new Document({
           tableRow([{ t: "test:", w: 1800, bold: true }, { t: "Ajout / modif de tests", w: 7560 }]),
         ],
       }),
-      h2("6.2 Workflow Pull Request"),
+      h2("7.2 Workflow Pull Request"),
       code(
         "# 1. Créer une branche feature à partir de main\n" +
         "git checkout main && git pull\n" +
@@ -624,46 +889,46 @@ const doc = new Document({
         "# Si changements demandés : push de nouveaux commits sur la même branche\n\n" +
         "# 5. Une fois approuvée, merger via l'UI GitHub (Squash and merge recommandé)"
       ),
-      h2("6.3 Avant chaque commit"),
+      h2("7.3 Avant chaque commit"),
       bullet("flutter analyze — doit retourner « No issues found »"),
       bullet("Vérifier visuellement que l'app tourne en mode release sans erreur console"),
       bullet("Si modification de UserProfile : penser à updater DatabaseService._toMap / _fromMap"),
       bullet("Pas de print() ni de TODO commit dans le code de la PR"),
 
-      // ───── 7. POINTS D'ATTENTION ─────
-      h1("7. Points d'attention"),
+      // ───── 8. POINTS D'ATTENTION ─────
+      h1("8. Points d'attention"),
       calloutBlock(
         "Sécurité Firebase",
         "Les règles Realtime Database sont actuellement en mode test (lecture/écriture " +
-          "ouvertes 30 jours). Avant tout déploiement public, il faut écrire les règles " +
-          "réelles : un user peut lire/écrire seulement /users/{uid} où {uid} == auth.uid.",
+        "ouvertes 30 jours). Avant tout déploiement public, il faut écrire les règles " +
+        "réelles : un user peut lire/écrire seulement /users/{uid} où {uid} == auth.uid.",
         "FEF3C7", AMBER, "⚠"
       ),
       p([text("", { size: 22 })], { spacing: { before: 200 } }),
       calloutBlock(
         "Plateforme",
         "Pour l'instant l'app ne tourne que sur Chrome (web). La config Android/iOS " +
-          "Firebase n'est pas faite — c'est ~30 min de boulot mais à planifier avant " +
-          "de pouvoir distribuer un APK ou TestFlight.",
-        "DCE6F5", BLUE, "💡"
+        "Firebase n'est pas faite — c'est ~30 min de boulot mais à planifier avant " +
+        "de pouvoir distribuer un APK ou TestFlight.",
+        BLUE_TINT, BLUE, "💡"
       ),
       p([text("", { size: 22 })], { spacing: { before: 200 } }),
       calloutBlock(
         "Performance",
         "Le mode --debug est très lent en web (5× plus lent que release). Pour la démo, " +
-          "toujours utiliser --release. Pour le développement, utiliser le hot reload " +
-          "avec --debug malgré la lenteur — ça vaut le coup pour itérer.",
+        "toujours utiliser --release. Pour le développement, utiliser le hot reload " +
+        "avec --debug malgré la lenteur — ça vaut le coup pour itérer.",
         "DCFCE7", GREEN, "🚀"
       ),
 
-      // ───── 8. RESSOURCES ─────
-      h1("8. Ressources"),
+      // ───── 9. RESSOURCES ─────
+      h1("9. Ressources"),
       bullet("Repo GitHub : github.com/Souleymane-Sirima-Mbodj/Diapaler-Africa"),
       bullet("Console Firebase : console.firebase.google.com/project/diapaler-africa"),
       bullet("Documentation Flutter : docs.flutter.dev"),
       bullet("FlutterFire (plugin Firebase) : firebase.flutter.dev"),
-      bullet("Guide d'installation pour rejoindre le projet : docs/Guide_Installation_DIAPALER.docx"),
-      bullet("Doc fonctionnelle (Livrable 0 du cours) : docs externes (DOCX original)"),
+      bullet("Guide d'installation : docs/Guide_Installation_DIAPALER.docx"),
+      bullet("Doc fonctionnelle (Livrable 0 du cours) : DOCX original de l'équipe"),
       bullet("Maquettes haute fidélité : présentation PowerPoint du Livrable 0"),
 
       // ───── Footer ─────
