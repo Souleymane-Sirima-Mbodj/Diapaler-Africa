@@ -374,11 +374,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         const SizedBox(height: 16),
         if (_role != UserRole.entrepreneur) ...[
-          _ComingSoonCard(
-            role: _role,
-            onSwitchRole: () =>
-                setState(() => _role = UserRole.entrepreneur),
-          ),
+          const SizedBox.shrink(),
         ] else ...[
           const _LabelRequired('Nom complet'),
         const SizedBox(height: 6),
@@ -1037,126 +1033,6 @@ class _RolePills extends StatelessWidget {
           if (i < items.length - 1) const SizedBox(width: 8),
         ],
       ],
-    );
-  }
-}
-
-class _ComingSoonCard extends StatelessWidget {
-  final UserRole role;
-  final VoidCallback onSwitchRole;
-  const _ComingSoonCard({required this.role, required this.onSwitchRole});
-
-  String get _roleLabel {
-    switch (role) {
-      case UserRole.mentor:
-        return 'Mentor';
-      case UserRole.investor:
-        return 'Investisseur';
-      case UserRole.entrepreneur:
-        return 'Entrepreneur';
-    }
-  }
-
-  String get _roleEmoji {
-    switch (role) {
-      case UserRole.mentor:
-        return '🎓';
-      case UserRole.investor:
-        return '💼';
-      case UserRole.entrepreneur:
-        return '🚀';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.amber.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.amber,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.amber.withValues(alpha: 0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.hourglass_top_rounded,
-                color: Colors.white, size: 28),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Inscription $_roleLabel $_roleEmoji',
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              color: AppColors.navyDeep,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.amber,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'BIENTÔT DISPONIBLE',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
-                color: AppColors.navyDeep,
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            "L'inscription pour ce profil sera disponible dans une prochaine version. "
-            "Pour l'instant, seule l'inscription Entrepreneur est ouverte.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.muted,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onSwitchRole,
-              icon: const Icon(Icons.rocket_launch_rounded, size: 18),
-              label: const Text(
-                "M'inscrire en tant qu'Entrepreneur",
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.navy,
-                side: const BorderSide(color: AppColors.navy, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
