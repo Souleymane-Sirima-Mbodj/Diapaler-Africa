@@ -592,8 +592,6 @@ class _GenderPicker extends StatelessWidget {
     final items = [
       Gender.female,
       Gender.male,
-      Gender.other,
-      Gender.undisclosed,
     ];
     return Wrap(
       spacing: 6,
