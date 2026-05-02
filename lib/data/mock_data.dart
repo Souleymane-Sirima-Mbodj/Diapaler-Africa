@@ -246,23 +246,50 @@ const mentors = <Mentor>[
   ),
 ];
 
-/// Secteurs du projet en cours de l'utilisatrice (Téranga Mode).
-/// Sert à filtrer les mentors recommandés sur le dashboard.
-const _userProjectSectors = <String>[
-  'Mode & Textile',
-  'Artisanat',
-  'Cosmétique',
-  'Beauté',
-];
+/// Calcule les mentors recommandés pour un utilisateur donné.
+///
+/// Source des secteurs pertinents (par ordre de priorité) :
+///   1. Le secteur principal du profil (si défini)
+///   2. Les secteurs des projets en cours
+///   3. Les centres d'intérêt sélectionnés
+///
+/// Tri : d'abord par nombre de secteurs en commun (overlap), puis par
+/// compatibility globale du mentor. Si l'utilisateur n'a sélectionné
+/// aucun secteur, on retourne tous les mentors triés par compatibility.
+List<Mentor> recommendedMentorsFor({
+  required String userSector,
+  required List<String> userInterests,
+  required List<String> projectSectors,
+}) {
+  final relevant = <String>{};
+  if (userSector.isNotEmpty && userSector != 'Autre') {
+    relevant.add(userSector);
+  }
+  for (final s in projectSectors) {
+    if (s.isNotEmpty) relevant.add(s);
+  }
+  relevant.addAll(userInterests);
 
-/// Mentors recommandés pour Mariéme Tine (Téranga Mode), triés par
-/// compatibilité décroissante. Filtrage sur les secteurs du projet.
-List<Mentor> get recommendedMentors {
-  final list = mentors.where((m) {
-    return m.sectors.any((s) => _userProjectSectors.contains(s));
-  }).toList()
-    ..sort((a, b) => b.compatibility.compareTo(a.compatibility));
-  return list;
+  if (relevant.isEmpty) {
+    return mentors.toList()
+      ..sort((a, b) => b.compatibility.compareTo(a.compatibility));
+  }
+
+  final scored = mentors
+      .map((m) {
+        final overlap =
+            m.sectors.where((s) => relevant.contains(s)).length;
+        return (m, overlap);
+      })
+      .where((e) => e.$2 > 0)
+      .toList()
+    ..sort((a, b) {
+      final byOverlap = b.$2.compareTo(a.$2);
+      if (byOverlap != 0) return byOverlap;
+      return b.$1.compatibility.compareTo(a.$1.compatibility);
+    });
+
+  return scored.map((e) => e.$1).toList();
 }
 
 /// Liste fermée des secteurs (utilisée par les filtres et le dropdown pitch).
