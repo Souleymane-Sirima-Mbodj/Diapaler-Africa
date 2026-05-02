@@ -107,3 +107,8 @@ coverage/
 
 # Local run log
 .flutter_run.log
+
+# Node modules in docs/
+docs/node_modules/
+docs/package-lock.json
+
