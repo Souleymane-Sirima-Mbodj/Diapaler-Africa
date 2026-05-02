@@ -7,7 +7,14 @@ import 'screens/splash_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/cursor_follower.dart';
 
-Future<void> main() async {
+/// Future global qu'on initialise dès le démarrage de l'app, mais sans
+/// bloquer `runApp`. Le splash l'attend pendant qu'il joue son animation
+/// — ça masque tout le délai d'init Firebase derrière le splash.
+final Future<FirebaseApp> firebaseReady = Firebase.initializeApp(
+  options: DefaultFirebaseOptions.currentPlatform,
+);
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -15,11 +22,6 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
   runApp(const DiapalerApp());
 }
 
