@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/diapaler_logo.dart';
+import '../widgets/flag_strip.dart';
 import 'root_shell.dart';
 import 'signup_page.dart';
 
@@ -42,7 +43,6 @@ class _LoginPageState extends State<LoginPage> {
         email: _email.text,
         password: _password.text,
       );
-      // Recharge le profil depuis RTDB pour synchroniser l'app.
       final uid = cred.user?.uid;
       if (uid != null) {
         final remote = await DatabaseService.readUserProfile(uid);
@@ -67,179 +67,266 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(
           children: [
-            const SizedBox(height: 8),
-            const Center(child: DiapalerLogoTile(size: 60)),
-            const SizedBox(height: 14),
-            const Center(child: DiapalerWordmark(fontSize: 30)),
-            const SizedBox(height: 36),
-            const Center(
-              child: Text(
-                'Bon retour !',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.navyDeep,
+            // ── Bandeau navy compact avec logo ──
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.navyDeep,
+                    AppColors.navy,
+                    Color(0xFF14305E),
+                  ],
                 ),
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(22)),
               ),
-            ),
-            const SizedBox(height: 6),
-            const Center(
-              child: Text(
-                'Connecte-toi pour continuer ton parcours',
-                style: TextStyle(fontSize: 13.5, color: AppColors.muted),
-              ),
-            ),
-            const SizedBox(height: 28),
-            const _Label('Email'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.mail_outline_rounded,
-                    color: AppColors.subtle, size: 20),
-                hintText: 'nom@exemple.sn',
-              ),
-            ),
-            const SizedBox(height: 14),
-            const _Label('Mot de passe'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _password,
-              obscureText: _obscure,
-              onSubmitted: (_) => _signIn(),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.lock_outline_rounded,
-                    color: AppColors.subtle, size: 20),
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: AppColors.subtle,
-                    size: 20,
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white),
+                    ),
                   ),
-                ),
+                  const DiapalerLogoTile(size: 50, onDark: true),
+                  const SizedBox(height: 10),
+                  const DiapalerWordmark(fontSize: 24, onDark: true),
+                  const SizedBox(height: 10),
+                  const SenegalFlagStrip(height: 3),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Mot de passe oublié ?',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.blue,
+            // ── Contenu ──
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
+                children: [
+                  const Center(
+                    child: Text(
+                      'Bon retour ! 👋',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: AppColors.red, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.red,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  const Center(
+                    child: Text(
+                      'Connecte-toi pour continuer ton parcours',
+                      style:
+                          TextStyle(fontSize: 13, color: AppColors.muted),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const _Label('Email'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(8),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.blueTint,
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: const Icon(Icons.mail_outline_rounded,
+                            color: AppColors.blue, size: 18),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                          minWidth: 48, minHeight: 48),
+                      hintText: 'nom@exemple.sn',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const _Label('Mot de passe'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    onSubmitted: (_) => _signIn(),
+                    decoration: InputDecoration(
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(8),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.amber.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.lock_outline_rounded,
+                            color: AppColors.amber, size: 18),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                          minWidth: 48, minHeight: 48),
+                      suffixIcon: IconButton(
+                        onPressed: () =>
+                            setState(() => _obscure = !_obscure),
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: AppColors.subtle,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Mot de passe oublié ?',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.blue,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: AppColors.red.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.red, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _signIn,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.navy,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      AppColors.navy.withValues(alpha: 0.5),
-                ),
-                child: _loading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
+                  const SizedBox(height: 14),
+                  // Bouton SE CONNECTER avec gradient + glow
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.amber.withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
-                      )
-                    : const Text(
-                        'SE CONNECTER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          fontSize: 14,
+                      ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.navyDeep, AppColors.navy, AppColors.blue],
+                          ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            disabledForegroundColor:
+                                Colors.white.withValues(alpha: 0.5),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'SE CONNECTER',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Icon(Icons.arrow_forward_rounded,
+                                        size: 18),
+                                  ],
+                                ),
                         ),
                       ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Pas encore de compte ?  ',
-                  style: TextStyle(color: AppColors.muted, fontSize: 13.5),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const SignUpPage()),
-                  ),
-                  child: const Text(
-                    "S'inscrire",
-                    style: TextStyle(
-                      color: AppColors.blue,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Pas encore de compte ?  ',
+                        style: TextStyle(
+                            color: AppColors.muted, fontSize: 13),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                              builder: (_) => const SignUpPage()),
+                        ),
+                        child: const Text(
+                          "S'inscrire",
+                          style: TextStyle(
+                            color: AppColors.blue,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -255,10 +342,9 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         text,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
           color: AppColors.navyDeep,
         ),
       );
 }
-
