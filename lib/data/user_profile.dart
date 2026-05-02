@@ -93,6 +93,13 @@ class UserProfile {
   final List<String> interests;
   final List<Project> projects;
 
+  // Stats agrégées (mises à jour par les actions de l'app — mentors contactés,
+  // sessions réservées, favoris ajoutés, notes reçues).
+  final int mentorsActive;
+  final int sessionsCount;
+  final int favoritesCount;
+  final double score;
+
   const UserProfile({
     required this.firstName,
     required this.lastName,
@@ -109,6 +116,10 @@ class UserProfile {
     this.linkedin = '',
     required this.interests,
     required this.projects,
+    this.mentorsActive = 0,
+    this.sessionsCount = 0,
+    this.favoritesCount = 0,
+    this.score = 0.0,
   });
 
   String get fullName => '$firstName $lastName';
@@ -165,6 +176,10 @@ class UserProfile {
     String? linkedin,
     List<String>? interests,
     List<Project>? projects,
+    int? mentorsActive,
+    int? sessionsCount,
+    int? favoritesCount,
+    double? score,
   }) {
     return UserProfile(
       firstName: firstName ?? this.firstName,
@@ -182,6 +197,10 @@ class UserProfile {
       linkedin: linkedin ?? this.linkedin,
       interests: interests ?? this.interests,
       projects: projects ?? this.projects,
+      mentorsActive: mentorsActive ?? this.mentorsActive,
+      sessionsCount: sessionsCount ?? this.sessionsCount,
+      favoritesCount: favoritesCount ?? this.favoritesCount,
+      score: score ?? this.score,
     );
   }
 }
@@ -252,5 +271,9 @@ class UserProfileController {
         totalSteps: 5,
       ),
     ],
+    mentorsActive: 4,
+    sessionsCount: 3,
+    favoritesCount: 7,
+    score: 4.8,
   );
 }

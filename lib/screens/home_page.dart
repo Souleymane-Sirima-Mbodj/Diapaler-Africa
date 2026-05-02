@@ -10,6 +10,7 @@ import '../widgets/profile_sheet.dart';
 import '../widgets/rotating_tagline.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
+import 'add_project_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -59,7 +60,7 @@ class _HomePageState extends State<HomePage> {
     return [
       const _Header(),
       const SizedBox(height: 18),
-      const _ProgressCard(),
+      const _ProjectHero(),
       const SizedBox(height: 14),
       const _StatsStrip(),
       const SizedBox(height: 22),
@@ -238,14 +239,133 @@ class _IconBubble extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Hero "Mon projet"
+// Hero "Mon projet" — bascule entre empty state et card projet en cours
 // ─────────────────────────────────────────────────────────────────
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard();
+class _ProjectHero extends StatelessWidget {
+  const _ProjectHero();
 
   @override
   Widget build(BuildContext context) {
-    final p = UserProfileController.profile.value;
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (_, p, __) {
+        if (p.currentProject == null) {
+          return const _EmptyProjectHero();
+        }
+        return _ProgressCard(profile: p);
+      },
+    );
+  }
+}
+
+class _EmptyProjectHero extends StatelessWidget {
+  const _EmptyProjectHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => const AddProjectPage(),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.navyDeep, AppColors.navy, AppColors.blue],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navy.withValues(alpha: 0.22),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -28,
+                right: -28,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.amber.withValues(alpha: 0.15),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.amber,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.amber.withValues(alpha: 0.55),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add_rounded,
+                        color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Aucun projet en cours',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Tape ici pour démarrer ton premier projet entrepreneurial.',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12.5,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: Colors.white, size: 24),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressCard extends StatelessWidget {
+  final UserProfile profile;
+  const _ProgressCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = profile;
     final step = p.projectStep;
     final total = p.projectTotalSteps;
     final percent = (p.progress * 100).round();
@@ -376,55 +496,61 @@ class _ProgressCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Stats — bande horizontale déroulante
+// Stats — bande horizontale déroulante (lit le profile en live)
 // ─────────────────────────────────────────────────────────────────
 class _StatsStrip extends StatelessWidget {
   const _StatsStrip();
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      _StatPill(
-        icon: Icons.handshake_rounded,
-        color: AppColors.blue,
-        label: 'Mentors',
-        value: 4,
-      ),
-      _StatPill(
-        icon: Icons.calendar_month_rounded,
-        color: AppColors.green,
-        label: 'Sessions',
-        value: 3,
-      ),
-      _StatPill(
-        icon: Icons.star_rounded,
-        color: AppColors.amber,
-        label: 'Score',
-        value: 4.8,
-        decimals: 1,
-        suffix: '★',
-      ),
-      _StatPill(
-        icon: Icons.upload_file_rounded,
-        color: AppColors.purple,
-        label: 'Pitchs',
-        value: 2,
-      ),
-      _StatPill(
-        icon: Icons.bookmark_rounded,
-        color: AppColors.red,
-        label: 'Favoris',
-        value: 7,
-      ),
-    ];
-    return SizedBox(
-      height: 64,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => items[i],
-      ),
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (_, p, __) {
+        final items = <_StatPill>[
+          _StatPill(
+            icon: Icons.handshake_rounded,
+            color: AppColors.blue,
+            label: 'Mentors',
+            value: p.mentorsActive,
+          ),
+          _StatPill(
+            icon: Icons.calendar_month_rounded,
+            color: AppColors.green,
+            label: 'Sessions',
+            value: p.sessionsCount,
+          ),
+          if (p.score > 0)
+            _StatPill(
+              icon: Icons.star_rounded,
+              color: AppColors.amber,
+              label: 'Score',
+              value: p.score,
+              decimals: 1,
+              suffix: '★',
+            ),
+          _StatPill(
+            icon: Icons.upload_file_rounded,
+            color: AppColors.purple,
+            label: 'Pitchs',
+            value: p.projects.length,
+          ),
+          _StatPill(
+            icon: Icons.bookmark_rounded,
+            color: AppColors.red,
+            label: 'Favoris',
+            value: p.favoritesCount,
+          ),
+        ];
+        return SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => items[i],
+          ),
+        );
+      },
     );
   }
 }
