@@ -1,8 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../main.dart' show firebaseReady;
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../data/user_profile.dart';
 import '../theme/app_theme.dart';
 import '../widgets/diapaler_logo.dart';
 import 'role_selection_page.dart';
+import 'root_shell.dart';
 
 /// Splash 1.6s — le tile apparaît, les 3 orbites s'allument une à une,
 /// puis le wordmark monte. À la fin → navigation vers RoleSelectionPage.
@@ -22,19 +27,40 @@ class _SplashPageState extends State<SplashPage>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1100),
     )..forward();
+    _bootstrap();
+  }
 
-    Future.delayed(const Duration(milliseconds: 1850), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, a, __) =>
-              FadeTransition(opacity: a, child: const RoleSelectionPage()),
-          transitionDuration: const Duration(milliseconds: 450),
-        ),
-      );
-    });
+  /// Attend que Firebase soit prêt ET que l'animation du splash se termine,
+  /// puis route vers RootShell (utilisateur déjà connecté) ou RoleSelectionPage.
+  Future<void> _bootstrap() async {
+    Widget next = const RoleSelectionPage();
+    try {
+      await firebaseReady.timeout(const Duration(seconds: 5));
+      final uid = AuthService.currentUid;
+      if (uid != null) {
+        final remote = await DatabaseService.readUserProfile(uid)
+            .timeout(const Duration(seconds: 4));
+        if (remote != null) {
+          UserProfileController.update(remote);
+          next = const RootShell();
+        }
+      }
+    } catch (_) {
+      // En cas de problème (réseau, timeout), on tombe sur RoleSelection.
+    }
+
+    // On garantit que le splash dure au minimum 1.2s pour bien voir l'anim.
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: next),
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+    );
   }
 
   @override
