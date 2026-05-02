@@ -39,7 +39,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
 
-  int _step = 0; // 0..2
+  int _step = 0; // 0..3
   bool _obscure = true;
   bool _accept = false;
   bool _loading = false;
@@ -87,7 +87,8 @@ class _SignUpPageState extends State<SignUpPage> {
   bool get _step2Valid =>
       supportedCountries.contains(_country) &&
       citiesOf(_country).contains(_city);
-  bool get _step3Valid =>
+  bool get _step3Valid => _interests.isNotEmpty;
+  bool get _step4Valid =>
       _phoneValid &&
       _password.text.length >= 6 &&
       _passwordsMatch &&
@@ -101,6 +102,8 @@ class _SignUpPageState extends State<SignUpPage> {
         return _step2Valid;
       case 2:
         return _step3Valid;
+      case 3:
+        return _step4Valid;
       default:
         return false;
     }
@@ -130,7 +133,9 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _submit() async {
-    if (!_step1Valid || !_step3Valid) return;
+    if (!_step1Valid || !_step2Valid || !_step3Valid || !_step4Valid) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -180,7 +185,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void _next() {
     if (!_stepValid) return;
-    if (_step < 2) {
+    if (_step < 3) {
       setState(() => _step += 1);
     } else {
       _submit();
@@ -218,13 +223,13 @@ class _SignUpPageState extends State<SignUpPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _StepBar(step: _step, total: 3),
+            _StepBar(step: _step, total: 4),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
               child: Row(
                 children: [
                   Text(
-                    'Étape ${_step + 1} / 3',
+                    'Étape ${_step + 1} / 4',
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
@@ -292,7 +297,7 @@ class _SignUpPageState extends State<SignUpPage> {
                               ),
                             )
                           : Text(
-                              _step == 2 ? "S'INSCRIRE" : 'CONTINUER',
+                              _step == 3 ? "S'INSCRIRE" : 'CONTINUER',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.5,
@@ -315,8 +320,10 @@ class _SignUpPageState extends State<SignUpPage> {
       case 0:
         return 'Créer un compte';
       case 1:
-        return 'Profil professionnel';
+        return 'Localisation';
       case 2:
+        return 'Profil professionnel';
+      case 3:
         return 'Sécurité du compte';
     }
     return '';
@@ -327,8 +334,10 @@ class _SignUpPageState extends State<SignUpPage> {
       case 0:
         return 'Qui es-tu ?';
       case 1:
-        return 'En savoir plus sur toi (optionnel)';
+        return 'D\'où viens-tu ?';
       case 2:
+        return 'Présente-toi à la communauté';
+      case 3:
         return 'Sécurise ton compte';
     }
     return '';
@@ -342,6 +351,8 @@ class _SignUpPageState extends State<SignUpPage> {
         return _buildStep2();
       case 2:
         return _buildStep3();
+      case 3:
+        return _buildStep4();
     }
     return const SizedBox.shrink();
   }
@@ -408,14 +419,12 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // ─── ÉTAPE 2 — Profil pro (optionnel) ───
+  // ─── ÉTAPE 2 — Localisation (pays + ville obligatoires) ───
   Widget _buildStep2() {
     return ListView(
       key: const ValueKey('step2'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
-        const _OptionalBanner(),
-        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
@@ -427,7 +436,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 values: supportedCountries,
                 onChanged: (v) => setState(() {
                   _country = v;
-                  // Reset la ville sur la 1re du nouveau pays.
                   _city = citiesOf(v).first;
                 }),
               ),
@@ -456,7 +464,29 @@ class _SignUpPageState extends State<SignUpPage> {
             hintText: 'Quartier, rue, n°…',
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
+        const _Hint(text: 'L\'adresse est optionnelle.'),
+      ],
+    );
+  }
+
+  // ─── ÉTAPE 3 — Profil pro (intérêts obligatoires) ───
+  Widget _buildStep3() {
+    return ListView(
+      key: const ValueKey('step3'),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      children: [
+        const _Label('À propos de moi'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _bio,
+          maxLines: 4,
+          maxLength: 240,
+          decoration: const InputDecoration(
+            hintText: 'Présente-toi en quelques lignes…',
+          ),
+        ),
+        const SizedBox(height: 4),
         const _Label('LinkedIn'),
         const SizedBox(height: 6),
         TextField(
@@ -468,40 +498,52 @@ class _SignUpPageState extends State<SignUpPage> {
             hintText: 'linkedin.com/in/...',
           ),
         ),
-        const SizedBox(height: 14),
-        const _Label('À propos de moi'),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _bio,
-          maxLines: 4,
-          maxLength: 240,
-          decoration: const InputDecoration(
-            hintText: 'Présente-toi en quelques lignes…',
-          ),
-        ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
+        const _Hint(
+            text: 'À propos et LinkedIn sont optionnels — tu peux les ajouter plus tard.'),
+        const SizedBox(height: 18),
         Row(
           children: [
-            const Text(
-              "Centres d'intérêt",
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.navyDeep,
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyDeep,
+                ),
+                children: [
+                  TextSpan(text: "Centres d'intérêt"),
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: AppColors.red),
+                  ),
+                ],
               ),
             ),
             const Spacer(),
             Text(
               '${_interests.length} sélectionné${_interests.length > 1 ? "s" : ""}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: AppColors.muted,
+                color: _interests.isEmpty
+                    ? AppColors.red
+                    : AppColors.muted,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        Text(
+          _interests.isEmpty
+              ? 'Choisis au moins 1 secteur qui t\'intéresse pour avancer.'
+              : 'Tu peux en sélectionner plusieurs.',
+          style: TextStyle(
+            fontSize: 11.5,
+            color: _interests.isEmpty ? AppColors.red : AppColors.muted,
+          ),
+        ),
+        const SizedBox(height: 10),
         Wrap(
           spacing: 6,
           runSpacing: 6,
@@ -552,10 +594,10 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // ─── ÉTAPE 3 — Sécurité ───
-  Widget _buildStep3() {
+  // ─── ÉTAPE 4 — Sécurité ───
+  Widget _buildStep4() {
     return ListView(
-      key: const ValueKey('step3'),
+      key: const ValueKey('step4'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
         const _LabelRequired('Téléphone'),
@@ -817,39 +859,6 @@ class _ErrorBox extends StatelessWidget {
                 fontSize: 12.5,
                 color: AppColors.red,
                 fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OptionalBanner extends StatelessWidget {
-  const _OptionalBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.blueTint,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.lightbulb_outline_rounded,
-              size: 18, color: AppColors.blue),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Tous les champs de cette étape sont optionnels — '
-              'tu peux les remplir maintenant ou plus tard depuis ton profil.',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.navyDeep,
-                height: 1.4,
               ),
             ),
           ),
