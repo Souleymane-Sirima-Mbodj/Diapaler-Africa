@@ -40,6 +40,10 @@ class DatabaseService {
         'linkedin': p.linkedin,
         'interests': p.interests,
         'projects': p.projects.map(_projectToMap).toList(),
+        'mentorsActive': p.mentorsActive,
+        'sessionsCount': p.sessionsCount,
+        'favoritesCount': p.favoritesCount,
+        'score': p.score,
         'updatedAt': ServerValue.timestamp,
       };
 
@@ -101,6 +105,10 @@ class DatabaseService {
       linkedin: m['linkedin']?.toString() ?? '',
       interests: interests,
       projects: projects,
+      mentorsActive: (m['mentorsActive'] as num?)?.toInt() ?? 0,
+      sessionsCount: (m['sessionsCount'] as num?)?.toInt() ?? 0,
+      favoritesCount: (m['favoritesCount'] as num?)?.toInt() ?? 0,
+      score: (m['score'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
