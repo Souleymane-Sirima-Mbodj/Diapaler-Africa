@@ -282,6 +282,49 @@ class _CoordsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rows = <_CoordEntry>[
+      _CoordEntry(
+        icon: Icons.mail_outline_rounded,
+        label: 'Email',
+        value: profile.email,
+      ),
+      _CoordEntry(
+        icon: Icons.phone_outlined,
+        label: 'Téléphone',
+        value: profile.phone.isEmpty ? '—' : profile.phone,
+      ),
+      _CoordEntry(
+        icon: Icons.wc_rounded,
+        label: 'Sexe',
+        value: profile.gender.label,
+      ),
+      if (profile.birthDate != null)
+        _CoordEntry(
+          icon: Icons.cake_outlined,
+          label: 'Naissance',
+          value:
+              '${profile.birthDate!.day.toString().padLeft(2, '0')}/${profile.birthDate!.month.toString().padLeft(2, '0')}/${profile.birthDate!.year}'
+              '${profile.age != null ? "  ·  ${profile.age} ans" : ""}',
+        ),
+      if (profile.address.isNotEmpty)
+        _CoordEntry(
+          icon: Icons.home_outlined,
+          label: 'Adresse',
+          value: profile.address,
+        ),
+      _CoordEntry(
+        icon: Icons.public_rounded,
+        label: 'Pays',
+        value: profile.country,
+      ),
+      if (profile.linkedin.isNotEmpty)
+        _CoordEntry(
+          icon: Icons.link_rounded,
+          label: 'LinkedIn',
+          value: profile.linkedin,
+        ),
+    ];
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -290,21 +333,26 @@ class _CoordsCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _CoordRow(
-            icon: Icons.mail_outline_rounded,
-            label: 'Email',
-            value: profile.email,
-          ),
-          const Divider(height: 1, indent: 56, endIndent: 14),
-          _CoordRow(
-            icon: Icons.phone_outlined,
-            label: 'Téléphone',
-            value: profile.phone,
-          ),
+          for (var i = 0; i < rows.length; i++) ...[
+            _CoordRow(
+              icon: rows[i].icon,
+              label: rows[i].label,
+              value: rows[i].value,
+            ),
+            if (i < rows.length - 1)
+              const Divider(height: 1, indent: 56, endIndent: 14),
+          ],
         ],
       ),
     );
   }
+}
+
+class _CoordEntry {
+  final IconData icon;
+  final String label;
+  final String value;
+  _CoordEntry({required this.icon, required this.label, required this.value});
 }
 
 class _CoordRow extends StatelessWidget {
@@ -393,14 +441,15 @@ class _ProjectsSection extends StatelessWidget {
         const SizedBox(height: 10),
         if (profile.projects.isEmpty)
           const _EmptyProjects()
-        else
+        else ...[
           ...profile.projects.map(
             (p) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _ProjectTile(project: p),
             ),
           ),
-        _NewProjectButton(canStart: profile.canStartNewProject),
+          _NewProjectButton(canStart: profile.canStartNewProject),
+        ],
       ],
     );
   }
@@ -534,27 +583,64 @@ class _EmptyProjects extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const AddProjectPage(),
+        ),
       ),
-      child: const Row(
-        children: [
-          Icon(Icons.lightbulb_outline_rounded, color: AppColors.muted),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Aucun projet pour l\'instant. Crée ton premier ↓',
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: AppColors.amber.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.amber.withValues(alpha: 0.5),
+            width: 1.5,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.amber,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.amber.withValues(alpha: 0.45),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.add_rounded,
+                  color: Colors.white, size: 32),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Démarre ton premier projet',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Tape ici pour créer ton projet entrepreneurial.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
                 color: AppColors.muted,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

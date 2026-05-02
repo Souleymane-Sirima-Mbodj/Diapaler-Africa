@@ -1,5 +1,40 @@
 import 'package:flutter/foundation.dart';
 
+enum Gender {
+  female,
+  male,
+  other,
+  undisclosed;
+
+  String get label {
+    switch (this) {
+      case Gender.female:
+        return 'Femme';
+      case Gender.male:
+        return 'Homme';
+      case Gender.other:
+        return 'Autre';
+      case Gender.undisclosed:
+        return 'Préfère ne pas dire';
+    }
+  }
+
+  static Gender fromString(String? raw) {
+    switch (raw) {
+      case 'female':
+        return Gender.female;
+      case 'male':
+        return Gender.male;
+      case 'other':
+        return Gender.other;
+      default:
+        return Gender.undisclosed;
+    }
+  }
+
+  String get serialized => name;
+}
+
 @immutable
 class Project {
   final String id;
@@ -46,10 +81,15 @@ class UserProfile {
   final String lastName;
   final String email;
   final String phone;
+  final Gender gender;
+  final DateTime? birthDate;
+  final String address;
   final String city;
+  final String country;
   final String sector;
   final String role;
   final String bio;
+  final String linkedin;
   final List<String> interests;
   final List<Project> projects;
 
@@ -58,10 +98,15 @@ class UserProfile {
     required this.lastName,
     required this.email,
     required this.phone,
+    this.gender = Gender.undisclosed,
+    this.birthDate,
+    this.address = '',
     required this.city,
+    this.country = 'Sénégal',
     required this.sector,
     required this.role,
     required this.bio,
+    this.linkedin = '',
     required this.interests,
     required this.projects,
   });
@@ -74,8 +119,17 @@ class UserProfile {
     return (f + l).toUpperCase();
   }
 
-  /// Le projet "actif" : le premier non-terminé. S'il n'y a que des projets
-  /// terminés, on retourne le plus récent (dernier de la liste).
+  int? get age {
+    if (birthDate == null) return null;
+    final now = DateTime.now();
+    var a = now.year - birthDate!.year;
+    if (now.month < birthDate!.month ||
+        (now.month == birthDate!.month && now.day < birthDate!.day)) {
+      a--;
+    }
+    return a;
+  }
+
   Project? get currentProject {
     final active = projects.where((p) => !p.isCompleted).toList();
     if (active.isNotEmpty) return active.first;
@@ -83,14 +137,11 @@ class UserProfile {
     return null;
   }
 
-  /// On ne peut démarrer un nouveau projet que si tous les projets existants
-  /// sont terminés (ou s'il n'y en a aucun).
   bool get canStartNewProject {
     if (projects.isEmpty) return true;
     return projects.every((p) => p.isCompleted);
   }
 
-  // Backward-compat getters utilisés par HomePage / ProfileSheet.
   String get projectName => currentProject?.name ?? 'Aucun projet';
   String get projectDescription => currentProject?.description ?? '';
   int get projectStep => currentProject?.step ?? 0;
@@ -102,10 +153,16 @@ class UserProfile {
     String? lastName,
     String? email,
     String? phone,
+    Gender? gender,
+    DateTime? birthDate,
+    bool clearBirthDate = false,
+    String? address,
     String? city,
+    String? country,
     String? sector,
     String? role,
     String? bio,
+    String? linkedin,
     List<String>? interests,
     List<Project>? projects,
   }) {
@@ -114,10 +171,15 @@ class UserProfile {
       lastName: lastName ?? this.lastName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      gender: gender ?? this.gender,
+      birthDate: clearBirthDate ? null : (birthDate ?? this.birthDate),
+      address: address ?? this.address,
       city: city ?? this.city,
+      country: country ?? this.country,
       sector: sector ?? this.sector,
       role: role ?? this.role,
       bio: bio ?? this.bio,
+      linkedin: linkedin ?? this.linkedin,
       interests: interests ?? this.interests,
       projects: projects ?? this.projects,
     );
@@ -134,7 +196,6 @@ class UserProfileController {
   }
 
   /// Ajoute un projet, uniquement si l'utilisateur peut en démarrer un nouveau.
-  /// Retourne true si l'opération a réussi.
   static bool addProject(Project p) {
     final current = profile.value;
     if (!current.canStartNewProject) return false;
@@ -144,7 +205,6 @@ class UserProfileController {
     return true;
   }
 
-  /// Met à jour un projet existant (par id).
   static void updateProject(Project updated) {
     final current = profile.value;
     profile.value = current.copyWith(
@@ -154,28 +214,33 @@ class UserProfileController {
     );
   }
 
-  static const _seed = UserProfile(
+  static final UserProfile _seed = UserProfile(
     firstName: 'Mariéme',
     lastName: 'Tine',
     email: 'marieme.tine@esp.sn',
     phone: '+221 77 123 45 67',
+    gender: Gender.female,
+    birthDate: DateTime(2001, 6, 14),
+    address: 'Sicap Liberté 6, Villa 1234',
     city: 'Dakar',
+    country: 'Sénégal',
     sector: 'Mode & Textile',
     role: 'Entrepreneure',
+    linkedin: 'linkedin.com/in/marieme-tine',
     bio:
         "Diplômée de l'École Supérieure Polytechnique de Dakar, je porte le projet "
         'Téranga Mode — une marque de prêt-à-porter qui valorise les tissus '
         'traditionnels sénégalais (bogolan, wax, bazin) à travers des coupes '
         "contemporaines. Je cherche un mentor pour structurer mon modèle "
         'économique et accéder au financement DER/FJ.',
-    interests: [
+    interests: const [
       'Mode & Textile',
       'Artisanat',
       'Cosmétique',
       'E-commerce',
       'Made in Sénégal',
     ],
-    projects: [
+    projects: const [
       Project(
         id: 'teranga-mode',
         name: 'Téranga Mode',

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../data/user_profile.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/diapaler_logo.dart';
 import 'root_shell.dart';
@@ -12,9 +15,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _email = TextEditingController(text: 'marieme.tine@esp.sn');
-  final _password = TextEditingController(text: '••••••••••');
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -23,10 +28,39 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _signIn() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const RootShell()),
-    );
+  Future<void> _signIn() async {
+    if (_email.text.trim().isEmpty || _password.text.isEmpty) {
+      setState(() => _error = 'Email et mot de passe requis.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final cred = await AuthService.signIn(
+        email: _email.text,
+        password: _password.text,
+      );
+      // Recharge le profil depuis RTDB pour synchroniser l'app.
+      final uid = cred.user?.uid;
+      if (uid != null) {
+        final remote = await DatabaseService.readUserProfile(uid);
+        if (remote != null) {
+          UserProfileController.update(remote);
+        }
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RootShell()),
+        (_) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = AuthService.humanError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -74,6 +108,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline_rounded,
                     color: AppColors.subtle, size: 20),
@@ -86,6 +121,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _password,
               obscureText: _obscure,
+              onSubmitted: (_) => _signIn(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline_rounded,
                     color: AppColors.subtle, size: 20),
@@ -121,24 +157,65 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: AppColors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _signIn,
+                onPressed: _loading ? null : _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.navy,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      AppColors.navy.withValues(alpha: 0.5),
                 ),
-                child: const Text(
-                  'SE CONNECTER',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    fontSize: 14,
-                  ),
-                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        'SE CONNECTER',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 24),
