@@ -1,11 +1,33 @@
 // ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
+import 'page_choix_role.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
+
+/// Pourcentage de complétion du profil — basé sur les champs remplis.
+double _profileCompletion(UserProfile p) {
+  final fields = <bool>[
+    p.firstName.isNotEmpty,
+    p.lastName.isNotEmpty,
+    p.email.isNotEmpty,
+    p.phone.isNotEmpty,
+    p.birthDate != null,
+    p.address.isNotEmpty,
+    p.city.isNotEmpty,
+    p.country.isNotEmpty,
+    p.sector.isNotEmpty,
+    p.bio.isNotEmpty,
+    p.linkedin.isNotEmpty,
+    p.interests.isNotEmpty,
+  ];
+  final filled = fields.where((x) => x).length;
+  return filled / fields.length;
+}
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -15,6 +37,7 @@ class ProfilePage extends StatelessWidget {
     return ValueListenableBuilder<UserProfile>(
       valueListenable: UserProfileController.profile,
       builder: (_, p, __) {
+        final completion = _profileCompletion(p);
         return Scaffold(
           appBar: AppBar(
             title: const Text('Mon profil'),
@@ -34,8 +57,14 @@ class ProfilePage extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
-              _IdentityCard(profile: p),
+              _IdentityCard(profile: p, completion: completion),
               const SizedBox(height: 14),
+              _AchievementsRow(profile: p, completion: completion),
+              if (completion < 1.0) ...[
+                const SizedBox(height: 14),
+                _CompleteProfileCta(percent: completion),
+              ],
+              const SizedBox(height: 18),
               const _StatsStrip(),
               const SizedBox(height: 18),
               LayoutBuilder(
@@ -45,33 +74,35 @@ class ProfilePage extends StatelessWidget {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _CoordsCard(profile: p)),
-                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             children: [
-                              _InterestsCard(interests: p.interests),
-                              const SizedBox(height: 14),
                               _AboutCard(profile: p),
+                              const SizedBox(height: 14),
+                              _CoordsCard(profile: p),
                             ],
                           ),
                         ),
+                        const SizedBox(width: 14),
+                        Expanded(child: _InterestsCard(interests: p.interests)),
                       ],
                     );
                   }
                   return Column(
                     children: [
+                      _AboutCard(profile: p),
+                      const SizedBox(height: 14),
                       _CoordsCard(profile: p),
                       const SizedBox(height: 14),
                       _InterestsCard(interests: p.interests),
-                      const SizedBox(height: 14),
-                      _AboutCard(profile: p),
                     ],
                   );
                 },
               ),
               const SizedBox(height: 18),
               _ProjectsSection(profile: p),
+              const SizedBox(height: 22),
+              const _LogoutButton(),
             ],
           ),
         );
@@ -85,10 +116,12 @@ class ProfilePage extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 class _IdentityCard extends StatelessWidget {
   final UserProfile profile;
-  const _IdentityCard({required this.profile});
+  final double completion;
+  const _IdentityCard({required this.profile, required this.completion});
 
   @override
   Widget build(BuildContext context) {
+    final percent = (completion * 100).round();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -99,79 +132,125 @@ class _IdentityCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
+          Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.amber, width: 2),
-                ),
-                child: Avatar(
-                  initials: profile.initials,
-                  size: 64,
-                  background: AppColors.amber,
-                  foreground: AppColors.navyDeep,
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: AppColors.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.navy, width: 2),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.amber, width: 2),
+                    ),
+                    child: Avatar(
+                      initials: profile.initials,
+                      size: 64,
+                      background: AppColors.amber,
+                      foreground: AppColors.navyDeep,
+                    ),
                   ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.navy, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.fullName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${profile.role} · ${profile.sector}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.place_outlined,
+                            color: AppColors.amber, size: 13),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            profile.city,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.amber,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Text('  ·  🇸🇳', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.fullName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+          const SizedBox(height: 14),
+          // Barre de complétion du profil
+          Row(
+            children: [
+              const Icon(Icons.bolt_rounded,
+                  color: AppColors.amber, size: 14),
+              const SizedBox(width: 4),
+              const Text(
+                'Profil complété',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${profile.role} · ${profile.sector}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              const Spacer(),
+              Text(
+                '$percent %',
+                style: const TextStyle(
+                  color: AppColors.amber,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.place_outlined,
-                        color: AppColors.amber, size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      profile.city,
-                      style: const TextStyle(
-                        color: AppColors.amber,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Text('  ·  🇸🇳', style: TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: completion,
+              minHeight: 6,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.amber),
             ),
           ),
         ],
@@ -758,6 +837,7 @@ class _AboutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasBio = profile.bio.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -778,15 +858,339 @@ class _AboutCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          if (hasBio)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 3,
+                  height: 38,
+                  margin: const EdgeInsets.only(right: 10, top: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    profile.bio,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.navyDeep,
+                      height: 1.55,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.fieldBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lightbulb_outline_rounded,
+                        color: AppColors.amber, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      "Ajoute une bio pour te présenter aux mentors et investisseurs.",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.muted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Succès / badges — gamification
+// ─────────────────────────────────────────────────────────────────
+class _AchievementsRow extends StatelessWidget {
+  final UserProfile profile;
+  final double completion;
+  const _AchievementsRow({required this.profile, required this.completion});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_Achievement>[
+      const _Achievement(
+        icon: Icons.verified_rounded,
+        label: 'Inscrit',
+        unlocked: true,
+        color: AppColors.green,
+      ),
+      _Achievement(
+        icon: Icons.rocket_launch_rounded,
+        label: '1er projet',
+        unlocked: profile.projects.isNotEmpty,
+        color: AppColors.amber,
+      ),
+      _Achievement(
+        icon: Icons.handshake_rounded,
+        label: 'Mentoré',
+        unlocked: profile.mentorsActive > 0,
+        color: AppColors.blue,
+      ),
+      _Achievement(
+        icon: Icons.workspace_premium_rounded,
+        label: 'Profil complet',
+        unlocked: completion >= 1.0,
+        color: AppColors.purple,
+      ),
+    ];
+    return SizedBox(
+      height: 76,
+      child: Row(
+        children: List.generate(items.length, (i) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i < items.length - 1 ? 8 : 0),
+              child: _AchievementChip(item: items[i]),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _Achievement {
+  final IconData icon;
+  final String label;
+  final bool unlocked;
+  final Color color;
+  const _Achievement({
+    required this.icon,
+    required this.label,
+    required this.unlocked,
+    required this.color,
+  });
+}
+
+class _AchievementChip extends StatelessWidget {
+  final _Achievement item;
+  const _AchievementChip({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocked = item.unlocked;
+    final color = unlocked ? item.color : AppColors.subtle;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: unlocked
+              ? color.withValues(alpha: 0.45)
+              : AppColors.border,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? color.withValues(alpha: 0.15)
+                  : AppColors.fieldBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              unlocked ? item.icon : Icons.lock_outline_rounded,
+              color: color,
+              size: 16,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
-            profile.bio,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.navyDeep,
-              height: 1.55,
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: unlocked ? AppColors.navyDeep : AppColors.subtle,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CTA "Compléter mon profil" — visible si <100%
+// ─────────────────────────────────────────────────────────────────
+class _CompleteProfileCta extends StatelessWidget {
+  final double percent;
+  const _CompleteProfileCta({required this.percent});
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = ((1 - percent) * 100).round();
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const EditProfilePage(),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.amber.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.amber.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: AppColors.amber,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.edit_rounded,
+                  color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Complète ton profil',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Plus ton profil est complet, plus tu reçois de propositions.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.amber,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '+$remaining %',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bouton "Se déconnecter" en bas de page
+// ─────────────────────────────────────────────────────────────────
+class _LogoutButton extends StatelessWidget {
+  const _LogoutButton();
+
+  Future<void> _confirmAndLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Se déconnecter ?'),
+        content: const Text(
+          'Tu devras te reconnecter pour accéder à ton tableau de bord.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Se déconnecter'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await AuthService.signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => FadeTransition(
+          opacity: a,
+          child: const RoleSelectionPage(),
+        ),
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+      (_) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmAndLogout(context),
+        icon: const Icon(Icons.logout_rounded, size: 18),
+        label: const Text(
+          'Se déconnecter',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.red,
+          side: BorderSide(color: AppColors.red.withValues(alpha: 0.4)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
       ),
     );
   }
