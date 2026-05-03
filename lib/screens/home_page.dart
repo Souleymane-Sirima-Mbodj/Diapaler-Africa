@@ -11,6 +11,7 @@ import '../widgets/rotating_tagline.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
 import 'add_project_page.dart';
+import 'matching_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -64,10 +65,7 @@ class _HomePageState extends State<HomePage> {
       const SizedBox(height: 14),
       const _StatsStrip(),
       const SizedBox(height: 22),
-      const SectionHeader(
-        title: 'Mentors recommandés',
-        action: 'Tout voir',
-      ),
+      const _RecommendedHeader(),
       const SizedBox(height: 10),
       const _RecommendedMentors(),
       const SizedBox(height: 4),
@@ -590,6 +588,21 @@ class _StatPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RecommendedHeader extends StatelessWidget {
+  const _RecommendedHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionHeader(
+      title: 'Mentors recommandés',
+      action: 'Tout voir',
+      onAction: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const MatchingPage()),
       ),
     );
   }
