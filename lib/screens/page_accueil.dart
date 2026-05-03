@@ -236,11 +236,8 @@ class _NavyHero extends StatelessWidget {
                   const SizedBox(height: 14),
                   // Barre de recherche
                   GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const MatchingPage(),
-                      ),
-                    ),
+                    // TODO: réactiver — Navigator.push(MatchingPage)
+                    onTap: () {},
                     child: Container(
                       height: 44,
                       padding:
@@ -527,9 +524,8 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.roleMentor,
           title: 'Trouver',
           subtitle: 'un mentor',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MatchingPage()),
-          ),
+          // TODO: réactiver — Navigator.push(MatchingPage)
+          onTap: () {},
         ),
         _QuickAction(
           icon: Icons.upload_file_rounded,
@@ -760,9 +756,8 @@ class _RecommendedHeader extends StatelessWidget {
     return SectionHeader(
       title: 'Mentors pour toi',
       action: 'Voir tout →',
-      onAction: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const RecommendedMentorsPage()),
-      ),
+      // TODO: réactiver — Navigator.push(RecommendedMentorsPage)
+      onAction: () {},
     );
   }
 }
