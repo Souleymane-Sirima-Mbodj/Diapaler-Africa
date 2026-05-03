@@ -182,7 +182,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ],
             ),
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 18),
           const _Section('Identité'),
           Row(
             children: [
@@ -205,7 +205,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _Field(
             label: 'Email',
             icon: Icons.mail_outline_rounded,
@@ -214,7 +214,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             trailing: const Icon(Icons.lock_outline_rounded,
                 size: 16, color: AppColors.subtle),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _PhoneField(controller: _phone),
           const SizedBox(height: 12),
           const _SubLabel('Sexe'),
@@ -223,7 +223,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             value: _gender,
             onChanged: (g) => setState(() => _gender = g),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _DateField(
             label: 'Date de naissance',
             value: _birthDate,
@@ -232,7 +232,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ? null
                 : () => setState(() => _birthDate = null),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           const _Section('Localisation'),
           _Dropdown(
             label: 'Pays *',
@@ -244,7 +244,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               _city = citiesOf(v).first;
             }),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _Dropdown(
             label: 'Ville *',
             icon: Icons.place_outlined,
@@ -252,14 +252,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
             values: citiesOf(_country),
             onChanged: (v) => setState(() => _city = v),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _Field(
             label: 'Adresse',
             icon: Icons.home_outlined,
             controller: _address,
             hint: 'Quartier, rue, n°…',
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           const _Section('Profil professionnel'),
           _Dropdown(
             label: "Secteur d'activité",
@@ -268,7 +268,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             values: allSectors,
             onChanged: (v) => setState(() => _sector = v),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _Field(
             label: 'LinkedIn (optionnel)',
             icon: Icons.link_rounded,
@@ -286,7 +286,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               }
             }),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           const _Section('À propos de moi'),
           TextField(
             controller: _bio,
@@ -328,11 +328,11 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 12.5,
           fontWeight: FontWeight.w800,
           color: AppColors.muted,
           letterSpacing: 0.4,
@@ -381,7 +381,7 @@ class _Field extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubLabel(label),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         TextField(
           controller: controller,
           readOnly: readOnly,
@@ -473,7 +473,7 @@ class _Dropdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubLabel(label),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         DropdownButtonFormField<String>(
           initialValue: safeValue,
           isExpanded: true,
@@ -516,7 +516,7 @@ class _DateField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubLabel(label),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),

@@ -44,28 +44,6 @@ class ProfilePage extends StatelessWidget {
               _InterestsCard(interests: p.interests),
               const SizedBox(height: 14),
               _AboutCard(profile: p),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      fullscreenDialog: true,
-                      builder: (_) => const EditProfilePage(),
-                    ),
-                  ),
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  label: const Text(
-                    'MODIFIER MON PROFIL',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         );
