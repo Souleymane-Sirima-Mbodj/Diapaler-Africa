@@ -1,4 +1,4 @@
-// ignore_for_file: unused_import
+// ignore_for_file: unused_import, unused_element
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
@@ -58,8 +58,9 @@ class ProfilePage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
               _IdentityCard(profile: p, completion: completion),
-              const SizedBox(height: 14),
-              _AchievementsRow(profile: p, completion: completion),
+              // TODO: réactiver — _AchievementsRow(profile: p, completion: completion)
+              //   quand les flows "Créer un projet" et "Devenir mentoré" seront
+              //   rebranchés (sinon 3 badges sur 4 restent verrouillés et confus).
               if (completion < 1.0) ...[
                 const SizedBox(height: 14),
                 _CompleteProfileCta(percent: completion),
