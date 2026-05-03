@@ -7,10 +7,11 @@ import '../widgets/avatar.dart';
 import '../widgets/hover_glow_card.dart';
 import '../widgets/mentor_card.dart';
 import '../widgets/profile_sheet.dart';
-import '../widgets/rotating_tagline.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
 import 'add_project_page.dart';
+import 'matching_page.dart';
+import 'pitch_page.dart';
 import 'recommended_mentors_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -40,18 +41,16 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: AppColors.amber,
-          backgroundColor: Theme.of(context).cardTheme.color,
-          onRefresh: _refresh,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 90),
-            children: _loading ? _skeletons() : _content(),
+      body: RefreshIndicator(
+        color: AppColors.amber,
+        backgroundColor: Theme.of(context).cardTheme.color,
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
           ),
+          padding: const EdgeInsets.only(bottom: 90),
+          children: _loading ? _skeletons() : _content(),
         ),
       ),
     );
@@ -59,128 +58,224 @@ class _HomePageState extends State<HomePage> {
 
   List<Widget> _content() {
     return [
-      const _Header(),
-      const SizedBox(height: 18),
-      const _ProjectHero(),
+      const _NavyHero(),
       const SizedBox(height: 14),
-      const _StatsStrip(),
-      const SizedBox(height: 22),
-      const _RecommendedHeader(),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _ProjectHero(),
+      ),
+      const SizedBox(height: 18),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: SectionHeader(title: 'Actions rapides'),
+      ),
       const SizedBox(height: 10),
-      const _RecommendedMentors(),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _QuickActionsGrid(),
+      ),
+      const SizedBox(height: 18),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _StatsStrip(),
+      ),
+      const SizedBox(height: 22),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _RecommendedHeader(),
+      ),
+      const SizedBox(height: 10),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _RecommendedMentors(),
+      ),
       const SizedBox(height: 4),
-      const _DerCard(),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _DerCard(),
+      ),
     ];
   }
 
   List<Widget> _skeletons() {
     return const [
-      Row(
-        children: [
-          SkeletonBox(width: 42, height: 42, radius: 999),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonBox(width: 160, height: 16),
-                SizedBox(height: 6),
-                SkeletonBox(width: 130, height: 11),
-              ],
-            ),
-          ),
-          SizedBox(width: 12),
-          SkeletonBox(width: 40, height: 40, radius: 12),
-        ],
-      ),
-      SizedBox(height: 18),
-      SkeletonBox(width: double.infinity, height: 130, radius: 18),
-      SizedBox(height: 14),
-      SizedBox(
-        height: 64,
+      Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
         child: Row(
           children: [
-            Expanded(child: SkeletonBox(height: 64, radius: 12)),
-            SizedBox(width: 8),
-            Expanded(child: SkeletonBox(height: 64, radius: 12)),
-            SizedBox(width: 8),
-            Expanded(child: SkeletonBox(height: 64, radius: 12)),
+            SkeletonBox(width: 42, height: 42, radius: 999),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(width: 160, height: 16),
+                  SizedBox(height: 6),
+                  SkeletonBox(width: 130, height: 11),
+                ],
+              ),
+            ),
+            SizedBox(width: 12),
+            SkeletonBox(width: 40, height: 40, radius: 12),
           ],
         ),
       ),
+      SizedBox(height: 18),
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: SkeletonBox(width: double.infinity, height: 130, radius: 18),
+      ),
+      SizedBox(height: 14),
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              Expanded(child: SkeletonBox(height: 64, radius: 12)),
+              SizedBox(width: 8),
+              Expanded(child: SkeletonBox(height: 64, radius: 12)),
+              SizedBox(width: 8),
+              Expanded(child: SkeletonBox(height: 64, radius: 12)),
+            ],
+          ),
+        ),
+      ),
       SizedBox(height: 22),
-      MentorCardSkeleton(),
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: MentorCardSkeleton(),
+      ),
       SizedBox(height: 10),
-      MentorCardSkeleton(),
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: MentorCardSkeleton(),
+      ),
     ];
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Header — avatar + greeting + citation rotative + cloche
+// Hero navy avec greeting + searchbar (style maquette)
 // ─────────────────────────────────────────────────────────────────
-class _Header extends StatelessWidget {
-  const _Header();
+class _NavyHero extends StatelessWidget {
+  const _NavyHero();
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<UserProfile>(
       valueListenable: UserProfileController.profile,
       builder: (_, p, __) {
-        return Row(
-          children: [
-            GestureDetector(
-              onTap: () => showProfileSheet(context),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Avatar(
-                  initials: p.initials,
-                  size: 42,
-                  background: AppColors.amber,
-                  foreground: AppColors.navyDeep,
-                  online: true,
-                ),
-              ),
+        return Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.navyDeep, AppColors.navy, AppColors.blue],
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'Bonjour, ${p.firstName}',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.navyDeep,
+                      GestureDetector(
+                        onTap: () => showProfileSheet(context),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Avatar(
+                            initials: p.initials,
+                            size: 50,
+                            background: AppColors.amber,
+                            foreground: AppColors.navyDeep,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      const Text('👋', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Text(
+                                  'Bonjour ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text('🇸🇳', style: TextStyle(fontSize: 14)),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              p.fullName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _NotifBell(onTap: () {}),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  const RotatingTagline(),
+                  const SizedBox(height: 14),
+                  // Barre de recherche
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const MatchingPage(),
+                      ),
+                    ),
+                    child: Container(
+                      height: 44,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.search_rounded,
+                              color: AppColors.subtle, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Rechercher un mentor, secteur…',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.subtle,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            _IconBubble(
-              icon: Icons.notifications_none_rounded,
-              onTap: () {},
-            ),
-          ],
+          ),
         );
       },
     );
   }
 }
 
-class _IconBubble extends StatelessWidget {
-  final IconData icon;
+class _NotifBell extends StatelessWidget {
   final VoidCallback onTap;
-  const _IconBubble({required this.icon, required this.onTap});
+  const _NotifBell({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -188,15 +283,33 @@ class _IconBubble extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Icon(icon, color: AppColors.navy, size: 20),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.notifications_none_rounded,
+                  color: Colors.white, size: 22),
+            ),
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: AppColors.amber,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.navy, width: 1.5),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -333,7 +446,6 @@ class _ProgressCard extends StatelessWidget {
     final p = profile;
     final step = p.projectStep;
     final total = p.projectTotalSteps;
-    final percent = (p.progress * 100).round();
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -341,120 +453,215 @@ class _ProgressCard extends StatelessWidget {
           // Page détail projet — à brancher plus tard
         },
         child: Container(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.navyDeep, AppColors.navy, AppColors.blue],
-            ),
-            borderRadius: BorderRadius.circular(18),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.navy.withValues(alpha: 0.22),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
+                color: AppColors.navy.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Stack(
-        children: [
-          Positioned(
-            top: -28,
-            right: -28,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.amber.withValues(alpha: 0.15),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -18,
-            right: 30,
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.blue.withValues(alpha: 0.22),
-              ),
-            ),
-          ),
-          Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'MON PROJET',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.amber,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                p.projectName,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.navyDeep,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                p.projectDescription.isEmpty
+                    ? p.sector
+                    : p.projectDescription,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.muted,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.amber,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text(
-                      '🚀  PROJET EN COURS',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.navyDeep,
-                        letterSpacing: 0.4,
-                      ),
+                  Text(
+                    'Étape $step / $total',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Spacer(),
-                  AnimatedCounter(
-                    value: percent,
-                    suffix: ' %',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: p.progress),
+                        duration: const Duration(milliseconds: 1100),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, v, __) => LinearProgressIndicator(
+                          value: v,
+                          minHeight: 6,
+                          backgroundColor: AppColors.fieldBg,
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(
+                                  AppColors.amber),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                p.projectName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Étape $step / $total · ${p.sector}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: p.progress),
-                  duration: const Duration(milliseconds: 1100),
-                  curve: Curves.easeOutCubic,
-                  builder: (_, v, __) => LinearProgressIndicator(
-                    value: v,
-                    minHeight: 6,
-                    backgroundColor: Colors.white.withValues(alpha: 0.22),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.amber),
-                  ),
-                ),
-              ),
             ],
           ),
-        ],
-      ),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Actions rapides — grille 2x2 (style maquette)
+// ─────────────────────────────────────────────────────────────────
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 2.4,
+      children: [
+        _QuickAction(
+          icon: Icons.handshake_rounded,
+          color: AppColors.roleMentor,
+          title: 'Trouver',
+          subtitle: 'un mentor',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MatchingPage()),
+          ),
+        ),
+        _QuickAction(
+          icon: Icons.upload_file_rounded,
+          color: AppColors.amber,
+          title: 'Déposer',
+          subtitle: 'un pitch',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => const PitchPage(),
+            ),
+          ),
+        ),
+        _QuickAction(
+          icon: Icons.account_balance_rounded,
+          color: AppColors.roleEntrepreneur,
+          title: 'DER / FJ',
+          subtitle: 'Orientation',
+          onTap: () {},
+        ),
+        _QuickAction(
+          icon: Icons.workspace_premium_rounded,
+          color: AppColors.green,
+          title: 'CIS',
+          subtitle: 'Investisseurs',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MatchingPage()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _QuickAction({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return HoverGlowCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -599,8 +806,8 @@ class _RecommendedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionHeader(
-      title: 'Mentors recommandés',
-      action: 'Tout voir',
+      title: 'Mentors pour toi',
+      action: 'Voir tout →',
       onAction: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const RecommendedMentorsPage()),
       ),
