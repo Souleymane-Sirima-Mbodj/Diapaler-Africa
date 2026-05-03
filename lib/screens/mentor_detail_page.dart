@@ -17,7 +17,7 @@ class MentorDetailPage extends StatelessWidget {
             backgroundColor: AppColors.navy,
             foregroundColor: Colors.white,
             elevation: 0,
-            expandedHeight: 240,
+            expandedHeight: 290,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -29,61 +29,108 @@ class MentorDetailPage extends StatelessWidget {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
-                    child: Row(
+                    padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Avatar(
-                          initials: mentor.initials,
-                          size: 78,
-                          background: AppColors.amber,
-                          foreground: AppColors.navyDeep,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Avatar(
+                              initials: mentor.initials,
+                              size: 70,
+                              background: AppColors.amber,
+                              foreground: AppColors.navyDeep,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      mentor.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          mentor.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 19,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      if (mentor.cis) const _CisBadgeBig(),
+                                    ],
                                   ),
-                                  if (mentor.cis) const _CisBadgeBig(),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                mentor.title,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on_outlined,
-                                      color: Colors.white60, size: 14),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    mentor.city,
+                                    mentor.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Colors.white70,
-                                      fontSize: 12,
+                                      fontSize: 12.5,
+                                      height: 1.3,
                                     ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      _HeroChip(
+                                        icon: Icons.location_on_outlined,
+                                        label: mentor.city,
+                                      ),
+                                      _HeroChip(
+                                        icon: Icons.business_rounded,
+                                        label:
+                                            '${mentor.companies.length} entreprise${mentor.companies.length > 1 ? "s" : ""}',
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          height: 1,
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                        const SizedBox(height: 14),
+                        // Stats inline dans le hero
+                        Row(
+                          children: [
+                            Expanded(child: _HeroStat(
+                              icon: Icons.star_rounded,
+                              color: AppColors.amber,
+                              value: mentor.rating.toStringAsFixed(1),
+                              label: 'Note',
+                            )),
+                            _HeroDivider(),
+                            Expanded(child: _HeroStat(
+                              icon: Icons.bolt_rounded,
+                              color: AppColors.green,
+                              value: '${mentor.compatibility} %',
+                              label: 'Match',
+                            )),
+                            _HeroDivider(),
+                            Expanded(child: _HeroStat(
+                              icon: Icons.timeline_rounded,
+                              color: AppColors.blueBright,
+                              value: '${mentor.years}+',
+                              label: 'Années',
+                            )),
+                            _HeroDivider(),
+                            Expanded(child: _HeroStat(
+                              icon: Icons.reviews_rounded,
+                              color: AppColors.purple,
+                              value: '${mentor.reviews}',
+                              label: 'Avis',
+                            )),
+                          ],
                         ),
                       ],
                     ),
@@ -95,8 +142,6 @@ class MentorDetailPage extends StatelessWidget {
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: 18),
-              _StatsRow(mentor: mentor),
-              const SizedBox(height: 22),
               const _SectionTitle('À propos'),
               const SizedBox(height: 8),
               Padding(
@@ -263,98 +308,83 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _StatsRow extends StatelessWidget {
-  final Mentor mentor;
-  const _StatsRow({required this.mentor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _Stat(
-              icon: Icons.star_rounded,
-              color: AppColors.amber,
-              label: 'Note',
-              value: mentor.rating.toStringAsFixed(1),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _Stat(
-              icon: Icons.bolt_rounded,
-              color: AppColors.green,
-              label: 'Match',
-              value: '${mentor.compatibility} %',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _Stat(
-              icon: Icons.timeline_rounded,
-              color: AppColors.blue,
-              label: 'Années',
-              value: '${mentor.years}+',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _Stat(
-              icon: Icons.reviews_rounded,
-              color: AppColors.purple,
-              label: 'Avis',
-              value: '${mentor.reviews}',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
+class _HeroStat extends StatelessWidget {
   final IconData icon;
   final Color color;
-  final String label;
   final String value;
-
-  const _Stat({
+  final String label;
+  const _HeroStat({
     required this.icon,
     required this.color,
-    required this.label,
     required this.value,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              color: AppColors.navyDeep,
-            ),
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            height: 1,
           ),
-          const SizedBox(height: 2),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 38,
+      color: Colors.white.withValues(alpha: 0.15),
+    );
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _HeroChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.amber, size: 12),
+          const SizedBox(width: 4),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 10.5,
-              color: AppColors.muted,
-              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
