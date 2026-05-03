@@ -723,7 +723,7 @@ class _DerCard extends StatelessWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Candidatures ouvertes',
+                  'Candidater pour un financement',
                   style: TextStyle(fontSize: 11.5, color: AppColors.muted),
                 ),
               ],
