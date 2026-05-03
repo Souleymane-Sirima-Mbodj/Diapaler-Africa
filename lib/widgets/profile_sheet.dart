@@ -109,15 +109,24 @@ class _ProfileSheet extends StatelessWidget {
                 );
               },
             ),
-            const _Tile(
-              icon: Icons.workspace_premium_outlined,
-              label: 'Mes pitchs déposés',
-              trailing: '2',
-            ),
-            const _Tile(
-              icon: Icons.bookmark_border_rounded,
-              label: 'Mentors favoris',
-              trailing: '4',
+            ValueListenableBuilder<UserProfile>(
+              valueListenable: UserProfileController.profile,
+              builder: (_, p, __) {
+                return Column(
+                  children: [
+                    _Tile(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Mes pitchs déposés',
+                      trailing: '${p.projects.length}',
+                    ),
+                    _Tile(
+                      icon: Icons.bookmark_border_rounded,
+                      label: 'Mentors favoris',
+                      trailing: '${p.favoritesCount}',
+                    ),
+                  ],
+                );
+              },
             ),
             const _Tile(
               icon: Icons.language_rounded,

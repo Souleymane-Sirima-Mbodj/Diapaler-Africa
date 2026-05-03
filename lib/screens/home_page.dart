@@ -170,7 +170,6 @@ class _Header extends StatelessWidget {
             ),
             _IconBubble(
               icon: Icons.notifications_none_rounded,
-              badge: '3',
               onTap: () {},
             ),
           ],
@@ -183,52 +182,25 @@ class _Header extends StatelessWidget {
 class _IconBubble extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final String? badge;
-  const _IconBubble({required this.icon, required this.onTap, this.badge});
+  const _IconBubble({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: onTap,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Icon(icon, color: AppColors.navy, size: 20),
-            ),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
           ),
+          child: Icon(icon, color: AppColors.navy, size: 20),
         ),
-        if (badge != null)
-          Positioned(
-            right: -4,
-            top: -4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: AppColors.red,
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: Text(
-                badge!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }
