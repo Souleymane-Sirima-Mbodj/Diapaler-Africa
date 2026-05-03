@@ -9,6 +9,8 @@ import '../widgets/mentor_card.dart';
 import '../widgets/profile_sheet.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
+// ignore_for_file: unused_import
+// (imports gardés en place — réactivés quand les redirections seront rebranchées)
 import 'add_project_page.dart';
 import 'matching_page.dart';
 import 'pitch_page.dart';
@@ -342,14 +344,10 @@ class _EmptyProjectHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
+      cursor: SystemMouseCursors.basic,
       child: GestureDetector(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            fullscreenDialog: true,
-            builder: (_) => const AddProjectPage(),
-          ),
-        ),
+        // TODO: réactiver — Navigator.push(AddProjectPage)
+        onTap: () {},
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -579,12 +577,8 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.amber,
           title: 'Déposer',
           subtitle: 'un pitch',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              fullscreenDialog: true,
-              builder: (_) => const PitchPage(),
-            ),
-          ),
+          // TODO: réactiver — Navigator.push(PitchPage)
+          onTap: () {},
         ),
         _QuickAction(
           icon: Icons.account_balance_rounded,
@@ -598,9 +592,8 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.green,
           title: 'CIS',
           subtitle: 'Investisseurs',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MatchingPage()),
-          ),
+          // TODO: réactiver — Navigator.push(MatchingPage)
+          onTap: () {},
         ),
       ],
     );

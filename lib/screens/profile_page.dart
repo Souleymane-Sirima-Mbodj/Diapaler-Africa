@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 import '../data/user_profile.dart';
 import '../theme/app_theme.dart';
@@ -592,12 +593,8 @@ class _EmptyProjects extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => const AddProjectPage(),
-        ),
-      ),
+      // TODO: réactiver — Navigator.push(AddProjectPage)
+      onTap: () {},
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
@@ -666,14 +663,8 @@ class _NewProjectButton extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
-          onPressed: canStart
-              ? () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      fullscreenDialog: true,
-                      builder: (_) => const AddProjectPage(),
-                    ),
-                  )
-              : null,
+          // TODO: réactiver — Navigator.push(AddProjectPage)
+          onPressed: canStart ? () {} : null,
           icon: const Icon(Icons.add_rounded, size: 18),
           label: const Text(
             'Nouveau projet',

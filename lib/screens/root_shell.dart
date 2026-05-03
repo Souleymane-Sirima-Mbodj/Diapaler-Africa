@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -22,12 +23,7 @@ class _RootShellState extends State<RootShell> {
   ];
 
   void _openPitch() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const PitchPage(),
-      ),
-    );
+    // TODO: réactiver — Navigator.push(PitchPage)
   }
 
   @override
