@@ -33,23 +33,28 @@ class _CursorFollowerState extends State<CursorFollower>
     AppColors.amber,
   ];
 
-  bool get _enabled =>
+  bool get _platformEnabled =>
       kIsWeb ||
       defaultTargetPlatform == TargetPlatform.macOS ||
       defaultTargetPlatform == TargetPlatform.linux ||
       defaultTargetPlatform == TargetPlatform.windows;
 
+  /// Coupé sur les écrans étroits (mobile / mode responsive Chrome) :
+  /// la traînée d'étoiles est purement décorative pour curseur souris.
+  bool _enabledFor(BuildContext context) =>
+      _platformEnabled && MediaQuery.of(context).size.width >= 700;
+
   @override
   void initState() {
     super.initState();
-    if (_enabled) {
+    if (_platformEnabled) {
       _ticker = createTicker(_onTick)..start();
     }
   }
 
   @override
   void dispose() {
-    if (_enabled) _ticker.dispose();
+    if (_platformEnabled) _ticker.dispose();
     _tickNotifier.dispose();
     super.dispose();
   }
@@ -91,7 +96,7 @@ class _CursorFollowerState extends State<CursorFollower>
 
   @override
   Widget build(BuildContext context) {
-    if (!_enabled) return widget.child;
+    if (!_enabledFor(context)) return widget.child;
 
     return MouseRegion(
       opaque: false,

@@ -384,10 +384,12 @@ class _CoordRow extends StatelessWidget {
             child: Icon(icon, size: 14, color: AppColors.navy),
           ),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 90,
+          Expanded(
+            flex: 3,
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 11.5,
                 color: AppColors.muted,
@@ -395,10 +397,14 @@ class _CoordRow extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
+            flex: 5,
             child: Text(
               value,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
