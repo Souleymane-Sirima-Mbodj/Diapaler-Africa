@@ -344,7 +344,7 @@ class _EmptyProjectHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.basic,
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
         // TODO: réactiver — Navigator.push(AddProjectPage)
         onTap: () {},
