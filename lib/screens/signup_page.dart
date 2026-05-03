@@ -20,7 +20,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   // Identité
-  late UserRole _role = widget.initialRole;
+  late final UserRole _role = widget.initialRole;
   Gender _gender = Gender.female;
   DateTime? _birthDate;
   final _name = TextEditingController();
@@ -979,56 +979,8 @@ class _InlineDropdown extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Pills rôle + sexe
+// Pills sexe
 // ─────────────────────────────────────────────────────────────────
-class _RolePills extends StatelessWidget {
-  final UserRole value;
-  final ValueChanged<UserRole> onChanged;
-  const _RolePills({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (UserRole.entrepreneur, 'Entrepreneur'),
-      (UserRole.mentor, 'Mentor'),
-      (UserRole.investor, 'Investisseur'),
-    ];
-    return Row(
-      children: [
-        for (var i = 0; i < items.length; i++) ...[
-          Expanded(
-            child: GestureDetector(
-              onTap: () => onChanged(items[i].$1),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                decoration: BoxDecoration(
-                  color: value == items[i].$1
-                      ? AppColors.navy
-                      : AppColors.fieldBg,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  items[i].$2,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: value == items[i].$1
-                        ? Colors.white
-                        : AppColors.muted,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (i < items.length - 1) const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-}
-
 class _GenderRow extends StatelessWidget {
   final Gender value;
   final ValueChanged<Gender> onChanged;
