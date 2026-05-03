@@ -17,7 +17,7 @@ class MentorDetailPage extends StatelessWidget {
             backgroundColor: AppColors.navy,
             foregroundColor: Colors.white,
             elevation: 0,
-            expandedHeight: 290,
+            expandedHeight: 250,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -29,7 +29,7 @@ class MentorDetailPage extends StatelessWidget {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 44, 20, 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -94,12 +94,12 @@ class MentorDetailPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 10),
                         Container(
                           height: 1,
                           color: Colors.white.withValues(alpha: 0.15),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         // Stats inline dans le hero
                         Row(
                           children: [

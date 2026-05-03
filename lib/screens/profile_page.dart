@@ -196,15 +196,15 @@ class _StatsStrip extends StatelessWidget {
           color: AppColors.green,
           value: '$completed',
           label: 'Terminés'),
-      const _MiniStat(
+      _MiniStat(
           icon: Icons.handshake_rounded,
           color: AppColors.blue,
-          value: '4',
+          value: '${p.mentorsActive}',
           label: 'Mentors'),
-      const _MiniStat(
+      _MiniStat(
           icon: Icons.bookmark_rounded,
           color: AppColors.red,
-          value: '7',
+          value: '${p.favoritesCount}',
           label: 'Favoris'),
     ];
     return SizedBox(
@@ -365,23 +365,23 @@ class _CoordRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
               color: AppColors.blueTint,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(7),
             ),
-            child: Icon(icon, size: 16, color: AppColors.navy),
+            child: Icon(icon, size: 14, color: AppColors.navy),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               color: AppColors.muted,
               fontWeight: FontWeight.w600,
             ),
@@ -392,7 +392,7 @@ class _CoordRow extends StatelessWidget {
               value,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.navyDeep,
               ),
