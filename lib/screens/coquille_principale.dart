@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
 import 'page_accueil.dart';
-import 'page_matching.dart';
 import 'page_profil.dart';
 
 class RootShell extends StatefulWidget {
@@ -18,7 +17,11 @@ class _RootShellState extends State<RootShell> {
 
   static const _pages = <Widget>[
     HomePage(),
-    MatchingPage(),
+    _ComingSoonPage(
+      icon: Icons.handshake_rounded,
+      title: 'Matching',
+      subtitle: 'Retrouve ici les mentors avec qui tu as matché.\nDisponible bientôt.',
+    ),
     _ComingSoonPage(
       icon: Icons.chat_bubble_rounded,
       title: 'Messages',
