@@ -9,7 +9,7 @@ import '../widgets/carte_mentor.dart';
 import '../widgets/feuille_profil.dart';
 import '../widgets/entete_section.dart';
 import '../widgets/squelette.dart';
-// ignore_for_file: unused_import
+// ignore_for_file: unused_import, unused_element
 // (imports gardés en place — réactivés quand les redirections seront rebranchées)
 import 'page_nouveau_projet.dart';
 import 'page_matching.dart';
@@ -753,45 +753,87 @@ class _RecommendedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionHeader(
-      title: 'Mentors pour toi',
-      action: 'Voir tout →',
-      // TODO: réactiver — Navigator.push(RecommendedMentorsPage)
-      onAction: () {},
-    );
+    // TODO: réactiver — afficher l'action "Voir tout →" qui redirige vers
+    //   RecommendedMentorsPage quand le flow mentors sera rebranché.
+    return const SectionHeader(title: 'Mentors pour toi');
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Mentors recommandés (réactif aux changements de profil)
+// Mentors recommandés — bandeau "À venir" pour la première démo
 // ─────────────────────────────────────────────────────────────────
 class _RecommendedMentors extends StatelessWidget {
   const _RecommendedMentors();
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<UserProfile>(
-      valueListenable: UserProfileController.profile,
-      builder: (_, p, __) {
-        final recos = recommendedMentorsFor(
-          userSector: p.sector,
-          userInterests: p.interests,
-          projectSectors: p.projects.map((pr) => pr.sector).toList(),
-        ).take(2).toList();
-
-        if (recos.isEmpty) {
-          return const _NoRecoState();
-        }
-        return Column(
-          children: [
-            for (final m in recos)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: MentorCard(mentor: m),
+    // TODO: réactiver — afficher la liste des mentors recommandés via
+    //   recommendedMentorsFor(userSector, userInterests, projectSectors)
+    //   quand le flow mentors sera rebranché. Cf. _NoRecoState pour
+    //   l'empty state quand la liste est vide.
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.amber.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.handshake_rounded,
+                color: AppColors.amber, size: 22),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Recommandations bientôt disponibles',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Les mentors qui correspondent à ton profil s\'afficheront ici.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.amberSoft,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'À venir',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: AppColors.amber,
+                letterSpacing: 0.5,
               ),
-          ],
-        );
-      },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
