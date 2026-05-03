@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -129,36 +130,50 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const _Label('Email'),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      prefixIcon: Container(
-                        margin: const EdgeInsets.all(8),
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.blueTint,
-                          borderRadius: BorderRadius.circular(8),
+                  AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _Label('Email'),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          autofillHints: const [
+                            AutofillHints.username,
+                            AutofillHints.email,
+                          ],
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            prefixIcon: Container(
+                              margin: const EdgeInsets.all(8),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.blueTint,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.mail_outline_rounded,
+                                  color: AppColors.blue, size: 18),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(
+                                minWidth: 48, minHeight: 48),
+                            hintText: 'nom@téki.sn',
+                          ),
                         ),
-                        child: const Icon(Icons.mail_outline_rounded,
-                            color: AppColors.blue, size: 18),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(
-                          minWidth: 48, minHeight: 48),
-                      hintText: 'nom@téki.sn',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const _Label('Mot de passe'),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _password,
-                    obscureText: _obscure,
-                    onSubmitted: (_) => _signIn(),
+                        const SizedBox(height: 12),
+                        const _Label('Mot de passe'),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _password,
+                          obscureText: _obscure,
+                          autofillHints: const [AutofillHints.password],
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) {
+                            TextInput.finishAutofillContext();
+                            _signIn();
+                          },
                     decoration: InputDecoration(
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(8),
@@ -184,6 +199,9 @@ class _LoginPageState extends State<LoginPage> {
                           size: 20,
                         ),
                       ),
+                    ),
+                  ),
+                      ],
                     ),
                   ),
                   Align(

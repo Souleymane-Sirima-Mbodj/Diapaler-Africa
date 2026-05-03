@@ -356,16 +356,18 @@ class _CoordRow extends StatelessWidget {
             child: Icon(icon, size: 14, color: AppColors.navy),
           ),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: AppColors.muted,
-              fontWeight: FontWeight.w600,
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const Spacer(),
-          Flexible(
+          Expanded(
             child: Text(
               value,
               overflow: TextOverflow.ellipsis,
