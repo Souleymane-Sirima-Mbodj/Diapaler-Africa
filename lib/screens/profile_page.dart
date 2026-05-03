@@ -37,13 +37,40 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 14),
               const _StatsStrip(),
               const SizedBox(height: 18),
-              _CoordsCard(profile: p),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 700;
+                  if (wide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _CoordsCard(profile: p)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _InterestsCard(interests: p.interests),
+                              const SizedBox(height: 14),
+                              _AboutCard(profile: p),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      _CoordsCard(profile: p),
+                      const SizedBox(height: 14),
+                      _InterestsCard(interests: p.interests),
+                      const SizedBox(height: 14),
+                      _AboutCard(profile: p),
+                    ],
+                  );
+                },
+              ),
               const SizedBox(height: 18),
               _ProjectsSection(profile: p),
-              const SizedBox(height: 18),
-              _InterestsCard(interests: p.interests),
-              const SizedBox(height: 14),
-              _AboutCard(profile: p),
             ],
           ),
         );
