@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import, unused_element
 import 'package:flutter/material.dart';
 import '../data/mock_data.dart';
 import '../screens/mentor_detail_page.dart';
@@ -14,12 +15,8 @@ class MentorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HoverGlowCard(
-      onTap: onTap ??
-          () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => MentorDetailPage(mentor: mentor),
-                ),
-              ),
+      // TODO: réactiver — Navigator.push(MentorDetailPage(mentor))
+      onTap: onTap ?? () {},
       padding: const EdgeInsets.all(14),
       child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,29 +100,9 @@ class MentorCard extends StatelessWidget {
                     .map((s) => Chip(label: Text(s)))
                     .toList(),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _CompatibilityPill(value: mentor.compatibility),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MentorDetailPage(mentor: mentor),
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.navy,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                    ),
-                    child: const Text(
-                      'Voir le profil  →',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
+              // TODO: réactiver — afficher le score de compatibilité
+              //   _CompatibilityPill(value: mentor.compatibility)
+              //   et le bouton "Voir le profil →" qui ouvre MentorDetailPage
             ],
           ),
     );
