@@ -58,26 +58,15 @@ class MentorCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded,
-                                size: 16, color: AppColors.amber),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${mentor.rating}',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              ' (${mentor.reviews})  ·  ',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.muted,
-                              ),
-                            ),
+                            // TODO: réactiver — afficher la note + le nombre d'avis
+                            //   const Icon(Icons.star_rounded,
+                            //       size: 16, color: AppColors.amber),
+                            //   const SizedBox(width: 4),
+                            //   Text('${mentor.rating}', ...),
+                            //   Text(' (${mentor.reviews})  ·  ', ...),
                             const Icon(Icons.location_on_outlined,
                                 size: 14, color: AppColors.muted),
-                            const SizedBox(width: 2),
+                            const SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 mentor.city,
