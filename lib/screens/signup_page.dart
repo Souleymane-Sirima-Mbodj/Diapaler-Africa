@@ -369,6 +369,8 @@ class _SignUpPageState extends State<SignUpPage> {
       key: const ValueKey('step1'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
+        _RoleBadge(role: _role),
+        const SizedBox(height: 16),
         const _LabelRequired('Nom complet'),
         const SizedBox(height: 6),
         TextField(
@@ -974,6 +976,99 @@ class _InlineDropdown extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Badge confirmation du rôle (read-only, choisi sur l'écran précédent)
+// ─────────────────────────────────────────────────────────────────
+class _RoleBadge extends StatelessWidget {
+  final UserRole role;
+  const _RoleBadge({required this.role});
+
+  String get _roleLabel {
+    switch (role) {
+      case UserRole.entrepreneur:
+        return 'Entrepreneur';
+      case UserRole.mentor:
+        return 'Mentor';
+      case UserRole.investor:
+        return 'Investisseur';
+    }
+  }
+
+  IconData get _roleIcon {
+    switch (role) {
+      case UserRole.entrepreneur:
+        return Icons.rocket_launch_rounded;
+      case UserRole.mentor:
+        return Icons.school_rounded;
+      case UserRole.investor:
+        return Icons.account_balance_wallet_rounded;
+    }
+  }
+
+  Color get _roleColor {
+    switch (role) {
+      case UserRole.entrepreneur:
+        return AppColors.roleEntrepreneur;
+      case UserRole.mentor:
+        return AppColors.roleMentor;
+      case UserRole.investor:
+        return AppColors.roleInvestor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.blueTint,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.blue.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _roleColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(_roleIcon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Je m'inscris en tant que",
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _roleLabel,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.check_circle_rounded,
+              color: AppColors.green, size: 22),
+        ],
+      ),
     );
   }
 }
