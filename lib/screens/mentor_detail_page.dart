@@ -17,7 +17,7 @@ class MentorDetailPage extends StatelessWidget {
             backgroundColor: AppColors.navy,
             foregroundColor: Colors.white,
             elevation: 0,
-            expandedHeight: 250,
+            expandedHeight: 218,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -28,8 +28,9 @@ class MentorDetailPage extends StatelessWidget {
                   ),
                 ),
                 child: SafeArea(
+                  bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 44, 20, 10),
+                    padding: const EdgeInsets.fromLTRB(20, 44, 20, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
