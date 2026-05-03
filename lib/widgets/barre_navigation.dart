@@ -22,33 +22,44 @@ class DiapalerBottomNav extends StatelessWidget {
       active: Icons.handshake_rounded,
       label: 'Matching',
     ),
+    _NavItem(
+      icon: Icons.chat_bubble_outline_rounded,
+      active: Icons.chat_bubble_rounded,
+      label: 'Messages',
+    ),
+    _NavItem(
+      icon: Icons.event_outlined,
+      active: Icons.event_rounded,
+      label: 'Agenda',
+    ),
+    _NavItem(
+      icon: Icons.person_outline_rounded,
+      active: Icons.person_rounded,
+      label: 'Profil',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
+    return Material(
       color: Colors.white,
       elevation: 8,
-      padding: EdgeInsets.zero,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavButton(
-              item: _items[0],
-              selected: currentIndex == 0,
-              onTap: () => onTap(0),
-            ),
-            const SizedBox(width: 60), // place du FAB
-            _NavButton(
-              item: _items[1],
-              selected: currentIndex == 1,
-              onTap: () => onTap(1),
-            ),
-          ],
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_items.length, (i) {
+              return Expanded(
+                child: _NavButton(
+                  item: _items[i],
+                  selected: currentIndex == i,
+                  onTap: () => onTap(i),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -68,39 +79,39 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = selected ? AppColors.navy : AppColors.muted;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? AppColors.navy : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            color: selected
+                ? AppColors.blueTint.withValues(alpha: 0.6)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 selected ? item.active : item.icon,
-                color: selected ? AppColors.amber : AppColors.muted,
+                color: color,
                 size: 22,
               ),
-              if (selected) ...[
-                const SizedBox(width: 8),
-                Text(
-                  item.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                item.label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 10.5,
                 ),
-              ],
+              ),
             ],
           ),
         ),

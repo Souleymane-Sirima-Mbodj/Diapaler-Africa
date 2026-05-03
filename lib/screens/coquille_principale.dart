@@ -1,11 +1,10 @@
-// ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
 import 'page_accueil.dart';
 import 'page_matching.dart';
-import 'page_pitch.dart';
+import 'page_profil.dart';
 
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
@@ -20,18 +19,23 @@ class _RootShellState extends State<RootShell> {
   static const _pages = <Widget>[
     HomePage(),
     MatchingPage(),
+    _ComingSoonPage(
+      icon: Icons.chat_bubble_rounded,
+      title: 'Messages',
+      subtitle: 'Discute avec tes mentors et entrepreneurs.\nDisponible bientôt.',
+    ),
+    _ComingSoonPage(
+      icon: Icons.event_rounded,
+      title: 'Agenda',
+      subtitle: 'Retrouve toutes tes sessions planifiées.\nDisponible bientôt.',
+    ),
+    ProfilePage(),
   ];
-
-  void _openPitch() {
-    // TODO: réactiver — Navigator.push(PitchPage)
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _PitchFab(onTap: _openPitch),
       bottomNavigationBar: DiapalerBottomNav(
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
@@ -40,31 +44,78 @@ class _RootShellState extends State<RootShell> {
   }
 }
 
-class _PitchFab extends StatelessWidget {
-  final VoidCallback onTap;
-  const _PitchFab({required this.onTap});
+class _ComingSoonPage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _ComingSoonPage({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.amber.withValues(alpha: 0.6),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: const BoxDecoration(
+                    color: AppColors.blueTint,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: AppColors.navy, size: 44),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.muted,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.amberSoft,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'À venir',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.amber,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: FloatingActionButton(
-        onPressed: onTap,
-        backgroundColor: AppColors.amber,
-        foregroundColor: AppColors.navyDeep,
-        elevation: 0,
-        shape: const CircleBorder(),
-        tooltip: 'Déposer un pitch',
-        child: const Icon(Icons.add_rounded, size: 28),
+        ),
       ),
     );
   }
