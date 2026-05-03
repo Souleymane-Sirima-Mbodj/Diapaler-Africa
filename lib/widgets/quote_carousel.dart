@@ -13,7 +13,7 @@ class QuoteCarousel extends StatefulWidget {
   const QuoteCarousel({
     super.key,
     this.onDark = false,
-    this.interval = const Duration(seconds: 5),
+    this.interval = const Duration(seconds: 3),
     this.height = 130,
   });
 
