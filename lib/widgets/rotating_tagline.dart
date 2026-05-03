@@ -19,7 +19,7 @@ class _RotatingTaglineState extends State<RotatingTagline> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
       setState(() => _i = (_i + 1) % quotes.length);
     });
