@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'firebase_options.dart';
-import 'screens/splash_page.dart';
-import 'theme/app_theme.dart';
-import 'widgets/cursor_follower.dart';
+import 'screens/page_demarrage.dart';
+import 'theme/theme_app.dart';
+import 'widgets/curseur_suiveur.dart';
 
 /// Future global qu'on initialise dès le démarrage de l'app, mais sans
 /// bloquer `runApp`. Le splash l'attend pendant qu'il joue son animation

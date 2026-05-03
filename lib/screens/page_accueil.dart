@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../data/user_profile.dart';
-import '../theme/app_theme.dart';
-import '../widgets/animated_counter.dart';
+import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
+import '../theme/theme_app.dart';
+import '../widgets/compteur_anime.dart';
 import '../widgets/avatar.dart';
-import '../widgets/hover_glow_card.dart';
-import '../widgets/mentor_card.dart';
-import '../widgets/profile_sheet.dart';
-import '../widgets/section_header.dart';
-import '../widgets/skeleton.dart';
+import '../widgets/carte_lumineuse.dart';
+import '../widgets/carte_mentor.dart';
+import '../widgets/feuille_profil.dart';
+import '../widgets/entete_section.dart';
+import '../widgets/squelette.dart';
 // ignore_for_file: unused_import
 // (imports gardés en place — réactivés quand les redirections seront rebranchées)
-import 'add_project_page.dart';
-import 'matching_page.dart';
-import 'pitch_page.dart';
-import 'recommended_mentors_page.dart';
+import 'page_nouveau_projet.dart';
+import 'page_matching.dart';
+import 'page_pitch.dart';
+import 'page_mentors_recommandes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

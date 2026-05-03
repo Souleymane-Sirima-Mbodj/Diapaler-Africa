@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../data/user_profile.dart';
-import '../theme/app_theme.dart';
-import '../widgets/mentor_card.dart';
+import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
+import '../theme/theme_app.dart';
+import '../widgets/carte_mentor.dart';
 
 /// Liste complète des mentors recommandés pour l'utilisateur en cours,
 /// filtrés selon le secteur de son profil, ses centres d'intérêt

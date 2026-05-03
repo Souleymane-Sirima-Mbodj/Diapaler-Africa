@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../data/quotes.dart';
-import '../theme/app_theme.dart';
+import '../data/citations.dart';
+import '../theme/theme_app.dart';
 
 /// Petit texte italique sous le greeting qui change toutes les 6s.
 /// Très discret — joue le rôle de "citation du jour" sans encombrer l'UI.

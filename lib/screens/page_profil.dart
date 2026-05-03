@@ -1,11 +1,11 @@
 // ignore_for_file: unused_import
 import 'package:flutter/material.dart';
-import '../data/user_profile.dart';
-import '../theme/app_theme.dart';
+import '../data/profil_utilisateur.dart';
+import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import '../widgets/hover_glow_card.dart';
-import 'add_project_page.dart';
-import 'edit_profile_page.dart';
+import '../widgets/carte_lumineuse.dart';
+import 'page_nouveau_projet.dart';
+import 'page_modification_profil.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});

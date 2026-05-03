@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../main.dart' show firebaseReady;
-import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../data/user_profile.dart';
-import '../theme/app_theme.dart';
-import '../widgets/diapaler_logo.dart';
-import 'role_selection_page.dart';
-import 'root_shell.dart';
+import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
+import '../data/profil_utilisateur.dart';
+import '../theme/theme_app.dart';
+import '../widgets/logo_diapaler.dart';
+import 'page_choix_role.dart';
+import 'coquille_principale.dart';
 
 /// Splash 1.6s — le tile apparaît, les 3 orbites s'allument une à une,
 /// puis le wordmark monte. À la fin → navigation vers RoleSelectionPage.

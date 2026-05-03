@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../theme/app_theme.dart';
+import '../theme/theme_app.dart';
 
 /// Logo "entraide" — un cercle navy lumineux qui contient une icône handshake,
 /// entouré de 3 points aux couleurs du drapeau du Sénégal (vert, jaune, rouge).

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import 'root_shell.dart';
+import '../theme/theme_app.dart';
+import 'coquille_principale.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
