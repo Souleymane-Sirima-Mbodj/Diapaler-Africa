@@ -285,33 +285,15 @@ class _NotifBell extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.notifications_none_rounded,
-                  color: Colors.white, size: 22),
-            ),
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: AppColors.amber,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.navy, width: 1.5),
-                ),
-              ),
-            ),
-          ],
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.notifications_none_rounded,
+              color: Colors.white, size: 22),
         ),
       ),
     );
