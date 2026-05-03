@@ -22,5 +22,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
+  # Aucun asset image utilisé pour l'instant.
+  # Pour en ajouter : créer le dossier assets/images/ avec au moins un fichier
+  # (Git ne suit pas les dossiers vides) puis décommenter la ligne ci-dessous.
+  # assets:
+  #   - assets/images/
