@@ -399,50 +399,38 @@ class _CompaniesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < companies.length; i++) ...[
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              child: Row(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: AppColors.amber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.business_rounded,
-                        size: 15, color: AppColors.amber),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      companies[i],
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: companies.map((c) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.amber.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: AppColors.amber.withValues(alpha: 0.4),
+              width: 1,
             ),
-            if (i < companies.length - 1)
-              const Divider(height: 1, indent: 56, endIndent: 14),
-          ],
-        ],
-      ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.business_rounded,
+                  size: 13, color: AppColors.amber),
+              const SizedBox(width: 6),
+              Text(
+                c,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyDeep,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
