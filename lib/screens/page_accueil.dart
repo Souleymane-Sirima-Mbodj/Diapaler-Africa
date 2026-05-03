@@ -347,68 +347,45 @@ class _EmptyProjectHero extends StatelessWidget {
               ),
             ],
           ),
-          child: Stack(
+          child: Row(
             children: [
-              Positioned(
-                top: -28,
-                right: -28,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.amber.withValues(alpha: 0.15),
-                  ),
+              Container(
+                width: 60,
+                height: 60,
+                decoration: const BoxDecoration(
+                  color: AppColors.amber,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add_rounded,
+                    color: Colors.white, size: 32),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aucun projet en cours',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Tape ici pour démarrer ton premier projet entrepreneurial.',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12.5,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.amber,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.amber.withValues(alpha: 0.55),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.add_rounded,
-                        color: Colors.white, size: 32),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Aucun projet en cours',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Tape ici pour démarrer ton premier projet entrepreneurial.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12.5,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded,
-                      color: Colors.white, size: 24),
-                ],
-              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white, size: 24),
             ],
           ),
         ),
