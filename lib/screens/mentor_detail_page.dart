@@ -153,6 +153,14 @@ class MentorDetailPage extends StatelessWidget {
               ],
               const SizedBox(height: 22),
               const _SectionTitle('Créneaux disponibles'),
+              const SizedBox(height: 4),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Tape sur un créneau pour le sélectionner.',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ),
               const SizedBox(height: 10),
               const _SlotsRow(),
               const SizedBox(height: 28),
@@ -162,14 +170,7 @@ class MentorDetailPage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Conversation ouverte (démo)'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                        onPressed: () {},
                         icon: const Icon(Icons.chat_bubble_outline_rounded,
                             size: 18),
                         label: const Text('Message'),
@@ -416,58 +417,140 @@ class _CompaniesList extends StatelessWidget {
   }
 }
 
-class _SlotsRow extends StatelessWidget {
+class _SlotsRow extends StatefulWidget {
   const _SlotsRow();
 
   @override
+  State<_SlotsRow> createState() => _SlotsRowState();
+}
+
+class _SlotsRowState extends State<_SlotsRow> {
+  int? _selected;
+
+  static const _slots = [
+    ('Lundi', '14h00'),
+    ('Mardi', '10h00'),
+    ('Mercredi', '15h00'),
+    ('Jeudi', '11h00'),
+    ('Vendredi', '16h00'),
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    const slots = [
-      ('Lun', '14h'),
-      ('Mar', '10h'),
-      ('Mer', '15h'),
-      ('Jeu', '11h'),
-      ('Ven', '16h'),
-    ];
     return SizedBox(
-      height: 76,
+      height: 118,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: slots.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: _slots.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          final s = slots[i];
-          final selected = i == 1;
-          return Container(
-            width: 64,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.navy : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected ? AppColors.navy : AppColors.border,
+          final s = _slots[i];
+          final isSelected = _selected == i;
+          return MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => setState(
+                  () => _selected = isSelected ? null : i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: 96,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.navy : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isSelected ? AppColors.navy : AppColors.border,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color:
+                                AppColors.amber.withValues(alpha: 0.45),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      s.$1.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected
+                            ? AppColors.amber
+                            : AppColors.muted,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      s.$2,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.navyDeep,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (isSelected)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded,
+                                size: 11, color: AppColors.navyDeep),
+                            SizedBox(width: 2),
+                            Text(
+                              'Choisi',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.navyDeep,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: AppColors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Libre',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  s.$1,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? AppColors.amber : AppColors.muted,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  s.$2,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: selected ? Colors.white : AppColors.navyDeep,
-                  ),
-                ),
-              ],
             ),
           );
         },
