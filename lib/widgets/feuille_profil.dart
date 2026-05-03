@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data/user_profile.dart';
-import '../screens/profile_page.dart';
-import '../screens/role_selection_page.dart';
-import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
+import '../data/profil_utilisateur.dart';
+import '../screens/page_profil.dart';
+import '../screens/page_choix_role.dart';
+import '../services/service_authentification.dart';
+import '../theme/theme_app.dart';
 import 'avatar.dart';
 
 void showProfileSheet(BuildContext context) {

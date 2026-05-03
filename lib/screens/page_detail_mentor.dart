@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../theme/app_theme.dart';
+import '../data/donnees_mentors.dart';
+import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 
 class MentorDetailPage extends StatelessWidget {

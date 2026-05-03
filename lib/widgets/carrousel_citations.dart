@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../data/quotes.dart';
-import '../theme/app_theme.dart';
+import '../data/citations.dart';
+import '../theme/theme_app.dart';
 
 /// Carrousel auto-rotatif de citations. `onDark = true` pour rendu sur fond
 /// navy (wordmark, splash). `onDark = false` pour rendu carte sur fond clair.

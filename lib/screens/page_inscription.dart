@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/countries.dart';
-import '../data/mock_data.dart';
-import '../data/user_profile.dart';
-import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../theme/app_theme.dart';
-import 'onboarding_page.dart';
-import 'role_selection_page.dart';
+import '../data/pays.dart';
+import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
+import '../theme/theme_app.dart';
+import 'page_decouverte.dart';
+import 'page_choix_role.dart';
 
 class SignUpPage extends StatefulWidget {
   final UserRole initialRole;

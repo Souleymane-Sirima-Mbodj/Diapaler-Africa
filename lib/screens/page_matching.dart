@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../theme/app_theme.dart';
-import '../widgets/mentor_card.dart';
+import '../data/donnees_mentors.dart';
+import '../theme/theme_app.dart';
+import '../widgets/carte_mentor.dart';
 
 class MatchingPage extends StatefulWidget {
   const MatchingPage({super.key});

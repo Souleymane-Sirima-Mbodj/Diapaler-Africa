@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/diapaler_logo.dart';
-import '../widgets/flag_strip.dart';
-import 'login_page.dart';
-import 'signup_page.dart';
+import '../theme/theme_app.dart';
+import '../widgets/logo_diapaler.dart';
+import '../widgets/bande_drapeau.dart';
+import 'page_connexion.dart';
+import 'page_inscription.dart';
 
 enum UserRole { entrepreneur, mentor, investor }
 

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_app.dart';
 
 /// Traînée d'étoiles aux couleurs du drapeau du Sénégal qui suit la souris.
 /// Sur tactile/mobile, devient un no-op.

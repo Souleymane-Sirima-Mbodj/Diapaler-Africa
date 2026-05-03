@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../data/user_profile.dart';
-import '../theme/app_theme.dart';
+import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
+import '../theme/theme_app.dart';
 
 class AddProjectPage extends StatefulWidget {
   const AddProjectPage({super.key});

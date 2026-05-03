@@ -1,10 +1,10 @@
 // ignore_for_file: unused_import, unused_element
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../screens/mentor_detail_page.dart';
-import '../theme/app_theme.dart';
+import '../data/donnees_mentors.dart';
+import '../screens/page_detail_mentor.dart';
+import '../theme/theme_app.dart';
 import 'avatar.dart';
-import 'hover_glow_card.dart';
+import 'carte_lumineuse.dart';
 
 class MentorCard extends StatelessWidget {
   final Mentor mentor;

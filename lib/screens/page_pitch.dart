@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
-import '../theme/app_theme.dart';
+import '../data/donnees_mentors.dart';
+import '../theme/theme_app.dart';
 
 /// Stepper 3 étapes pour déposer un pitch (correspond à l'Écran 8 du doc).
 class PitchPage extends StatefulWidget {

@@ -1,11 +1,11 @@
 // ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
-import '../widgets/bottom_nav.dart';
-import 'home_page.dart';
-import 'matching_page.dart';
-import 'pitch_page.dart';
+import '../theme/theme_app.dart';
+import '../widgets/barre_navigation.dart';
+import 'page_accueil.dart';
+import 'page_matching.dart';
+import 'page_pitch.dart';
 
 class RootShell extends StatefulWidget {
   const RootShell({super.key});

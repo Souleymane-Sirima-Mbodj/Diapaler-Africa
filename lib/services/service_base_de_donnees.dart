@@ -1,5 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
-import '../data/user_profile.dart';
+import '../data/profil_utilisateur.dart';
 
 /// Wrapper Realtime Database pour la persistance des profils utilisateurs.
 class DatabaseService {
