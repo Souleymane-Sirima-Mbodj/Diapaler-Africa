@@ -78,11 +78,15 @@ class MentorCard extends StatelessWidget {
                             const Icon(Icons.location_on_outlined,
                                 size: 14, color: AppColors.muted),
                             const SizedBox(width: 2),
-                            Text(
-                              mentor.city,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.muted,
+                            Flexible(
+                              child: Text(
+                                mentor.city,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.muted,
+                                ),
                               ),
                             ),
                           ],
