@@ -362,21 +362,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
   // ─── ÉTAPE 1 — Identité ───
   Widget _buildStep1() {
+    if (_role != UserRole.entrepreneur) {
+      return const SizedBox.shrink();
+    }
     return ListView(
       key: const ValueKey('step1'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
-        const _Label("Je m'inscris en tant que"),
-        const SizedBox(height: 8),
-        _RolePills(
-          value: _role,
-          onChanged: (r) => setState(() => _role = r),
-        ),
-        const SizedBox(height: 16),
-        if (_role != UserRole.entrepreneur) ...[
-          const SizedBox.shrink(),
-        ] else ...[
-          const _LabelRequired('Nom complet'),
+        const _LabelRequired('Nom complet'),
         const SizedBox(height: 6),
         TextField(
           controller: _name,
@@ -421,7 +414,6 @@ class _SignUpPageState extends State<SignUpPage> {
           value: _birthDate,
           onTap: _pickBirthDate,
         ),
-        ],
       ],
     );
   }
