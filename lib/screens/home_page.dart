@@ -11,7 +11,7 @@ import '../widgets/rotating_tagline.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
 import 'add_project_page.dart';
-import 'matching_page.dart';
+import 'recommended_mentors_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -602,7 +602,7 @@ class _RecommendedHeader extends StatelessWidget {
       title: 'Mentors recommandés',
       action: 'Tout voir',
       onAction: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const MatchingPage()),
+        MaterialPageRoute(builder: (_) => const RecommendedMentorsPage()),
       ),
     );
   }
