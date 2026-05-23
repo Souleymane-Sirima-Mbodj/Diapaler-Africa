@@ -37,7 +37,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
       final currentProfile = UserProfileController.profile.value;
       await InteractionsService.sendMentorRequest(
         fromUserId: currentProfile.email,
-        toUserId: widget.mentor.id,
+        toUserId: widget.mentor.name, // Mentor n'a pas ID, on utilise le name
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,
         message: _messageCtrl.text,
@@ -86,10 +86,11 @@ class _SendRequestPageState extends State<SendRequestPage> {
             ),
             child: Row(
               children: [
-                const AvatarWidget(
-                  firstName: 'M',
-                  lastName: 'T',
+                Avatar(
+                  initials: '${widget.mentor.name[0]}${widget.mentor.name.split(' ').length > 1 ? widget.mentor.name.split(' ')[1][0] : ''}',
                   size: 56,
+                  background: AppColors.blue,
+                  foreground: Colors.white,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

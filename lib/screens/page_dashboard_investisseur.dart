@@ -25,11 +25,12 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
             // Header
             Row(
               children: [
-                AvatarWidget(
-                  firstName: profile.firstName,
-                  lastName: profile.lastName,
-                  photoBase64: profile.photoBase64,
+                Avatar(
+                  initials: profile.initials,
                   size: 48,
+                  background: AppColors.blue,
+                  foreground: Colors.white,
+                  photoBase64: profile.photoBase64,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
