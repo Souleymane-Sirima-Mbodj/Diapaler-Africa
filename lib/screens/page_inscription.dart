@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/pays.dart';
 import '../data/donnees_mentors.dart';
@@ -33,6 +36,10 @@ class _SignUpPageState extends State<SignUpPage> {
   String _city = 'Dakar';
   String _country = 'Sénégal';
   final Set<String> _interests = {};
+
+  // Photo de profil
+  File? _photoFile;
+  String _photoBase64 = '';
 
   // Sécurité
   final _phone = TextEditingController();
@@ -83,7 +90,6 @@ class _SignUpPageState extends State<SignUpPage> {
   int get _passwordStrength => _computeStrength(_password.text);
 
   bool get _step1Valid =>
-      _role == UserRole.entrepreneur &&
       _nameValid &&
       _emailValid &&
       _birthDate != null;
@@ -122,6 +128,31 @@ class _SignUpPageState extends State<SignUpPage> {
       helpText: 'Ta date de naissance',
     );
     if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 512,
+        maxHeight: 512,
+      );
+      if (image != null) {
+        final bytes = await File(image.path).readAsBytes();
+        setState(() {
+          _photoFile = File(image.path);
+          _photoBase64 = base64Encode(bytes);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e')),
+        );
+      }
+    }
   }
 
   String _roleLabel(UserRole r) {
@@ -167,6 +198,7 @@ class _SignUpPageState extends State<SignUpPage> {
         role: _roleLabel(_role),
         bio: _bio.text.trim(),
         linkedin: _linkedin.text.trim(),
+        photoBase64: _photoBase64,
         interests: _interests.toList()..sort(),
         projects: const [],
       );
@@ -362,9 +394,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
   // ─── ÉTAPE 1 — Identité ───
   Widget _buildStep1() {
-    if (_role != UserRole.entrepreneur) {
-      return const SizedBox.shrink();
-    }
     return ListView(
       key: const ValueKey('step1'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -410,12 +439,21 @@ class _SignUpPageState extends State<SignUpPage> {
           onChanged: (g) => setState(() => _gender = g),
         ),
         const SizedBox(height: 14),
-        const _LabelRequired('Date de naissance'),
-        const SizedBox(height: 6),
-        _DatePickerField(
-          value: _birthDate,
-          onTap: _pickBirthDate,
-        ),
+        if (_role == UserRole.entrepreneur) ...[
+          const _LabelRequired('Date de naissance'),
+          const SizedBox(height: 6),
+          _DatePickerField(
+            value: _birthDate,
+            onTap: _pickBirthDate,
+          ),
+        ] else ...[
+          const _Label('Date de naissance (optionnelle)'),
+          const SizedBox(height: 6),
+          _DatePickerField(
+            value: _birthDate,
+            onTap: _pickBirthDate,
+          ),
+        ],
       ],
     );
   }
@@ -477,6 +515,60 @@ class _SignUpPageState extends State<SignUpPage> {
       key: const ValueKey('step3'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
+        const _Label('Photo de profil'),
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: _pickProfilePhoto,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            width: double.infinity,
+            height: 150,
+            decoration: BoxDecoration(
+              color: AppColors.fieldBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _photoFile != null ? AppColors.blue : AppColors.border,
+                width: 2,
+              ),
+            ),
+            child: _photoFile != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.file(
+                      _photoFile!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.camera_alt_rounded,
+                        size: 40,
+                        color: AppColors.muted,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Ajouter une photo',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Optionnel',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 18),
         const _Label('À propos de moi'),
         const SizedBox(height: 6),
         TextField(
@@ -501,20 +593,26 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         const SizedBox(height: 8),
         const _Hint(
-            text: 'À propos et LinkedIn sont optionnels — tu peux les ajouter plus tard.'),
+            text: 'À propos, LinkedIn et photo sont optionnels — tu peux les ajouter plus tard.'),
         const SizedBox(height: 18),
         Row(
           children: [
             RichText(
-              text: const TextSpan(
-                style: TextStyle(
+              text: TextSpan(
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navyDeep,
                 ),
                 children: [
-                  TextSpan(text: "Centres d'intérêt"),
                   TextSpan(
+                    text: _role == UserRole.investor
+                        ? 'Secteurs d\'intérêt'
+                        : _role == UserRole.mentor
+                            ? 'Domaines d\'expertise'
+                            : 'Centres d\'intérêt',
+                  ),
+                  const TextSpan(
                     text: ' *',
                     style: TextStyle(color: AppColors.red),
                   ),
