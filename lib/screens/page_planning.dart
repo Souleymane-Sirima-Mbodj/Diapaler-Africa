@@ -176,7 +176,7 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
           ),
           if (_isAvailable && (widget.schedule?.timeSlots.isEmpty ?? true)) ...[
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Disponible toute la journée',
               style: TextStyle(
                 fontSize: 12,
@@ -191,7 +191,7 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   children: [
-                    Icon(Icons.schedule_rounded,
+                    const Icon(Icons.schedule_rounded,
                         size: 16, color: AppColors.amber),
                     const SizedBox(width: 8),
                     Text(
@@ -205,7 +205,7 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ],
       ),

@@ -49,7 +49,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         valueListenable: NotificationService.notifications,
         builder: (context, notifications, _) {
           if (notifications.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -58,7 +58,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     size: 60,
                     color: AppColors.muted,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'Pas de notification',
                     style: TextStyle(
@@ -67,7 +67,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       color: AppColors.navyDeep,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
                     'Tu recevras des notifications quand\ndes mises à jour importantes arrivent.',
                     textAlign: TextAlign.center,
@@ -184,7 +184,7 @@ class _NotificationTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           notification.title,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.navyDeep,
@@ -205,7 +205,7 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     notification.message,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.muted,
                       height: 1.4,
@@ -216,7 +216,7 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     _formatTime(notification.timestamp),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.muted,
                       fontWeight: FontWeight.w500,

@@ -538,7 +538,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       fit: BoxFit.cover,
                     ),
                   )
-                : Column(
+                : const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
@@ -546,7 +546,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         size: 40,
                         color: AppColors.muted,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text(
                         'Ajouter une photo',
                         style: TextStyle(
@@ -555,8 +555,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           color: AppColors.muted,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      const Text(
+                      SizedBox(height: 2),
+                      Text(
                         'Optionnel',
                         style: TextStyle(
                           fontSize: 11,

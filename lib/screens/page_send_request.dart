@@ -107,8 +107,8 @@ class _SendRequestPageState extends State<SendRequestPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${widget.mentor.sectors.join(", ")}',
-                        style: TextStyle(
+                        widget.mentor.sectors.join(", "),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.muted,
                         ),

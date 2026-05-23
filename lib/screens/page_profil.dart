@@ -104,7 +104,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 18),
               _ProjectsSection(profile: p),
               const SizedBox(height: 22),
-              _InteractionsSection(),
+              const _InteractionsSection(),
               const SizedBox(height: 22),
               const _LogoutButton(),
             ],

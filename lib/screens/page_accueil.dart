@@ -11,6 +11,7 @@ import '../widgets/entete_section.dart';
 import '../widgets/squelette.dart';
 import 'page_nouveau_projet.dart';
 import 'page_matching.dart';
+import 'page_notifications.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
 import 'page_dashboard_investisseur.dart';
@@ -251,7 +252,13 @@ class _NavyHero extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _NotifBell(onTap: () {}),
+                      _NotifBell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsPage(),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -573,7 +580,7 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.roleEntrepreneur,
           title: 'DER / FJ',
           subtitle: 'Orientation',
-          onTap: () {},
+          onTap: () => _showDerFjSheet(context),
         ),
         _QuickAction(
           icon: Icons.workspace_premium_rounded,
@@ -875,6 +882,203 @@ class _NoRecoState extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 // DER/FJ
 // ─────────────────────────────────────────────────────────────────
+void _showDerFjSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => const _DerFjSheet(),
+  );
+}
+
+class _DerFjSheet extends StatelessWidget {
+  const _DerFjSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, ctrl) => ListView(
+        controller: ctrl,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.navyDeep, AppColors.navy],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.account_balance_rounded,
+                    color: AppColors.amber, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PAVIE 2 · DER/FJ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Financement entrepreneurial au Sénégal',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const _InfoTile(
+            icon: Icons.info_rounded,
+            color: AppColors.blue,
+            title: 'Qu\'est-ce que la DER/FJ ?',
+            body:
+                'La Délégation générale à l\'Entrepreneuriat Rapide des Femmes et des Jeunes (DER/FJ) est un programme du gouvernement sénégalais qui finance les projets des jeunes entrepreneurs.',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.attach_money_rounded,
+            color: AppColors.green,
+            title: 'Montants disponibles',
+            body:
+                '• Volet individuel : 100 000 – 3 000 000 FCFA\n• Volet groupements : jusqu\'à 15 000 000 FCFA\n• Volet PME/TPE : jusqu\'à 30 000 000 FCFA',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.checklist_rounded,
+            color: AppColors.amber,
+            title: 'Conditions d\'éligibilité',
+            body:
+                '• Être sénégalais(e), âgé(e) de 18 à 40 ans\n• Avoir un projet viable avec un plan de gestion\n• Fournir une pièce d\'identité valide\n• Résider au Sénégal',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.description_rounded,
+            color: AppColors.purple,
+            title: 'Documents requis',
+            body:
+                '• CNI ou passeport en cours de validité\n• Plan d\'affaires (business plan)\n• Photos d\'identité\n• Justificatif de domicile\n• Registre de commerce (si entreprise existante)',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.place_rounded,
+            color: AppColors.red,
+            title: 'Contact & Dépôt',
+            body:
+                'Délégation Générale à l\'Entrepreneuriat Rapide\nRue Amadou Assane Ndoye × Boulevard de la République\nDakar, Sénégal\n📞 +221 33 889 47 00\n🌐 derfj.sn',
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: const Text(
+              'Fermer',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.navy,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              minimumSize: const Size(double.infinity, 0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+  const _InfoTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            body,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.muted,
+              height: 1.55,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DerCard extends StatelessWidget {
   const _DerCard();
 
@@ -884,7 +1088,7 @@ class _DerCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       background: AppColors.blueTint,
       hoverBorder: AppColors.blue,
-      onTap: () {},
+      onTap: () => _showDerFjSheet(context),
       child: Row(
         children: [
           Container(

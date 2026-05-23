@@ -46,7 +46,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      const Text(
                         'Investisseur',
                         style: TextStyle(
                           fontSize: 12,
