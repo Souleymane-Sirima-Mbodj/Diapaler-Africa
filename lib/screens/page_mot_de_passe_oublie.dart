@@ -113,6 +113,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
+              onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.mail_outline_rounded,
                     color: AppColors.subtle, size: 20),
