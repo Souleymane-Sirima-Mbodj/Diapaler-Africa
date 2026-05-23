@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_messages.dart';
+import 'page_agenda.dart';
+import 'page_requests.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -162,7 +165,9 @@ class _MentorDashboardState extends State<MentorDashboard> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MessagesPage()),
+                    ),
                     icon: const Icon(Icons.message_rounded),
                     label: const Text('Messages'),
                     style: ElevatedButton.styleFrom(
@@ -175,7 +180,9 @@ class _MentorDashboardState extends State<MentorDashboard> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AgendaPage()),
+                    ),
                     icon: const Icon(Icons.calendar_today_rounded),
                     label: const Text('Agenda'),
                     style: ElevatedButton.styleFrom(
@@ -186,6 +193,25 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                ),
+                icon: const Icon(Icons.mail_rounded, size: 18),
+                label: const Text(
+                  'Voir mes demandes de mentorat',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.roleMentor,
+                  side: const BorderSide(color: AppColors.roleMentor),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
           ],
         );
