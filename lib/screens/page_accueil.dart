@@ -193,6 +193,7 @@ class _NavyHero extends StatelessWidget {
                             size: 50,
                             background: AppColors.amber,
                             foreground: AppColors.navyDeep,
+                            photoBase64: p.photoBase64,
                           ),
                         ),
                       ),

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../data/pays.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
@@ -28,6 +30,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late Gender _gender;
   DateTime? _birthDate;
   late Set<String> _interests;
+  late String _photoBase64;
 
   @override
   void initState() {
@@ -49,6 +52,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _gender = _initial.gender;
     _birthDate = _initial.birthDate;
     _interests = Set<String>.from(_initial.interests);
+    _photoBase64 = _initial.photoBase64;
   }
 
   @override
@@ -76,6 +80,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  /// Ouvre la galerie pour choisir une photo de profil.
+  /// L'image est redimensionnée (max 400 px) puis encodée en base64,
+  /// ce qui la rend persistable dans Firebase et le cache local.
+  Future<void> _pickPhoto() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 400,
+        maxHeight: 400,
+        imageQuality: 70,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() => _photoBase64 = base64Encode(bytes));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de charger la photo.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _save() async {
     final next = _initial.copyWith(
       firstName: _firstName.text.trim(),
@@ -89,6 +119,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       sector: _sector,
       linkedin: _linkedin.text.trim(),
       bio: _bio.text.trim(),
+      photoBase64: _photoBase64,
       interests: _interests.toList()..sort(),
     );
     UserProfileController.update(next);
@@ -152,20 +183,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   size: 88,
                   background: AppColors.amber,
                   foreground: AppColors.navyDeep,
+                  photoBase64: _photoBase64,
                 ),
                 Positioned(
                   bottom: -2,
                   right: -2,
                   child: GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              '📷 Sélection de photo (à venir avec Firebase Storage)'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onTap: _pickPhoto,
                     child: Container(
                       width: 32,
                       height: 32,

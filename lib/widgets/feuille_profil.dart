@@ -53,6 +53,7 @@ class _ProfileSheet extends StatelessWidget {
                       size: 52,
                       background: AppColors.amber,
                       foreground: AppColors.navyDeep,
+                      photoBase64: p.photoBase64,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
