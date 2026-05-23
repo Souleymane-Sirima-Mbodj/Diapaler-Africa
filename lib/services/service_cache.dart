@@ -1,30 +1,52 @@
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/profil_utilisateur.dart';
 
-/// Wrapper Realtime Database pour la persistance des profils utilisateurs.
-class DatabaseService {
-  static FirebaseDatabase get _db => FirebaseDatabase.instance;
+/// Cache local du profil utilisateur (stockage hors-ligne).
+///
+/// Permet à l'application de réafficher instantanément les données du
+/// dernier utilisateur connecté au démarrage, même sans connexion internet.
+/// Les données sont sérialisées en JSON et stockées via shared_preferences.
+class CacheService {
+  static const String _profileKey = 'diapaler_cached_profile';
 
-  static DatabaseReference _userRef(String uid) => _db.ref('users/$uid');
-
-  static Future<void> createUserProfile(String uid, UserProfile profile) {
-    return _userRef(uid).set(_toMap(profile));
+  /// Enregistre le profil dans le stockage local de l'appareil.
+  static Future<void> saveProfile(UserProfile p) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profileKey, jsonEncode(_toJson(p)));
+    } catch (_) {
+      // Le cache est une optimisation : on ignore les erreurs d'écriture.
+    }
   }
 
-  static Future<void> updateUserProfile(String uid, UserProfile profile) {
-    return _userRef(uid).update(_toMap(profile));
+  /// Recharge le dernier profil connu depuis le stockage local.
+  /// Renvoie `null` si aucun profil n'est en cache.
+  static Future<UserProfile?> loadProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_profileKey);
+      if (raw == null || raw.isEmpty) return null;
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return _fromJson(map);
+    } catch (_) {
+      return null;
+    }
   }
 
-  static Future<UserProfile?> readUserProfile(String uid) async {
-    final snap = await _userRef(uid).get();
-    if (!snap.exists || snap.value == null) return null;
-    final raw = Map<String, dynamic>.from(snap.value as Map);
-    return _fromMap(raw);
+  /// Vide le cache (appelé à la déconnexion).
+  static Future<void> clear() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_profileKey);
+    } catch (_) {
+      // Ignoré : la déconnexion ne doit jamais échouer à cause du cache.
+    }
   }
 
-  // ───────────────────────────── Sérialisation ─────────────────────────────
+  // ─────────────────────────── Sérialisation JSON ───────────────────────────
 
-  static Map<String, dynamic> _toMap(UserProfile p) => {
+  static Map<String, dynamic> _toJson(UserProfile p) => {
         'firstName': p.firstName,
         'lastName': p.lastName,
         'email': p.email,
@@ -40,26 +62,25 @@ class DatabaseService {
         'linkedin': p.linkedin,
         'photoBase64': p.photoBase64,
         'interests': p.interests,
-        'projects': p.projects.map(_projectToMap).toList(),
+        'projects': p.projects
+            .map((pr) => {
+                  'id': pr.id,
+                  'name': pr.name,
+                  'description': pr.description,
+                  'sector': pr.sector,
+                  'step': pr.step,
+                  'totalSteps': pr.totalSteps,
+                })
+            .toList(),
         'mentorsActive': p.mentorsActive,
         'sessionsCount': p.sessionsCount,
         'favoritesCount': p.favoritesCount,
         'score': p.score,
-        'updatedAt': ServerValue.timestamp,
       };
 
-  static Map<String, dynamic> _projectToMap(Project p) => {
-        'id': p.id,
-        'name': p.name,
-        'description': p.description,
-        'sector': p.sector,
-        'step': p.step,
-        'totalSteps': p.totalSteps,
-      };
-
-  static UserProfile _fromMap(Map<String, dynamic> m) {
-    final rawProjects = m['projects'];
+  static UserProfile _fromJson(Map<String, dynamic> m) {
     final projects = <Project>[];
+    final rawProjects = m['projects'];
     if (rawProjects is List) {
       for (final raw in rawProjects) {
         if (raw is Map) {
@@ -76,8 +97,8 @@ class DatabaseService {
       }
     }
 
-    final rawInterests = m['interests'];
     final interests = <String>[];
+    final rawInterests = m['interests'];
     if (rawInterests is List) {
       for (final v in rawInterests) {
         interests.add(v.toString());

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart' show firebaseReady;
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
+import '../services/service_cache.dart';
 import '../data/profil_utilisateur.dart';
 import '../theme/theme_app.dart';
 import '../widgets/logo_diapaler.dart';
@@ -36,6 +37,14 @@ class _SplashPageState extends State<SplashPage>
   /// puis route vers RootShell (utilisateur déjà connecté) ou RoleSelectionPage.
   Future<void> _bootstrap() async {
     Widget next = const RoleSelectionPage();
+
+    // Cache local : recharge le dernier profil connu pour un affichage
+    // instantané au démarrage (fonctionne même hors-ligne).
+    final cached = await CacheService.loadProfile();
+    if (cached != null) {
+      UserProfileController.update(cached);
+    }
+
     try {
       await firebaseReady.timeout(const Duration(seconds: 5));
       final uid = AuthService.currentUid;

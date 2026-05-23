@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
+import '../services/service_cache.dart';
 
 enum Gender {
   female,
@@ -90,6 +93,10 @@ class UserProfile {
   final String role;
   final String bio;
   final String linkedin;
+
+  /// Photo de profil encodée en base64 (chaîne vide = avatar à initiales).
+  final String photoBase64;
+
   final List<String> interests;
   final List<Project> projects;
 
@@ -114,6 +121,7 @@ class UserProfile {
     required this.role,
     required this.bio,
     this.linkedin = '',
+    this.photoBase64 = '',
     required this.interests,
     required this.projects,
     this.mentorsActive = 0,
@@ -174,6 +182,7 @@ class UserProfile {
     String? role,
     String? bio,
     String? linkedin,
+    String? photoBase64,
     List<String>? interests,
     List<Project>? projects,
     int? mentorsActive,
@@ -195,6 +204,7 @@ class UserProfile {
       role: role ?? this.role,
       bio: bio ?? this.bio,
       linkedin: linkedin ?? this.linkedin,
+      photoBase64: photoBase64 ?? this.photoBase64,
       interests: interests ?? this.interests,
       projects: projects ?? this.projects,
       mentorsActive: mentorsActive ?? this.mentorsActive,
@@ -210,27 +220,52 @@ class UserProfileController {
   static final ValueNotifier<UserProfile> profile =
       ValueNotifier<UserProfile>(_seed);
 
+  /// Met à jour le profil courant, l'enregistre dans le cache local et
+  /// le synchronise avec Firebase. Tout changement (profil ou projet) est
+  /// ainsi persisté localement ET sur la base distante.
   static void update(UserProfile next) {
     profile.value = next;
+    CacheService.saveProfile(next);
+    _syncToFirebase(next);
+  }
+
+  /// Pousse le profil vers la base distante si un utilisateur est connecté.
+  /// L'écriture est asynchrone et n'interrompt jamais l'interface.
+  static void _syncToFirebase(UserProfile p) {
+    try {
+      final uid = AuthService.currentUid;
+      if (uid == null) return;
+      DatabaseService.updateUserProfile(uid, p).catchError((Object _) {});
+    } catch (_) {
+      // Firebase pas encore prêt : le cache local a déjà tout sauvegardé.
+    }
   }
 
   /// Ajoute un projet, uniquement si l'utilisateur peut en démarrer un nouveau.
   static bool addProject(Project p) {
     final current = profile.value;
     if (!current.canStartNewProject) return false;
-    profile.value = current.copyWith(
+    update(current.copyWith(
       projects: [...current.projects, p],
-    );
+    ));
     return true;
   }
 
   static void updateProject(Project updated) {
     final current = profile.value;
-    profile.value = current.copyWith(
+    update(current.copyWith(
       projects: current.projects
           .map((p) => p.id == updated.id ? updated : p)
           .toList(),
-    );
+    ));
+  }
+
+  /// Supprime le projet portant l'identifiant [id].
+  static void deleteProject(String id) {
+    final current = profile.value;
+    update(current.copyWith(
+      projects: current.projects.where((p) => p.id != id).toList(),
+    ));
   }
 
   static final UserProfile _seed = UserProfile(

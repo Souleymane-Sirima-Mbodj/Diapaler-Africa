@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
+import '../services/service_cache.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -149,6 +150,7 @@ class _IdentityCard extends StatelessWidget {
                       size: 64,
                       background: AppColors.amber,
                       foreground: AppColors.navyDeep,
+                      photoBase64: profile.photoBase64,
                     ),
                   ),
                   Positioned(
@@ -551,6 +553,132 @@ class _ProjectTile extends StatelessWidget {
   final Project project;
   const _ProjectTile({required this.project});
 
+  /// Affiche les actions disponibles pour le projet (avancer / supprimer).
+  void _showActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  project.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (!project.isCompleted)
+              ListTile(
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.green.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.trending_up_rounded,
+                      color: AppColors.green, size: 20),
+                ),
+                title: const Text(
+                  'Avancer d\'une étape',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: Text(
+                  'Étape ${project.step} → ${project.step + 1} / '
+                  '${project.totalSteps}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  UserProfileController.updateProject(
+                    project.copyWith(step: project.step + 1),
+                  );
+                },
+              ),
+            ListTile(
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.delete_outline_rounded,
+                    color: AppColors.red, size: 20),
+              ),
+              title: const Text(
+                'Supprimer le projet',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AppColors.red,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _confirmDelete(context);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Demande confirmation avant de supprimer définitivement le projet.
+  void _confirmDelete(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Supprimer ce projet ?'),
+        content: Text(
+          '« ${project.name} » sera définitivement supprimé de ton profil.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              UserProfileController.deleteProject(project.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final completed = project.isCompleted;
@@ -558,7 +686,7 @@ class _ProjectTile extends StatelessWidget {
 
     return HoverGlowCard(
       padding: const EdgeInsets.all(14),
-      onTap: () {},
+      onTap: () => _showActions(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1171,6 +1299,7 @@ class _LogoutButton extends StatelessWidget {
     );
     if (confirm != true) return;
     await AuthService.signOut();
+    await CacheService.clear();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
