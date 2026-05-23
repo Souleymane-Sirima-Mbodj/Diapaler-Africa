@@ -1,14 +1,51 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_send_request.dart';
 
-class MentorDetailPage extends StatelessWidget {
+class MentorDetailPage extends StatefulWidget {
   final Mentor mentor;
   const MentorDetailPage({super.key, required this.mentor});
 
   @override
+  State<MentorDetailPage> createState() => _MentorDetailPageState();
+}
+
+class _MentorDetailPageState extends State<MentorDetailPage> {
+  bool _isFavorite = false;
+
+  void _toggleFavorite() {
+    final profile = UserProfileController.profile.value;
+    final delta = _isFavorite ? -1 : 1;
+    UserProfileController.update(
+      profile.copyWith(
+        favoritesCount: (profile.favoritesCount + delta).clamp(0, 999),
+      ),
+    );
+    setState(() => _isFavorite = !_isFavorite);
+  }
+
+  void _bookSession() {
+    final profile = UserProfileController.profile.value;
+    UserProfileController.update(
+      profile.copyWith(sessionsCount: profile.sessionsCount + 1),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Session réservée avec ${widget.mentor.name.split(" ").first} 🎉',
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.green,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final mentor = widget.mentor;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -18,6 +55,21 @@ class MentorDetailPage extends StatelessWidget {
             foregroundColor: Colors.white,
             elevation: 0,
             expandedHeight: 218,
+            actions: [
+              IconButton(
+                onPressed: _toggleFavorite,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Icon(
+                    _isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    key: ValueKey(_isFavorite),
+                    color: _isFavorite ? Colors.red : Colors.white,
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -216,7 +268,11 @@ class MentorDetailPage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {},
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SendRequestPage(mentor: mentor),
+                          ),
+                        ),
                         icon: const Icon(Icons.chat_bubble_outline_rounded,
                             size: 18),
                         label: const Text('Message'),
@@ -229,15 +285,7 @@ class MentorDetailPage extends StatelessWidget {
                     Expanded(
                       flex: 2,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Session réservée avec ${mentor.name.split(" ").first} 🎉'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                        onPressed: _bookSession,
                         icon: const Icon(Icons.calendar_month_rounded,
                             size: 18),
                         label: const Text('Réserver une session'),
