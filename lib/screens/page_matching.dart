@@ -15,6 +15,7 @@ class _MatchingPageState extends State<MatchingPage> {
   String _query = '';
   String _sector = 'Tous';
   String _city = 'Toutes';
+  String _role = 'Tous';
 
   static const _topSectors = <String>[
     'Tous',
@@ -51,6 +52,7 @@ class _MatchingPageState extends State<MatchingPage> {
         return false;
       }
       if (_city != 'Toutes' && m.city != _city) return false;
+      if (_role != 'Tous' && m.role != _role) return false;
       return true;
     }).toList()
       ..sort((a, b) => b.compatibility.compareTo(a.compatibility));
@@ -67,6 +69,7 @@ class _MatchingPageState extends State<MatchingPage> {
       _query = '';
       _sector = 'Tous';
       _city = 'Toutes';
+      _role = 'Tous';
     });
   }
 
@@ -74,11 +77,11 @@ class _MatchingPageState extends State<MatchingPage> {
   Widget build(BuildContext context) {
     final filtered = _filtered;
     final hasFilter =
-        _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes';
+        _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trouver un mentor'),
+        title: const Text('Mentors & Investisseurs'),
         actions: [
           if (hasFilter)
             TextButton(
@@ -111,6 +114,40 @@ class _MatchingPageState extends State<MatchingPage> {
                       )
                     : null,
               ),
+            ),
+          ),
+          // Pills rôle
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Row(
+              children: [
+                for (final r in ['Tous', 'Mentor', 'Investisseur'])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _role = r),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: _role == r ? AppColors.navyDeep : Colors.white,
+                          border: Border.all(
+                            color: _role == r ? AppColors.navyDeep : AppColors.border,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          r,
+                          style: TextStyle(
+                            color: _role == r ? Colors.white : AppColors.navyDeep,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           // Pills secteurs
@@ -169,7 +206,7 @@ class _MatchingPageState extends State<MatchingPage> {
                 ),
                 const Spacer(),
                 Text(
-                  '${filtered.length} mentor${filtered.length > 1 ? "s" : ""}',
+                  '${filtered.length} profil${filtered.length > 1 ? "s" : ""}',
                   style: const TextStyle(
                     color: AppColors.muted,
                     fontSize: 12.5,
@@ -256,7 +293,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             const Text(
-              'Aucun mentor trouvé',
+              'Aucun profil trouvé',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
@@ -265,7 +302,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Essaie de changer le secteur ou la ville,\nou de retirer la recherche.',
+              'Essaie de changer le rôle, le secteur ou la ville.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
