@@ -68,38 +68,72 @@ DIAPALER AFRICA est une plateforme mobile innovante conçue pour connecter les e
 ### Fonctionnalités Avancées (✓ Implémentées)
 
 1. **Notifications** : Système complet avec :
-   - Liste des notifications
-   - Types variés (mentor, investisseur, message, etc.)
-   - Marquage comme lu
-   - Effacement
+   - Liste des notifications en temps réel (ValueNotifier)
+   - Types variés (mentor, investisseur, message, pitch, etc.)
+   - Marquage comme lu et effacement groupé
+   - Cloche de notification sur l'accueil avec navigation directe
 
-2. **Filtres et Recherche** : 
-   - Filtrage par secteur d'intérêt
-   - Sélection multiple
+2. **Chat temps réel** :
+   - Messagerie via Firebase Realtime Database (StreamBuilder)
+   - Historique des conversations
+   - Indicateur d'envoi / heure du message
+   - Bulles distinctes émetteur/destinataire
 
-3. **Géolocalisation** :
+3. **Système de matching et demandes de mentorat** :
+   - Demandes envoyées/reçues avec statuts (En attente, Acceptée, Refusée)
+   - Formulaire de demande avec message personnalisé
+   - Accepter / refuser via Firebase
+
+4. **Planning de disponibilité** :
+   - Créneaux par jour de la semaine avec Firebase
+   - Activation/désactivation de chaque journée
+
+5. **Gamification / Succès** :
+   - Badges débloqués (Inscrit, 1er projet, Mentoré, Profil complet)
+   - Barre de progression du profil en temps réel (complétion)
+
+6. **Orientation DER/FJ (Sénégal)** :
+   - Bottom sheet informatif sur les programmes de financement sénégalais
+   - DER/FJ, PAVIE 2 : conditions, montants, documents, contacts
+
+7. **Filtres et Recherche avancée** :
+   - Matching avec filtres par secteur, ville, texte libre
+   - Mentors triés par score de compatibilité
+   - Réinitialisation des filtres en un clic
+
+8. **Géolocalisation** :
    - Permission et requête de localisation
-   - Formattage des coordonnées
+   - Formatage des coordonnées GPS
    - Support iOS/Android
 
-4. **Dashboards Spécialisés** :
+9. **Dashboards Spécialisés** :
    - Dashboard Investisseur : Statistiques, secteurs, actions rapides
-   - Dashboard Mentor : Sessions, mentorés, score
-   - Dashboard Entrepreneur : Projets, mentors recommandés
+   - Dashboard Mentor : Sessions, mentorés, score, domaines
+   - Dashboard Entrepreneur : Projets, mentors recommandés, pitch
 
-### Pages/Écrans Créés
-- ✓ Page Accueil (adaptive selon rôle)
-- ✓ Page Connexion + Inscription
-- ✓ Page Mot de Passe Oublié
-- ✓ Page Profil (modification)
-- ✓ Page Matching (entrepreneurs <-> mentors/investisseurs)
-- ✓ Page Messages
-- ✓ Page Agenda
-- ✓ Page Notifications
+### Pages/Écrans Créés (22 écrans)
+- ✓ Splash animé (orbites DIAPALER, init Firebase en parallèle)
+- ✓ Page Choix Rôle (Entrepreneur / Mentor / Investisseur)
+- ✓ Page Connexion + validation temps réel
+- ✓ Page Inscription multi-étapes (4 étapes : identité → localisation → intérêts → sécurité)
+- ✓ Page Mot de Passe Oublié (email Firebase)
+- ✓ Page Accueil (adaptive selon rôle, squelettes de chargement)
+- ✓ Page Profil (gamification, complétion, coordonnées, projets)
+- ✓ Page Modification Profil (photo, bio, intérêts, LinkedIn)
+- ✓ Page Matching (recherche + filtres secteur/ville)
+- ✓ Page Détail Mentor + Demande de mentorat
+- ✓ Page Messages (liste des conversations)
+- ✓ Page Chat (messagerie temps réel Firebase)
+- ✓ Page Agenda / Disponibilités
+- ✓ Page Planning (créneaux jour par jour)
+- ✓ Page Demandes (accepter / refuser)
+- ✓ Page Notifications (cloche connectée)
+- ✓ Page Nouveau Projet (création avec étapes)
+- ✓ Page Pitch
+- ✓ Page Découverte
 - ✓ Dashboard Investisseur
 - ✓ Dashboard Mentor
-- ✓ Page Choix Rôle
-- ✓ Page Découverte
+- ✓ Page Mentors Recommandés
 
 ## 4. Captures d'écran
 
@@ -121,20 +155,27 @@ DIAPALER AFRICA est une plateforme mobile innovante conçue pour connecter les e
 ## 5. Difficultés Rencontrées
 
 ### 1. Gestion des Rôles Différents
-**Problème** : Initialement, le formulaire d'inscription était uniquement pour entrepreneurs.  
-**Solution** : Refactorisation pour support multi-rôles avec labels adaptatifs.
+**Problème** : Formulaire d'inscription initialement générique, comportements différents par rôle.  
+**Solution** : Refactorisation avec `UserRole` enum, dashboards adaptatifs (`ValueListenableBuilder`).
 
-### 2. Upload Photo de Profil
-**Problème** : Conversion image en base64 et stockage Firebase.  
-**Solution** : Utilisation image_picker + compression (512x512, qualité 80%) + encodage base64.
+### 2. Upload Photo de Profil (compatibilité Web + Mobile)
+**Problème** : `image_picker` retourne des types différents selon la plateforme (path vs bytes).  
+**Solution** : Lecture directe en octets (`readAsBytes()`), encodage base64, stockage Firebase. Compatible Web et Android/iOS.
 
-### 3. Navigation et État Global
-**Problème** : Synchronisation profil utilisateur entre pages.  
-**Solution** : ValueNotifier pour état réactif + CacheService pour persistance locale.
+### 3. Navigation et État Global Réactif
+**Problème** : Synchronisation du profil entre toutes les pages après modification.  
+**Solution** : `ValueNotifier<UserProfile>` global (`UserProfileController`) — toutes les pages se mettent à jour automatiquement.
 
-### 4. Offline-First Architecture
-**Problème** : App doit fonctionner sans connexion.  
-**Solution** : SharedPreferences cache + synchronisation lazy vers Firebase.
+### 4. Architecture Offline-First
+**Problème** : Firebase nécessite Internet ; l'app doit démarrer même hors-ligne.  
+**Solution** : `CacheService` (SharedPreferences) charge le dernier profil connu au démarrage, la synchronisation Firebase se fait en arrière-plan.
+
+### 5. Sécurité async avec BuildContext
+**Problème** : Utilisation du `context` après des opérations async peut provoquer des crashs si le widget est démonté.  
+**Solution** : Vérification systématique `if (!mounted) return;` avant toute utilisation de `context` après un `await`.
+
+### 6. Qualité du Code
+**Résultat** : `flutter analyze` retourne **0 issues** — aucun warning ni erreur sur l'ensemble des 50+ fichiers Dart.
 
 ## 6. Solutions Proposées et Déploiement
 

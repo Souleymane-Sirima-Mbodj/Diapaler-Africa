@@ -46,7 +46,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      const Text(
                         'Mentor',
                         style: TextStyle(
                           fontSize: 12,
@@ -83,7 +83,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   child: _StatCard(
                     icon: Icons.star_rounded,
                     label: 'Score',
-                    value: '${profile.score.toStringAsFixed(1)}',
+                    value: profile.score.toStringAsFixed(1),
                   ),
                 ),
               ],
@@ -117,7 +117,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   ),
                   child: Text(
                     interest,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.roleMentor,

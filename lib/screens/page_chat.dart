@@ -57,6 +57,7 @@ class _ChatPageState extends State<ChatPage> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: $e')),
       );
@@ -94,7 +95,7 @@ class _ChatPageState extends State<ChatPage> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -103,7 +104,7 @@ class _ChatPageState extends State<ChatPage> {
                           size: 60,
                           color: AppColors.muted,
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Text(
                           'Aucun message',
                           style: TextStyle(
@@ -111,7 +112,7 @@ class _ChatPageState extends State<ChatPage> {
                             color: AppColors.muted,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Text(
                           'Commence la conversation!',
                           style: TextStyle(
@@ -186,7 +187,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.border)),
             ),
@@ -217,7 +218,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.blue,
                     shape: BoxShape.circle,
                   ),

@@ -90,7 +90,7 @@ class Availability {
 
   static Availability empty(String userId) => Availability(
     userId: userId,
-    schedule: {
+    schedule: const {
       'Monday': DaySchedule(day: 'Monday', isAvailable: true, timeSlots: []),
       'Tuesday': DaySchedule(day: 'Tuesday', isAvailable: true, timeSlots: []),
       'Wednesday': DaySchedule(day: 'Wednesday', isAvailable: true, timeSlots: []),

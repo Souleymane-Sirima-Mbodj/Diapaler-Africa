@@ -42,7 +42,7 @@ class _RequestsPageState extends State<RequestsPage> {
           final processed = requests.where((r) => r.status != RequestStatus.pending).toList();
 
           if (requests.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -51,7 +51,7 @@ class _RequestsPageState extends State<RequestsPage> {
                     size: 60,
                     color: AppColors.muted,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'Aucune demande',
                     style: TextStyle(
@@ -84,8 +84,8 @@ class _RequestsPageState extends State<RequestsPage> {
               ],
               if (processed.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(8, 8, 8, 12),
                   child: Text(
                     'Traitées',
                     style: TextStyle(
@@ -173,7 +173,7 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Il y a ${_formatTime(request.createdAt)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.muted,
                       ),
@@ -201,7 +201,7 @@ class _RequestCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             request.message,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               color: AppColors.navyDeep,
               height: 1.4,
@@ -246,6 +246,7 @@ class _RequestCard extends StatelessWidget {
 
   Future<void> _acceptRequest(BuildContext context, String requestId) async {
     await InteractionsService.acceptRequest(requestId);
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Demande acceptée!')),
     );
@@ -253,6 +254,7 @@ class _RequestCard extends StatelessWidget {
 
   Future<void> _rejectRequest(BuildContext context, String requestId) async {
     await InteractionsService.rejectRequest(requestId);
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Demande refusée.')),
     );
