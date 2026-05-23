@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_matching.dart';
+import 'page_pitch.dart';
+import 'page_messages.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -159,14 +162,54 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
             const SizedBox(height: 20),
             // Quick actions
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MatchingPage()),
+              ),
               icon: const Icon(Icons.search_rounded),
-              label: const Text('Découvrir des entrepreneurs'),
+              label: const Text('Explorer la communauté'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                minimumSize: const Size(double.infinity, 0),
               ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) => const PitchPage(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    label: const Text('Pitchs reçus'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.blue,
+                      side: const BorderSide(color: AppColors.blue),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MessagesPage()),
+                    ),
+                    icon: const Icon(Icons.message_rounded, size: 18),
+                    label: const Text('Messages'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
