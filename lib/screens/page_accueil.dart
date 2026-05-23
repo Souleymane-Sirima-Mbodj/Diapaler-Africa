@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/compteur_anime.dart';
 import '../widgets/avatar.dart';
@@ -309,21 +310,54 @@ class _NotifBell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+    return ValueListenableBuilder<List<NotificationItem>>(
+      valueListenable: NotificationService.notifications,
+      builder: (_, notifs, __) {
+        final unread = notifs.where((n) => !n.isRead).length;
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: onTap,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.notifications_none_rounded,
+                      color: Colors.white, size: 22),
+                ),
+                if (unread > 0)
+                  Positioned(
+                    top: -3,
+                    right: -3,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        unread > 9 ? '9+' : '$unread',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          child: const Icon(Icons.notifications_none_rounded,
-              color: Colors.white, size: 22),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -426,6 +460,123 @@ class _EmptyProjectHero extends StatelessWidget {
   }
 }
 
+void _showProjectSheet(BuildContext context, UserProfile p) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'MON PROJET',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.amber,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              p.projectName,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              p.sector,
+              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(
+                  'Étape ${p.projectStep} / ${p.projectTotalSteps}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: p.progress,
+                      minHeight: 6,
+                      backgroundColor: AppColors.fieldBg,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(AppColors.amber),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${(p.progress * 100).round()} %',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.amber,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      fullscreenDialog: true,
+                      builder: (_) => const PitchPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.upload_file_rounded, size: 18),
+                label: const Text(
+                  'Déposer un pitch',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _ProgressCard extends StatelessWidget {
   final UserProfile profile;
   const _ProgressCard({required this.profile});
@@ -438,9 +589,7 @@ class _ProgressCard extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          // Page détail projet — à brancher plus tard
-        },
+        onTap: () => _showProjectSheet(context, p),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
