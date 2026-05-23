@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,8 +36,8 @@ class _SignUpPageState extends State<SignUpPage> {
   String _country = 'Sénégal';
   final Set<String> _interests = {};
 
-  // Photo de profil
-  File? _photoFile;
+  // Photo de profil (octets en memoire — compatible web ET mobile)
+  Uint8List? _photoBytes;
   String _photoBase64 = '';
 
   // Sécurité
@@ -140,9 +139,9 @@ class _SignUpPageState extends State<SignUpPage> {
         maxHeight: 512,
       );
       if (image != null) {
-        final bytes = await File(image.path).readAsBytes();
+        final bytes = await image.readAsBytes();
         setState(() {
-          _photoFile = File(image.path);
+          _photoBytes = bytes;
           _photoBase64 = base64Encode(bytes);
         });
       }
@@ -527,15 +526,15 @@ class _SignUpPageState extends State<SignUpPage> {
               color: AppColors.fieldBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _photoFile != null ? AppColors.blue : AppColors.border,
+                color: _photoBytes != null ? AppColors.blue : AppColors.border,
                 width: 2,
               ),
             ),
-            child: _photoFile != null
+            child: _photoBytes != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.file(
-                      _photoFile!,
+                    child: Image.memory(
+                      _photoBytes!,
                       fit: BoxFit.cover,
                     ),
                   )

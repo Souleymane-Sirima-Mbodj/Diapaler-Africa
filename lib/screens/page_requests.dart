@@ -3,7 +3,6 @@ import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
-import '../widgets/avatar.dart';
 
 class RequestsPage extends StatefulWidget {
   const RequestsPage({super.key});

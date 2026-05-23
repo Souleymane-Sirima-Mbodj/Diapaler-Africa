@@ -25,11 +25,12 @@ class _MentorDashboardState extends State<MentorDashboard> {
             // Header
             Row(
               children: [
-                AvatarWidget(
-                  firstName: profile.firstName,
-                  lastName: profile.lastName,
-                  photoBase64: profile.photoBase64,
+                Avatar(
+                  initials: profile.initials,
                   size: 48,
+                  background: AppColors.roleMentor,
+                  foreground: Colors.white,
+                  photoBase64: profile.photoBase64,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
