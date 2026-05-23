@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
 import 'page_accueil.dart';
+import 'page_chatbot.dart';
 import 'page_matching.dart';
 import 'page_messages.dart';
 import 'page_agenda.dart';
@@ -37,6 +39,16 @@ class _RootShellState extends State<RootShell> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ChatbotPage()),
+        ),
+        backgroundColor: AppColors.amber,
+        foregroundColor: AppColors.navyDeep,
+        tooltip: 'DIALI IA — Assistant entrepreneurial',
+        child: const Icon(Icons.psychology_rounded, size: 26),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
