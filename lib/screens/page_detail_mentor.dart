@@ -34,13 +34,15 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     UserProfileController.update(
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
-    // Ajoute la session dans l'agenda, planifiée 7 jours plus tard à 14h.
+    // Ajoute la session dans l'agenda (Firebase), planifiée 7 jours plus tard à 14h.
     final sessionDate = DateTime.now().add(const Duration(days: 7));
-    AgendaController.add(BookedSession(
+    final session = BookedSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       mentorName: widget.mentor.name,
       mentorInitials: widget.mentor.initials,
       scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
-    ));
+    );
+    AgendaController.add(profile.email, session);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

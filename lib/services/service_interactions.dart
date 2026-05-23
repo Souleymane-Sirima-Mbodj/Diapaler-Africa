@@ -141,4 +141,10 @@ class InteractionsService {
   static Future<void> createOrUpdateConversation(Conversation conversation) async {
     await _db.child('conversations/${conversation.id}').set(conversation.toJson());
   }
+
+  static Future<void> markConversationAsRead(String conversationId) async {
+    await _db
+        .child('conversations/$conversationId')
+        .update({'unreadCount': 0});
+  }
 }
