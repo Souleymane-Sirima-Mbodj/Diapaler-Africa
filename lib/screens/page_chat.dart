@@ -25,6 +25,13 @@ class _ChatPageState extends State<ChatPage> {
   final _scrollCtrl = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    // Remet le compteur de non-lus à 0 dès l'ouverture du fil.
+    InteractionsService.markConversationAsRead(widget.conversationId);
+  }
+
+  @override
   void dispose() {
     _messageCtrl.dispose();
     _scrollCtrl.dispose();

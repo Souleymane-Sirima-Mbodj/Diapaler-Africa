@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../data/profil_utilisateur.dart';
+import '../services/service_agenda.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
 import 'page_accueil.dart';
@@ -21,6 +24,17 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Charge les sessions agenda depuis Firebase au démarrage.
+    final uid = UserProfileController.profile.value.email;
+    if (uid.isNotEmpty) {
+      AgendaController.load(uid);
+      NotificationService.init(uid);
+    }
+  }
 
   // Un écran par onglet : Accueil, Matching, Messages, Agenda, Profil.
   static const _pages = <Widget>[
