@@ -1,4 +1,3 @@
-// ignore_for_file: unused_import, unused_element
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../screens/page_detail_mentor.dart';
@@ -15,8 +14,12 @@ class MentorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HoverGlowCard(
-      // TODO: réactiver — Navigator.push(MentorDetailPage(mentor))
-      onTap: onTap ?? () {},
+      onTap: onTap ??
+          () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MentorDetailPage(mentor: mentor),
+                ),
+              ),
       padding: const EdgeInsets.all(14),
       child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,15 +61,26 @@ class MentorCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            // TODO: réactiver — afficher la note + le nombre d'avis
-                            //   const Icon(Icons.star_rounded,
-                            //       size: 16, color: AppColors.amber),
-                            //   const SizedBox(width: 4),
-                            //   Text('${mentor.rating}', ...),
-                            //   Text(' (${mentor.reviews})  ·  ', ...),
+                            const Icon(Icons.star_rounded,
+                                size: 16, color: AppColors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${mentor.rating}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              ' (${mentor.reviews})  ·  ',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.muted,
+                              ),
+                            ),
                             const Icon(Icons.location_on_outlined,
                                 size: 14, color: AppColors.muted),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 2),
                             Flexible(
                               child: Text(
                                 mentor.city,
@@ -93,9 +107,29 @@ class MentorCard extends StatelessWidget {
                     .map((s) => Chip(label: Text(s)))
                     .toList(),
               ),
-              // TODO: réactiver — afficher le score de compatibilité
-              //   _CompatibilityPill(value: mentor.compatibility)
-              //   et le bouton "Voir le profil →" qui ouvre MentorDetailPage
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _CompatibilityPill(value: mentor.compatibility),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MentorDetailPage(mentor: mentor),
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                    ),
+                    child: const Text(
+                      'Voir le profil  →',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
     );
