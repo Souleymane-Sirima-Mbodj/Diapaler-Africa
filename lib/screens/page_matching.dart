@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../data/donnees_mentors.dart';
+import '../services/service_geolocation.dart';
 import '../theme/theme_app.dart';
 import '../widgets/carte_mentor.dart';
 
@@ -16,6 +18,9 @@ class _MatchingPageState extends State<MatchingPage> {
   String _sector = 'Tous';
   String _city = 'Toutes';
   String _role = 'Tous';
+  Position? _userPosition;
+  bool _nearMe = false;
+  bool _loadingLocation = false;
 
   static const _topSectors = <String>[
     'Tous',
@@ -45,7 +50,7 @@ class _MatchingPageState extends State<MatchingPage> {
   }
 
   List<Mentor> get _filtered {
-    return mentors.where((m) {
+    final list = mentors.where((m) {
       if (!m.matches(_query)) return false;
       if (_sector != 'Tous' &&
           !m.sectors.any((s) => s.toLowerCase() == _sector.toLowerCase())) {
@@ -54,8 +59,18 @@ class _MatchingPageState extends State<MatchingPage> {
       if (_city != 'Toutes' && m.city != _city) return false;
       if (_role != 'Tous' && m.role != _role) return false;
       return true;
-    }).toList()
-      ..sort((a, b) => b.compatibility.compareTo(a.compatibility));
+    }).toList();
+
+    if (_nearMe && _userPosition != null) {
+      list.sort((a, b) {
+        final da = _distanceFor(a) ?? double.infinity;
+        final db = _distanceFor(b) ?? double.infinity;
+        return da.compareTo(db);
+      });
+    } else {
+      list.sort((a, b) => b.compatibility.compareTo(a.compatibility));
+    }
+    return list;
   }
 
   List<String> get _cities {
@@ -70,7 +85,32 @@ class _MatchingPageState extends State<MatchingPage> {
       _sector = 'Tous';
       _city = 'Toutes';
       _role = 'Tous';
+      _nearMe = false;
+      _userPosition = null;
     });
+  }
+
+  Future<void> _toggleNearMe() async {
+    if (_nearMe) {
+      setState(() { _nearMe = false; _userPosition = null; });
+      return;
+    }
+    setState(() => _loadingLocation = true);
+    final pos = await GeolocationService.getCurrentLocation();
+    if (!mounted) return;
+    if (pos != null) {
+      setState(() { _userPosition = pos; _nearMe = true; });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'obtenir ta position.')),
+      );
+    }
+    setState(() => _loadingLocation = false);
+  }
+
+  double? _distanceFor(Mentor m) {
+    if (_userPosition == null) return null;
+    return GeolocationService.distanceKmToCity(_userPosition!, m.city);
   }
 
   @override
@@ -113,6 +153,48 @@ class _MatchingPageState extends State<MatchingPage> {
                         onPressed: () => _searchCtrl.clear(),
                       )
                     : null,
+              ),
+            ),
+          ),
+          // Bouton Près de moi
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: GestureDetector(
+              onTap: _loadingLocation ? null : _toggleNearMe,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                decoration: BoxDecoration(
+                  color: _nearMe ? AppColors.purple : Colors.white,
+                  border: Border.all(
+                    color: _nearMe ? AppColors.purple : AppColors.border,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _loadingLocation
+                        ? const SizedBox(
+                            width: 14, height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.near_me_rounded,
+                            size: 16,
+                            color: _nearMe ? Colors.white : AppColors.purple,
+                          ),
+                    const SizedBox(width: 7),
+                    Text(
+                      _nearMe ? 'Trié par distance ✓' : 'Près de moi',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _nearMe ? Colors.white : AppColors.purple,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -225,8 +307,10 @@ class _MatchingPageState extends State<MatchingPage> {
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 10),
-                    itemBuilder: (_, i) =>
-                        MentorCard(mentor: filtered[i]),
+                    itemBuilder: (_, i) => MentorCard(
+                      mentor: filtered[i],
+                      distanceKm: _distanceFor(filtered[i]),
+                    ),
                   ),
           ),
         ],

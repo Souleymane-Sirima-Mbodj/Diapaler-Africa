@@ -8,8 +8,9 @@ import 'carte_lumineuse.dart';
 class MentorCard extends StatelessWidget {
   final Mentor mentor;
   final VoidCallback? onTap;
+  final double? distanceKm;
 
-  const MentorCard({super.key, required this.mentor, this.onTap});
+  const MentorCard({super.key, required this.mentor, this.onTap, this.distanceKm});
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +113,10 @@ class MentorCard extends StatelessWidget {
               Row(
                 children: [
                   _CompatibilityPill(value: mentor.compatibility),
+                  if (distanceKm != null) ...[
+                    const SizedBox(width: 8),
+                    _DistancePill(km: distanceKm!),
+                  ],
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
@@ -133,6 +138,42 @@ class MentorCard extends StatelessWidget {
               ),
             ],
           ),
+    );
+  }
+}
+
+class _DistancePill extends StatelessWidget {
+  final double km;
+  const _DistancePill({required this.km});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = km < 1
+        ? '< 1 km'
+        : km < 10
+            ? '${km.toStringAsFixed(1)} km'
+            : '${km.round()} km';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.purple.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.near_me_rounded, size: 13, color: AppColors.purple),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.purple,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
