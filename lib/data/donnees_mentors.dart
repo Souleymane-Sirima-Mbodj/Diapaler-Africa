@@ -815,6 +815,288 @@ const mentors = <Mentor>[
     rating: 4.6, reviews: 25, years: 9, compatibility: 80,
   ),
 
+  // ─── Région Dakar (banlieue) ───
+  Mentor(
+    initials: 'MG',
+    name: 'Mamadou Guèye',
+    title: 'PDG · Guèye Construction',
+    city: 'Rufisque',
+    sectors: ['BTP', 'Immobilier', 'Services'],
+    companies: ['Guèye Construction', 'Rufisque Bâtiment'],
+    rating: 4.6, reviews: 22, years: 14, compatibility: 80,
+  ),
+  Mentor(
+    initials: 'FDi',
+    name: 'Fatou Diallo',
+    title: 'Fondatrice · Pikine Commerce Digital',
+    city: 'Pikine',
+    sectors: ['E-commerce', 'Commerce', 'Services'],
+    companies: ['Pikine Commerce Digital', 'Boutique Banlieue SN'],
+    rating: 4.5, reviews: 18, years: 7, compatibility: 78,
+  ),
+
+  // ─── Région Thiès (compléments) ───
+  Mentor(
+    initials: 'OBa',
+    name: 'Omar Badji',
+    title: 'Fondateur · Mbour Tourisme Plus',
+    city: 'Mbour',
+    sectors: ['Tourisme', 'Hôtellerie', 'Services'],
+    companies: ['Mbour Tourisme Plus', 'Côte des Filets'],
+    rating: 4.6, reviews: 24, years: 10, compatibility: 79,
+  ),
+  Mentor(
+    initials: 'AFa',
+    name: 'Awa Fall',
+    title: 'PDG · Tivaouane Agri Services',
+    city: 'Tivaouane',
+    sectors: ['Agriculture', 'Agro-industrie', 'Services'],
+    companies: ['Tivaouane Agri Services', 'Coopérative Niayes Centre'],
+    rating: 4.5, reviews: 19, years: 12, compatibility: 77,
+  ),
+
+  // ─── Région Fatick ───
+  Mentor(
+    initials: 'ACi',
+    name: 'Aminata Cissokho',
+    title: 'Fondatrice · Fatick AgroFemmes',
+    city: 'Fatick',
+    sectors: ['Agriculture', 'Agro-industrie', 'Finance'],
+    companies: ['Fatick AgroFemmes', 'Microfinance Sine-Saloum'],
+    rating: 4.7, reviews: 28, years: 11, compatibility: 83,
+  ),
+  Mentor(
+    initials: 'MDg',
+    name: 'Moussa Diagne',
+    title: 'PDG · Gossas Agri+',
+    city: 'Gossas',
+    sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
+    companies: ['Gossas Agri+', 'Élevage Sine Saloum'],
+    rating: 4.5, reviews: 16, years: 13, compatibility: 76,
+  ),
+  Mentor(
+    initials: 'BDi',
+    name: 'Baye Diaw',
+    title: 'CEO · Foundiougne Pêche Durable',
+    city: 'Foundiougne',
+    sectors: ['Agriculture', 'Food', 'Tourisme'],
+    companies: ['Foundiougne Pêche Durable', 'Delta du Saloum Nature'],
+    rating: 4.6, reviews: 20, years: 9, compatibility: 78,
+  ),
+
+  // ─── Région Kaffrine ───
+  Mentor(
+    initials: 'ICi',
+    name: 'Ibrahima Cissé',
+    title: 'Fondateur · Kaffrine Élevage',
+    city: 'Kaffrine',
+    sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
+    companies: ['Kaffrine Élevage', 'Coopérative Pastorale Centre'],
+    rating: 4.5, reviews: 17, years: 16, compatibility: 75,
+  ),
+  Mentor(
+    initials: 'MDl',
+    name: 'Marème Diallo',
+    title: 'Directrice · Kaffrine Microfinance',
+    city: 'Kaffrine',
+    sectors: ['Finance', 'Services', 'Agriculture'],
+    companies: ['Kaffrine Microfinance', 'Réseau Femmes Rurales'],
+    rating: 4.6, reviews: 21, years: 12, compatibility: 80,
+  ),
+
+  // ─── Région Louga ───
+  Mentor(
+    initials: 'CLo',
+    name: 'Cheikh Lô',
+    title: 'PDG · Louga Commerce & Transit',
+    city: 'Louga',
+    sectors: ['Commerce', 'Transport', 'Logistique'],
+    companies: ['Louga Commerce & Transit', 'Nord Transit SN'],
+    rating: 4.6, reviews: 23, years: 17, compatibility: 79,
+  ),
+  Mentor(
+    initials: 'NSa',
+    name: 'Ndéye Sall',
+    title: 'Fondatrice · Artisanat Louga',
+    city: 'Louga',
+    sectors: ['Artisanat', 'Mode & Textile', 'Agriculture'],
+    companies: ['Artisanat Louga', 'Tisseuses du Cayor'],
+    rating: 4.7, reviews: 26, years: 10, compatibility: 81,
+  ),
+
+  // ─── Région Saint-Louis (compléments) ───
+  Mentor(
+    initials: 'OSo',
+    name: 'Oumar Sow',
+    title: 'PDG · Podor Élevage Sahel',
+    city: 'Podor',
+    sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
+    companies: ['Podor Élevage Sahel', 'Fleuve Agri Services'],
+    rating: 4.5, reviews: 18, years: 20, compatibility: 74,
+  ),
+  Mentor(
+    initials: 'ABa',
+    name: 'Aminata Baldé',
+    title: 'CEO · Dagana Riz & Céréales',
+    city: 'Dagana',
+    sectors: ['Agriculture', 'Agro-industrie', 'Food'],
+    companies: ['Dagana Riz & Céréales', 'Vallée Agricole Nord'],
+    rating: 4.6, reviews: 22, years: 14, compatibility: 78,
+  ),
+
+  // ─── Région Matam ───
+  Mentor(
+    initials: 'DDl',
+    name: 'Demba Diallo',
+    title: 'Fondateur · Matam Agro-Pastoral',
+    city: 'Matam',
+    sectors: ['Agriculture', 'Agro-industrie', 'Services'],
+    companies: ['Matam Agro-Pastoral', 'Sahel Bétail Export'],
+    rating: 4.5, reviews: 15, years: 18, compatibility: 73,
+  ),
+  Mentor(
+    initials: 'HSo',
+    name: 'Hawa Sow',
+    title: 'Directrice · Microfinance Fouta',
+    city: 'Matam',
+    sectors: ['Finance', 'Services', 'Éducation / EdTech'],
+    companies: ['Microfinance Fouta', 'Réseau Femmes Fouta'],
+    rating: 4.6, reviews: 20, years: 13, compatibility: 77,
+  ),
+
+  // ─── Région Tambacounda ───
+  Mentor(
+    initials: 'OBl',
+    name: 'Oumar Baldé',
+    title: 'PDG · Tambacounda Commerce',
+    city: 'Tambacounda',
+    sectors: ['Commerce', 'Agro-industrie', 'Transport'],
+    companies: ['Tambacounda Commerce', 'Tamba Transit Est'],
+    rating: 4.5, reviews: 19, years: 15, compatibility: 75,
+  ),
+  Mentor(
+    initials: 'ADl',
+    name: 'Aïssatou Diallo',
+    title: 'Fondatrice · EduTamba',
+    city: 'Tambacounda',
+    sectors: ['Éducation / EdTech', 'Services', 'Tech & Digital'],
+    companies: ['EduTamba', 'Centre Numérique Est Sénégal'],
+    rating: 4.7, reviews: 24, years: 8, compatibility: 82,
+  ),
+
+  // ─── Région Kédougou ───
+  Mentor(
+    initials: 'DCa',
+    name: 'Daouda Camara',
+    title: 'CEO · Kédougou Resources',
+    city: 'Kédougou',
+    sectors: ['Agriculture', 'Renouvelable', 'Services'],
+    companies: ['Kédougou Resources', 'Or & Développement SN'],
+    rating: 4.6, reviews: 17, years: 12, compatibility: 77,
+  ),
+
+  // ─── Région Kolda ───
+  Mentor(
+    initials: 'MaDl',
+    name: 'Mamadou Diallo',
+    title: 'PDG · Kolda Agri Sud',
+    city: 'Kolda',
+    sectors: ['Agriculture', 'Agro-industrie', 'Food'],
+    companies: ['Kolda Agri Sud', 'Casamance Intérieure Agro'],
+    rating: 4.5, reviews: 16, years: 17, compatibility: 74,
+  ),
+  Mentor(
+    initials: 'FBl',
+    name: 'Fatoumata Baldé',
+    title: 'Fondatrice · Kolda Femmes Entrepreneurs',
+    city: 'Vélingara',
+    sectors: ['Commerce', 'Artisanat', 'Services'],
+    companies: ['Kolda Femmes Entrepreneurs', 'Marché Sud SARL'],
+    rating: 4.6, reviews: 21, years: 9, compatibility: 78,
+  ),
+
+  // ─── Région Sédhiou ───
+  Mentor(
+    initials: 'ACo',
+    name: 'Adama Coly',
+    title: 'Fondateur · Sédhiou Artisanat Casamance',
+    city: 'Sédhiou',
+    sectors: ['Artisanat', 'Agriculture', 'Tourisme'],
+    companies: ['Sédhiou Artisanat Casamance', 'Forêts & Développement'],
+    rating: 4.5, reviews: 14, years: 10, compatibility: 74,
+  ),
+
+  // ─── Région Ziguinchor (compléments) ───
+  Mentor(
+    initials: 'MDt',
+    name: 'Marie-Thérèse Diatta',
+    title: 'Fondatrice · Bignona Nature & Tourisme',
+    city: 'Bignona',
+    sectors: ['Tourisme', 'Artisanat', 'Agriculture'],
+    companies: ['Bignona Nature & Tourisme', 'Kassolol Artisanat'],
+    rating: 4.7, reviews: 25, years: 11, compatibility: 81,
+  ),
+  Mentor(
+    initials: 'SDi',
+    name: 'Samba Dione',
+    title: 'PDG · Nioro AgroExport',
+    city: 'Nioro du Rip',
+    sectors: ['Agriculture', 'Agro-industrie', 'Commerce'],
+    companies: ['Nioro AgroExport', 'Saloum Sud Producteurs'],
+    rating: 4.5, reviews: 17, years: 14, compatibility: 76,
+  ),
+  Mentor(
+    initials: 'MDp',
+    name: 'Moustapha Diop',
+    title: 'Fondateur · Diourbel Négoce',
+    city: 'Diourbel',
+    sectors: ['Commerce', 'Services', 'Transport'],
+    companies: ['Diourbel Négoce', 'Baol Transit'],
+    rating: 4.5, reviews: 19, years: 16, compatibility: 75,
+  ),
+
+  // ─── Investisseurs régionaux ───
+  Mentor(
+    initials: 'AMb',
+    name: 'Aliou Mbaye',
+    title: 'Fondateur · Mbour Impact Invest',
+    city: 'Mbour',
+    sectors: ['Tourisme', 'Agriculture', 'Finance'],
+    companies: ['Mbour Impact Invest', 'Petite Côte Ventures'],
+    rating: 4.7, reviews: 28, years: 13, compatibility: 82,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'IBl',
+    name: 'Ibrahima Baldé',
+    title: 'Fondateur · Sud Sénégal Capital',
+    city: 'Vélingara',
+    sectors: ['Agriculture', 'Commerce', 'Finance'],
+    companies: ['Sud Sénégal Capital', 'Kolda Angel Fund'],
+    rating: 4.6, reviews: 20, years: 12, compatibility: 79,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'FDn',
+    name: 'Fatou Dione',
+    title: 'Directrice · Kaolack Invest',
+    city: 'Kaolack',
+    sectors: ['Finance', 'Agriculture', 'Agro-industrie'],
+    companies: ['Kaolack Invest', 'Bassin Arachidier Fund'],
+    rating: 4.7, reviews: 25, years: 15, compatibility: 81,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'MSa',
+    name: 'Mamadou Sarr',
+    title: 'Partner · Louga Ventures',
+    city: 'Louga',
+    sectors: ['Agriculture', 'Commerce', 'Finance'],
+    companies: ['Louga Ventures', 'Nord Sénégal Angel Network'],
+    rating: 4.6, reviews: 18, years: 11, compatibility: 78,
+    role: 'Investisseur',
+  ),
+
   // ═══════════════════════════════════════════════
   //  INVESTISSEURS SÉNÉGALAIS
   // ═══════════════════════════════════════════════
