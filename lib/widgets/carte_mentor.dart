@@ -46,7 +46,8 @@ class MentorCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (mentor.cis) const _CisBadge(),
+                            if (mentor.isInvestor) const _InvestorBadge(),
+                            if (mentor.cis && !mentor.isInvestor) const _CisBadge(),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -132,6 +133,37 @@ class MentorCard extends StatelessWidget {
               ),
             ],
           ),
+    );
+  }
+}
+
+class _InvestorBadge extends StatelessWidget {
+  const _InvestorBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.green.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up_rounded, size: 12, color: AppColors.green),
+          SizedBox(width: 3),
+          Text(
+            'Investisseur',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.green,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

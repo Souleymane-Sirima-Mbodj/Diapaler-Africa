@@ -10,6 +10,7 @@ class Mentor {
   final int years;
   final int compatibility;
   final bool cis;
+  final String role; // 'Mentor' ou 'Investisseur'
 
   const Mentor({
     required this.initials,
@@ -23,7 +24,10 @@ class Mentor {
     required this.years,
     required this.compatibility,
     this.cis = false,
+    this.role = 'Mentor',
   });
+
+  bool get isInvestor => role == 'Investisseur';
 
   String get firstName => name.split(' ').first;
 
@@ -809,6 +813,310 @@ const mentors = <Mentor>[
     sectors: ['E-commerce', 'Lifestyle', 'Tech & Digital'],
     companies: ['Marketplace Africa', 'Boutique en ligne SN'],
     rating: 4.6, reviews: 25, years: 9, compatibility: 80,
+  ),
+
+  // ═══════════════════════════════════════════════
+  //  INVESTISSEURS SÉNÉGALAIS
+  // ═══════════════════════════════════════════════
+
+  // ─── Tech / FinTech / Digital ───
+  Mentor(
+    initials: 'ABC',
+    name: 'Alioune Badara Cissé',
+    title: 'Fondateur · Dakar Angel Network',
+    city: 'Dakar',
+    sectors: ['Tech & Digital', 'FinTech', 'E-commerce'],
+    companies: [
+      'Dakar Angel Network',
+      'Téranga Ventures Fund',
+      'Africa Tech Holdings',
+    ],
+    rating: 4.9, reviews: 64, years: 16, compatibility: 95,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'NS',
+    name: 'Ndèye Seck',
+    title: 'Managing Partner · Impact Africa SN',
+    city: 'Dakar',
+    sectors: ['FinTech', 'Éducation / EdTech', 'Santé'],
+    companies: [
+      'Impact Africa SN',
+      'Fonds Entrepreneuriat Féminin',
+      'Réseau Business Angels Africa',
+    ],
+    rating: 4.8, reviews: 53, years: 14, compatibility: 92,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'HB',
+    name: 'Hamidou Bah',
+    title: 'Partner · Jokkolabs Capital',
+    city: 'Dakar',
+    sectors: ['Tech & Digital', 'Mobile Money', 'E-commerce'],
+    companies: [
+      'Jokkolabs Capital',
+      'West Africa Tech Fund',
+      'StartHub Dakar',
+    ],
+    rating: 4.7, reviews: 41, years: 12, compatibility: 89,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'CMT',
+    name: 'Cheikh M. Tall',
+    title: 'CEO · Téranga Venture Capital',
+    city: 'Dakar',
+    sectors: ['Tech & Digital', 'FinTech', 'Télécoms'],
+    companies: [
+      'Téranga Venture Capital',
+      'Tall Family Office',
+      'InnoSeed SN',
+    ],
+    rating: 4.8, reviews: 48, years: 19, compatibility: 91,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'RN',
+    name: 'Rokhaya Ndoye',
+    title: 'Associée · Cauris Capital',
+    city: 'Dakar',
+    sectors: ['FinTech', 'Mobile Money', 'Finance'],
+    companies: [
+      'Cauris Capital Sénégal',
+      'Fonds Francophone d\'Investissement',
+      'Réseau Investisseurs UEMOA',
+    ],
+    rating: 4.9, reviews: 57, years: 21, compatibility: 94,
+    cis: true, role: 'Investisseur',
+  ),
+
+  // ─── Agro-industrie / Agriculture ───
+  Mentor(
+    initials: 'TD',
+    name: 'Thierno Diallo',
+    title: 'PDG · Fonds Agricole du Sénégal',
+    city: 'Kaolack',
+    sectors: ['Agriculture', 'Agro-industrie', 'Renouvelable'],
+    companies: [
+      'Fonds Agricole du Sénégal',
+      'Agri-Finance Sahel',
+      'Investissements Ruraux SN',
+    ],
+    rating: 4.7, reviews: 39, years: 18, compatibility: 86,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'FMB',
+    name: 'Fatou Mbodj',
+    title: 'Fondatrice · AgroInvest Africa',
+    city: 'Thiès',
+    sectors: ['Agro-industrie', 'Food', 'Agriculture'],
+    companies: [
+      'AgroInvest Africa',
+      'Green Sahel Partners',
+      'Coopérative d\'Investissement Féminin',
+    ],
+    rating: 4.7, reviews: 35, years: 13, compatibility: 84,
+    role: 'Investisseur',
+  ),
+
+  // ─── Immobilier / BTP ───
+  Mentor(
+    initials: 'MoD',
+    name: 'Mouhamed Diagne',
+    title: 'Fondateur · Dakar Capital Immo',
+    city: 'Dakar',
+    sectors: ['Immobilier', 'BTP', 'Services'],
+    companies: [
+      'Dakar Capital Immo',
+      'Fonds Immobilier UEMOA',
+      'Diagne & Partners',
+    ],
+    rating: 4.6, reviews: 30, years: 22, compatibility: 82,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'KAN',
+    name: 'Khadidjatou Ndiaye',
+    title: 'Directrice · NdFund Immobilier',
+    city: 'Dakar',
+    sectors: ['Immobilier', 'Finance', 'Services'],
+    companies: [
+      'NdFund Immobilier',
+      'Savane Property Group',
+      'Africa Real Estate Partners',
+    ],
+    rating: 4.7, reviews: 26, years: 17, compatibility: 80,
+    role: 'Investisseur',
+  ),
+
+  // ─── Énergie / Renouvelable ───
+  Mentor(
+    initials: 'AS3',
+    name: 'Ababacar Sèye',
+    title: 'CEO · Africa Green Fund',
+    city: 'Dakar',
+    sectors: ['Énergie', 'Renouvelable', 'Tech & Digital'],
+    companies: [
+      'Africa Green Fund',
+      'Sèye Solar Investments',
+      'Fonds Énergie Propre CEDEAO',
+    ],
+    rating: 4.8, reviews: 44, years: 15, compatibility: 88,
+    role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'MB2',
+    name: 'Mariama Ba',
+    title: 'Partner · CleanTech Invest SN',
+    city: 'Dakar',
+    sectors: ['Renouvelable', 'Énergie', 'Agriculture'],
+    companies: [
+      'CleanTech Invest SN',
+      'Fonds Climat Africa',
+      'Ba Green Partners',
+    ],
+    rating: 4.7, reviews: 32, years: 11, compatibility: 85,
+    role: 'Investisseur',
+  ),
+
+  // ─── Santé / E-santé ───
+  Mentor(
+    initials: 'DrFM',
+    name: 'Dr. Fatou Mbaye',
+    title: 'Fondatrice · HealthCare Invest SN',
+    city: 'Dakar',
+    sectors: ['Santé', 'E-santé', 'Services'],
+    companies: [
+      'HealthCare Invest SN',
+      'Fonds Santé Afrique Occidentale',
+      'Réseau Médical d\'Investissement',
+    ],
+    rating: 4.9, reviews: 50, years: 20, compatibility: 91,
+    cis: true, role: 'Investisseur',
+  ),
+
+  // ─── Tourisme / Hôtellerie ───
+  Mentor(
+    initials: 'IBa',
+    name: 'Ibrahima Ba',
+    title: 'Partner · Téranga Hospitality Fund',
+    city: 'Saly',
+    sectors: ['Tourisme', 'Hôtellerie', 'Lifestyle'],
+    companies: [
+      'Téranga Hospitality Fund',
+      'Côte Ouest Investments',
+      'Saly Resort Capital',
+    ],
+    rating: 4.7, reviews: 36, years: 16, compatibility: 83,
+    role: 'Investisseur',
+  ),
+
+  // ─── Mode / Cosmétique / Artisanat ───
+  Mentor(
+    initials: 'SD2',
+    name: 'Sokhna Diallo',
+    title: 'Angel Investor · African Beauty Fund',
+    city: 'Dakar',
+    sectors: ['Cosmétique', 'Beauté', 'Mode & Textile', 'Artisanat'],
+    companies: [
+      'African Beauty Fund',
+      'Diallo Angel Investments',
+      'Fashion Africa Capital',
+    ],
+    rating: 4.8, reviews: 42, years: 10, compatibility: 87,
+    role: 'Investisseur',
+  ),
+
+  // ─── Transport / Logistique ───
+  Mentor(
+    initials: 'MaC',
+    name: 'Mamadou Camara',
+    title: 'Fondateur · Mobility Africa Fund',
+    city: 'Dakar',
+    sectors: ['Transport', 'Logistique', 'E-commerce'],
+    companies: [
+      'Mobility Africa Fund',
+      'Camara Logistique Capital',
+      'Réseau Transport Invest UEMOA',
+    ],
+    rating: 4.6, reviews: 28, years: 14, compatibility: 81,
+    role: 'Investisseur',
+  ),
+
+  // ─── Médias / Éducation ───
+  Mentor(
+    initials: 'AdN',
+    name: 'Adja Ndiaye',
+    title: 'Directrice · Médias Invest Africa',
+    city: 'Dakar',
+    sectors: ['Médias', 'Éducation / EdTech', 'Tech & Digital'],
+    companies: [
+      'Médias Invest Africa',
+      'Content Capital SN',
+      'Fonds Créatif Africa',
+    ],
+    rating: 4.7, reviews: 33, years: 13, compatibility: 84,
+    role: 'Investisseur',
+  ),
+
+  // ─── Multi-secteurs / Fonds généralistes ───
+  Mentor(
+    initials: 'PMN',
+    name: 'Pape Malick Ndiaye',
+    title: 'Fondateur · Jeune Afrique Capital',
+    city: 'Dakar',
+    sectors: ['Finance', 'Tech & Digital', 'Agro-industrie', 'Énergie'],
+    companies: [
+      'Jeune Afrique Capital',
+      'Fonds Émergence Sénégal',
+      'Ndiaye Family Office',
+    ],
+    rating: 4.8, reviews: 61, years: 24, compatibility: 93,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'SM2',
+    name: 'Serigne Mbaye',
+    title: 'Partner · AfricaInvest Sénégal',
+    city: 'Dakar',
+    sectors: ['Finance', 'FinTech', 'Immobilier', 'Agro-industrie'],
+    companies: [
+      'AfricaInvest Sénégal',
+      'Mbaye Partners Capital',
+      'FONSIS (administrateur)',
+    ],
+    rating: 4.9, reviews: 72, years: 28, compatibility: 96,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'AW',
+    name: 'Aminata Wane',
+    title: 'CEO · Sahel Impact Investors',
+    city: 'Dakar',
+    sectors: ['Finance', 'Santé', 'Agriculture', 'Renouvelable'],
+    companies: [
+      'Sahel Impact Investors',
+      'Wane Capital Partners',
+      'Réseau Femmes Investisseuses Africa',
+    ],
+    rating: 4.8, reviews: 49, years: 17, compatibility: 90,
+    cis: true, role: 'Investisseur',
+  ),
+  Mentor(
+    initials: 'OTh',
+    name: 'Oumar Thiam',
+    title: 'Fondateur · Gaïndé Capital',
+    city: 'Dakar',
+    sectors: ['Tech & Digital', 'Transport', 'BTP', 'Tourisme'],
+    companies: [
+      'Gaïndé Capital',
+      'Thiam Holding Investissements',
+      'Fonds Infrastructures UEMOA',
+    ],
+    rating: 4.7, reviews: 45, years: 20, compatibility: 88,
+    cis: true, role: 'Investisseur',
   ),
 ];
 
