@@ -123,7 +123,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                                           ),
                                         ),
                                       ),
-                                      if (mentor.cis) const _CisBadgeBig(),
+                                      if (mentor.isInvestor) const _InvestorBadgeBig(),
+                                      if (mentor.cis && !mentor.isInvestor) const _CisBadgeBig(),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -321,6 +322,37 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               ),
               const SizedBox(height: 32),
             ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvestorBadgeBig extends StatelessWidget {
+  const _InvestorBadgeBig();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.green,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up_rounded, size: 13, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Investisseur',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 0.4,
+            ),
           ),
         ],
       ),
