@@ -30,6 +30,10 @@ class AuthService {
 
   static Future<void> signOut() => _auth.signOut();
 
+  static Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email);
+  }
+
   /// Traduit un FirebaseAuthException en message FR lisible.
   static String humanError(Object e) {
     if (e is FirebaseAuthException) {

@@ -8,6 +8,7 @@ import '../widgets/logo_diapaler.dart';
 import '../widgets/bande_drapeau.dart';
 import 'coquille_principale.dart';
 import 'page_inscription.dart';
+import 'page_mot_de_passe_oublie.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -207,7 +208,11 @@ class _LoginPageState extends State<LoginPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordPage(),
+                        ),
+                      ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4, vertical: 4),

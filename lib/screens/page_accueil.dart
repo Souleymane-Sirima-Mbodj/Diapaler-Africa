@@ -13,6 +13,8 @@ import 'page_nouveau_projet.dart';
 import 'page_matching.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
+import 'page_dashboard_investisseur.dart';
+import 'page_dashboard_mentor.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,17 +43,37 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        color: AppColors.amber,
-        backgroundColor: Theme.of(context).cardTheme.color,
-        onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: const EdgeInsets.only(bottom: 90),
-          children: _loading ? _skeletons() : _content(),
-        ),
+      body: ValueListenableBuilder<UserProfile>(
+        valueListenable: UserProfileController.profile,
+        builder: (context, profile, _) {
+          if (profile.role == 'Investisseur') {
+            return RefreshIndicator(
+              color: AppColors.amber,
+              backgroundColor: Theme.of(context).cardTheme.color,
+              onRefresh: _refresh,
+              child: const InvestorDashboard(),
+            );
+          } else if (profile.role == 'Mentor') {
+            return RefreshIndicator(
+              color: AppColors.amber,
+              backgroundColor: Theme.of(context).cardTheme.color,
+              onRefresh: _refresh,
+              child: const MentorDashboard(),
+            );
+          }
+          return RefreshIndicator(
+            color: AppColors.amber,
+            backgroundColor: Theme.of(context).cardTheme.color,
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.only(bottom: 90),
+              children: _loading ? _skeletons() : _content(),
+            ),
+          );
+        },
       ),
     );
   }
