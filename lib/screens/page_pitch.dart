@@ -258,7 +258,7 @@ class _StepBar extends StatelessWidget {
   }
 }
 
-class _UploadTile extends StatelessWidget {
+class _UploadTile extends StatefulWidget {
   final IconData icon;
   final String label;
   final String subtitle;
@@ -271,53 +271,80 @@ class _UploadTile extends StatelessWidget {
   });
 
   @override
+  State<_UploadTile> createState() => _UploadTileState();
+}
+
+class _UploadTileState extends State<_UploadTile> {
+  bool _selected = false;
+
+  Widget _content() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: _selected ? 0.2 : 0.13),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              _selected ? Icons.check_circle_rounded : widget.icon,
+              color: widget.color,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _selected ? 'Fichier ajouté ✓' : widget.subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _selected ? widget.color : AppColors.muted,
+                    fontWeight:
+                        _selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            _selected ? Icons.check_rounded : Icons.add_rounded,
+            color: _selected ? widget.color : AppColors.muted,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () {},
-      child: DottedBorder(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 22),
+      onTap: () => setState(() => _selected = !_selected),
+      child: _selected
+          ? Container(
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: widget.color, width: 1.5),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.add_rounded, color: AppColors.muted),
-            ],
-          ),
-        ),
-      ),
+              child: _content(),
+            )
+          : DottedBorder(child: _content()),
     );
   }
 }
