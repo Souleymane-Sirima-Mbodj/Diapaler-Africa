@@ -1,470 +1,295 @@
 import 'package:flutter/material.dart';
-import '../data/donnees_mentors.dart';
+import '../data/interactions.dart';
+import '../data/profil_utilisateur.dart';
+import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
+import 'page_chat.dart';
 
 // ─────────────────────────────────────────────────────────────────
-// Onglet Messages — liste des conversations avec les mentors.
-// Toucher une conversation ouvre le fil de discussion.
+// Onglet Messages — liste Firebase des conversations en temps réel.
 // ─────────────────────────────────────────────────────────────────
 
-/// Conversation entre l'utilisateur et un mentor.
-class _Conversation {
-  final Mentor mentor;
-  final String lastMessage;
-  final String time;
-  final int unread;
-  final bool online;
-  final Color color;
-
-  const _Conversation({
-    required this.mentor,
-    required this.lastMessage,
-    required this.time,
-    required this.unread,
-    required this.online,
-    required this.color,
-  });
-}
-
-class MessagesPage extends StatelessWidget {
+class MessagesPage extends StatefulWidget {
   const MessagesPage({super.key});
 
-  /// Conversations de démonstration, basées sur les mentors de la plateforme.
-  static final List<_Conversation> _conversations = [
-    _Conversation(
-      mentor: mentors[3], // Babacar Ngom
-      lastMessage: 'Parfait, je t\'envoie le document avant jeudi.',
-      time: '09:24',
-      unread: 0,
-      online: true,
-      color: AppColors.amber,
-    ),
-    _Conversation(
-      mentor: mentors[5], // Aminata Niane
-      lastMessage: 'Ton idée de marketplace est très prometteuse !',
-      time: 'Hier',
-      unread: 2,
-      online: true,
-      color: AppColors.blue,
-    ),
-    _Conversation(
-      mentor: mentors[0], // Anta Diama Kama
-      lastMessage: 'On se cale une session la semaine prochaine ?',
-      time: 'Hier',
-      unread: 0,
-      online: false,
-      color: AppColors.green,
-    ),
-    _Conversation(
-      mentor: mentors[1], // Yérim Habib Sow
-      lastMessage: 'Merci pour ton message, je reviens vers toi vite.',
-      time: 'Lun',
-      unread: 0,
-      online: false,
-      color: AppColors.purple,
-    ),
-    _Conversation(
-      mentor: mentors[4], // Mossane Diop
-      lastMessage: 'Bravo pour ton avancement sur le projet !',
-      time: '12 mai',
-      unread: 0,
-      online: false,
-      color: AppColors.roleEntrepreneur,
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    final unreadTotal =
-        _conversations.fold<int>(0, (sum, c) => sum + c.unread);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-        actions: [
-          if (unreadTotal > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.amber.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$unreadTotal non lus',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.amber,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
-        itemCount: _conversations.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _ConversationTile(
-          conversation: _conversations[i],
-        ),
-      ),
-    );
-  }
+  State<MessagesPage> createState() => _MessagesPageState();
 }
 
-/// Ligne de la liste représentant une conversation.
-class _ConversationTile extends StatelessWidget {
-  final _Conversation conversation;
-  const _ConversationTile({required this.conversation});
+class _MessagesPageState extends State<MessagesPage> {
+  String _search = '';
+
+  static const _colors = <Color>[
+    AppColors.amber,
+    AppColors.blue,
+    AppColors.green,
+    AppColors.purple,
+    AppColors.navy,
+  ];
+
+  Color _colorFor(int index) => _colors[index % _colors.length];
+
+  String _initials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    if (now.year == dt.year && now.month == dt.month && now.day == dt.day) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (yesterday.year == dt.year &&
+        yesterday.month == dt.month &&
+        yesterday.day == dt.day) {
+      return 'Hier';
+    }
+    if (now.difference(dt).inDays < 7) {
+      const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      return days[dt.weekday - 1];
+    }
+    return '${dt.day}/${dt.month}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = conversation;
-    final unread = c.unread > 0;
+    final currentEmail = UserProfileController.profile.value.email;
 
-    return HoverGlowCard(
-      padding: const EdgeInsets.all(12),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => _ConversationView(conversation: c)),
-      ),
-      child: Row(
-        children: [
-          Avatar(
-            initials: c.mentor.initials,
-            size: 50,
-            background: c.color,
-            online: c.online,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        c.mentor.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.navyDeep,
-                        ),
-                      ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Messages')),
+      body: StreamBuilder<List<Conversation>>(
+        stream: InteractionsService.getConversations(currentEmail),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final all = snapshot.data ?? [];
+          final filtered = _search.isEmpty
+              ? all
+              : all.where((c) {
+                  final otherName = c.user1Id == currentEmail
+                      ? c.user2Name
+                      : c.user1Name;
+                  return otherName
+                      .toLowerCase()
+                      .contains(_search.toLowerCase());
+                }).toList();
+
+          final unreadTotal =
+              all.fold<int>(0, (sum, c) => sum + c.unreadCount);
+
+          return Column(
+            children: [
+              if (all.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _search = v),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search_rounded,
+                          size: 20, color: AppColors.subtle),
+                      hintText: 'Rechercher une conversation…',
+                      contentPadding: EdgeInsets.symmetric(vertical: 0),
                     ),
-                    Text(
-                      c.time,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: unread ? AppColors.amber : AppColors.subtle,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        c.lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.3,
-                          color: unread
-                              ? AppColors.navyDeep
-                              : AppColors.muted,
-                          fontWeight:
-                              unread ? FontWeight.w700 : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    if (unread) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 20,
-                        height: 20,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppColors.amber,
-                          shape: BoxShape.circle,
+                if (unreadTotal > 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          '${c.unread}',
+                          '$unreadTotal non lu${unreadTotal > 1 ? "s" : ""}',
                           style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.amber,
                           ),
                         ),
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+              Expanded(
+                child: filtered.isEmpty
+                    ? _EmptyState(hasSearch: _search.isNotEmpty)
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 90),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (_, i) {
+                          final conv = filtered[i];
+                          final otherName = conv.user1Id == currentEmail
+                              ? conv.user2Name
+                              : conv.user1Name;
+                          final otherId = conv.user1Id == currentEmail
+                              ? conv.user2Id
+                              : conv.user1Id;
+                          final unread = conv.unreadCount > 0;
 
-// ─────────────────────────────────────────────────────────────────
-// Fil de discussion — bulles + champ de saisie fonctionnel.
-// ─────────────────────────────────────────────────────────────────
-
-/// Un message du fil de discussion.
-class _Msg {
-  final String text;
-  final bool mine;
-  final String time;
-  const _Msg({required this.text, required this.mine, required this.time});
-}
-
-class _ConversationView extends StatefulWidget {
-  final _Conversation conversation;
-  const _ConversationView({required this.conversation});
-
-  @override
-  State<_ConversationView> createState() => _ConversationViewState();
-}
-
-class _ConversationViewState extends State<_ConversationView> {
-  final _inputCtrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
-  late final List<_Msg> _messages;
-
-  @override
-  void initState() {
-    super.initState();
-    // Fil de discussion de démonstration.
-    _messages = [
-      const _Msg(
-        text: 'Bonjour ! J\'ai bien reçu ta demande de mentorat.',
-        mine: false,
-        time: '09:02',
-      ),
-      const _Msg(
-        text: 'Bonjour, merci beaucoup d\'avoir accepté !',
-        mine: true,
-        time: '09:05',
-      ),
-      const _Msg(
-        text: 'Avec plaisir. Parle-moi un peu de ton projet, je t\'écoute.',
-        mine: false,
-        time: '09:06',
-      ),
-      const _Msg(
-        text:
-            'C\'est une plateforme qui met en relation les producteurs '
-            'locaux et les restaurateurs de Dakar.',
-        mine: true,
-        time: '09:09',
-      ),
-      const _Msg(
-        text: 'Parfait, je t\'envoie le document avant jeudi.',
-        mine: false,
-        time: '09:24',
-      ),
-    ];
-  }
-
-  @override
-  void dispose() {
-    _inputCtrl.dispose();
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  void _send() {
-    final text = _inputCtrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() {
-      _messages.add(_Msg(text: text, mine: true, time: 'Maintenant'));
-      _inputCtrl.clear();
-    });
-    // Défile vers le dernier message après le rendu.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = widget.conversation;
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            Avatar(
-              initials: c.mentor.initials,
-              size: 38,
-              background: c.color,
-              online: c.online,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    c.mentor.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                  Text(
-                    c.online ? 'En ligne' : 'Hors ligne',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: c.online ? AppColors.green : AppColors.subtle,
-                    ),
-                  ),
-                ],
+                          return HoverGlowCard(
+                            padding: const EdgeInsets.all(12),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                  conversationId: conv.id,
+                                  otherUserName: otherName,
+                                  otherUserId: otherId,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Avatar(
+                                  initials: _initials(otherName),
+                                  size: 50,
+                                  background: _colorFor(i),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              otherName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 14.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.navyDeep,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatTime(conv.lastMessageTime),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: unread
+                                                  ? AppColors.amber
+                                                  : AppColors.subtle,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              conv.lastMessage,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                height: 1.3,
+                                                color: unread
+                                                    ? AppColors.navyDeep
+                                                    : AppColors.muted,
+                                                fontWeight: unread
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w400,
+                                              ),
+                                            ),
+                                          ),
+                                          if (unread) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              width: 20,
+                                              height: 20,
+                                              alignment: Alignment.center,
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.amber,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Text(
+                                                '${conv.unreadCount}',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
               ),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              itemCount: _messages.length,
-              itemBuilder: (_, i) => _Bubble(message: _messages[i]),
-            ),
-          ),
-          _InputBar(controller: _inputCtrl, onSend: _send),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-/// Bulle d'un message, stylisée selon l'expéditeur.
-class _Bubble extends StatelessWidget {
-  final _Msg message;
-  const _Bubble({required this.message});
+class _EmptyState extends StatelessWidget {
+  final bool hasSearch;
+  const _EmptyState({required this.hasSearch});
 
   @override
   Widget build(BuildContext context) {
-    final mine = message.mine;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment:
-            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.74,
-            ),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: mine ? AppColors.navy : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(mine ? 16 : 4),
-                  bottomRight: Radius.circular(mine ? 4 : 16),
-                ),
-                border: mine
-                    ? null
-                    : Border.all(color: AppColors.border),
+                color: AppColors.blueTint,
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  height: 1.4,
-                  color: mine ? Colors.white : AppColors.navyDeep,
-                ),
+              child: const Icon(Icons.chat_bubble_outline_rounded,
+                  size: 36, color: AppColors.blue),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              hasSearch ? 'Aucun résultat' : 'Aucune conversation',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
               ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            message.time,
-            style: const TextStyle(fontSize: 10, color: AppColors.subtle),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Barre de saisie d'un message en bas du fil de discussion.
-class _InputBar extends StatelessWidget {
-  final TextEditingController controller;
-  final VoidCallback onSend;
-
-  const _InputBar({required this.controller, required this.onSend});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-                minLines: 1,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Écris ton message…',
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onSend,
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  color: AppColors.navy,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 20),
+            const SizedBox(height: 8),
+            Text(
+              hasSearch
+                  ? 'Essaie un autre nom.'
+                  : 'Tes échanges avec les mentors\napparaîtront ici automatiquement.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.muted,
+                height: 1.5,
               ),
             ),
           ],
