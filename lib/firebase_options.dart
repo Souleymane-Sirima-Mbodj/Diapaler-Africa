@@ -13,7 +13,7 @@ class DefaultFirebaseOptions {
     if (kIsWeb) return web;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return web; // fallback pour la démo — à régénérer avec flutterfire configure
+        return android;
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
@@ -22,6 +22,17 @@ class DefaultFirebaseOptions {
         return web;
     }
   }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyBihgsIao5ccFMCUFYnRDyTRvFDCrfyv4A',
+    authDomain: 'diapaler-africa.firebaseapp.com',
+    databaseURL:
+        'https://diapaler-africa-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'diapaler-africa',
+    storageBucket: 'diapaler-africa.firebasestorage.app',
+    messagingSenderId: '742284091826',
+    appId: '1:742284091826:android:dd155e4f84c64c837cc4ab',
+  );
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBBFVDwfhUKGMrvsqE2EdZG6dODj4BrKMk',
