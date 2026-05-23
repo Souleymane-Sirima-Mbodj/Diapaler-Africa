@@ -8,6 +8,8 @@ import '../widgets/carte_lumineuse.dart';
 import 'page_choix_role.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
+import 'page_planning.dart';
+import 'page_requests.dart';
 
 /// Pourcentage de complétion du profil — basé sur les champs remplis.
 double _profileCompletion(UserProfile p) {
@@ -101,6 +103,8 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               _ProjectsSection(profile: p),
+              const SizedBox(height: 22),
+              _InteractionsSection(),
               const SizedBox(height: 22),
               const _LogoutButton(),
             ],
@@ -1258,6 +1262,97 @@ class _CompleteProfileCta extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Interactions Section
+// ─────────────────────────────────────────────────────────────────
+class _InteractionsSection extends StatelessWidget {
+  const _InteractionsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Interactions',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppColors.navyDeep,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _InteractionButton(
+                icon: Icons.calendar_today_rounded,
+                label: 'Planning',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SchedulePage()),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _InteractionButton(
+                icon: Icons.mail_rounded,
+                label: 'Demandes',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _InteractionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _InteractionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.blue, size: 24),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
               ),
             ),
           ],
