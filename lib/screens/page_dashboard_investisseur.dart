@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_agenda.dart';
 import 'page_matching.dart';
-import 'page_pitch.dart';
 import 'page_messages.dart';
+import 'page_notifications.dart';
+import 'page_requests.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -59,6 +62,49 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                       ),
                     ],
                   ),
+                ),
+                ValueListenableBuilder<List<NotificationItem>>(
+                  valueListenable: NotificationService.notifications,
+                  builder: (context, notifs, _) {
+                    final unread = notifs.where((n) => !n.isRead).length;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          color: AppColors.navyDeep,
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsPage(),
+                            ),
+                          ),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                color: AppColors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -180,12 +226,9 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        fullscreenDialog: true,
-                        builder: (_) => const PitchPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RequestsPage()),
                     ),
-                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    icon: const Icon(Icons.inbox_rounded, size: 18),
                     label: const Text('Pitchs reçus'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.blue,
@@ -210,6 +253,25 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AgendaPage()),
+                ),
+                icon: const Icon(Icons.event_rounded, size: 18),
+                label: const Text(
+                  'Mon Agenda',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.navyDeep,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
           ],
         );

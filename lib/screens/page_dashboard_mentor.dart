@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import 'page_messages.dart';
 import 'page_agenda.dart';
+import 'page_messages.dart';
+import 'page_notifications.dart';
+import 'page_planning.dart';
 import 'page_requests.dart';
 
 class MentorDashboard extends StatefulWidget {
@@ -59,6 +62,49 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       ),
                     ],
                   ),
+                ),
+                ValueListenableBuilder<List<NotificationItem>>(
+                  valueListenable: NotificationService.notifications,
+                  builder: (context, notifs, _) {
+                    final unread = notifs.where((n) => !n.isRead).length;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          color: AppColors.navyDeep,
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsPage(),
+                            ),
+                          ),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                color: AppColors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -195,23 +241,44 @@ class _MentorDashboardState extends State<MentorDashboard> {
               ],
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const RequestsPage()),
+                    ),
+                    icon: const Icon(Icons.mail_rounded, size: 18),
+                    label: const Text(
+                      'Demandes',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.roleMentor,
+                      side: const BorderSide(color: AppColors.roleMentor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
-                icon: const Icon(Icons.mail_rounded, size: 18),
-                label: const Text(
-                  'Voir mes demandes de mentorat',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SchedulePage()),
+                    ),
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: const Text(
+                      'Mon Planning',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navyDeep,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.roleMentor,
-                  side: const BorderSide(color: AppColors.roleMentor),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
+              ],
             ),
           ],
         );
