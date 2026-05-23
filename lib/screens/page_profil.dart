@@ -1,4 +1,3 @@
-// ignore_for_file: unused_import, unused_element
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
@@ -58,9 +57,8 @@ class ProfilePage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
               _IdentityCard(profile: p, completion: completion),
-              // TODO: réactiver — _AchievementsRow(profile: p, completion: completion)
-              //   quand les flows "Créer un projet" et "Devenir mentoré" seront
-              //   rebranchés (sinon 3 badges sur 4 restent verrouillés et confus).
+              const SizedBox(height: 14),
+              _AchievementsRow(profile: p, completion: completion),
               if (completion < 1.0) ...[
                 const SizedBox(height: 14),
                 _CompleteProfileCta(percent: completion),
@@ -679,8 +677,12 @@ class _EmptyProjects extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      // TODO: réactiver — Navigator.push(AddProjectPage)
-      onTap: () {},
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const AddProjectPage(),
+        ),
+      ),
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
@@ -749,8 +751,14 @@ class _NewProjectButton extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
-          // TODO: réactiver — Navigator.push(AddProjectPage)
-          onPressed: canStart ? () {} : null,
+          onPressed: canStart
+              ? () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      fullscreenDialog: true,
+                      builder: (_) => const AddProjectPage(),
+                    ),
+                  )
+              : null,
           icon: const Icon(Icons.add_rounded, size: 18),
           label: const Text(
             'Nouveau projet',

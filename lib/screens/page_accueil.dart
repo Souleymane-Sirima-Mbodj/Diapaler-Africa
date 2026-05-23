@@ -9,8 +9,6 @@ import '../widgets/carte_mentor.dart';
 import '../widgets/feuille_profil.dart';
 import '../widgets/entete_section.dart';
 import '../widgets/squelette.dart';
-// ignore_for_file: unused_import, unused_element
-// (imports gardés en place — réactivés quand les redirections seront rebranchées)
 import 'page_nouveau_projet.dart';
 import 'page_matching.dart';
 import 'page_pitch.dart';
@@ -236,8 +234,11 @@ class _NavyHero extends StatelessWidget {
                   const SizedBox(height: 14),
                   // Barre de recherche
                   GestureDetector(
-                    // TODO: réactiver — Navigator.push(MatchingPage)
-                    onTap: () {},
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const MatchingPage(),
+                      ),
+                    ),
                     child: Container(
                       height: 44,
                       padding:
@@ -325,8 +326,12 @@ class _EmptyProjectHero extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        // TODO: réactiver — Navigator.push(AddProjectPage)
-        onTap: () {},
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => const AddProjectPage(),
+          ),
+        ),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -524,16 +529,21 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.roleMentor,
           title: 'Trouver',
           subtitle: 'un mentor',
-          // TODO: réactiver — Navigator.push(MatchingPage)
-          onTap: () {},
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MatchingPage()),
+          ),
         ),
         _QuickAction(
           icon: Icons.upload_file_rounded,
           color: AppColors.amber,
           title: 'Déposer',
           subtitle: 'un pitch',
-          // TODO: réactiver — Navigator.push(PitchPage)
-          onTap: () {},
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => const PitchPage(),
+            ),
+          ),
         ),
         _QuickAction(
           icon: Icons.account_balance_rounded,
@@ -547,8 +557,9 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.green,
           title: 'CIS',
           subtitle: 'Investisseurs',
-          // TODO: réactiver — Navigator.push(MatchingPage)
-          onTap: () {},
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MatchingPage()),
+          ),
         ),
       ],
     );
@@ -753,87 +764,46 @@ class _RecommendedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: réactiver — afficher l'action "Voir tout →" qui redirige vers
-    //   RecommendedMentorsPage quand le flow mentors sera rebranché.
-    return const SectionHeader(title: 'Mentors pour toi');
+    return SectionHeader(
+      title: 'Mentors pour toi',
+      action: 'Voir tout →',
+      onAction: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const RecommendedMentorsPage()),
+      ),
+    );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Mentors recommandés — bandeau "À venir" pour la première démo
+// Mentors recommandés — liste réactive selon le profil utilisateur
 // ─────────────────────────────────────────────────────────────────
 class _RecommendedMentors extends StatelessWidget {
   const _RecommendedMentors();
 
   @override
   Widget build(BuildContext context) {
-    // TODO: réactiver — afficher la liste des mentors recommandés via
-    //   recommendedMentorsFor(userSector, userInterests, projectSectors)
-    //   quand le flow mentors sera rebranché. Cf. _NoRecoState pour
-    //   l'empty state quand la liste est vide.
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.amber.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.handshake_rounded,
-                color: AppColors.amber, size: 22),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recommandations bientôt disponibles',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Les mentors qui correspondent à ton profil s\'afficheront ici.',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.muted,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.amberSoft,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'À venir',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: AppColors.amber,
-                letterSpacing: 0.5,
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (_, p, __) {
+        final recos = recommendedMentorsFor(
+          userSector: p.sector,
+          userInterests: p.interests,
+          projectSectors: p.projects.map((pr) => pr.sector).toList(),
+        ).take(2).toList();
+
+        if (recos.isEmpty) {
+          return const _NoRecoState();
+        }
+        return Column(
+          children: [
+            for (final m in recos)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: MentorCard(mentor: m),
               ),
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
