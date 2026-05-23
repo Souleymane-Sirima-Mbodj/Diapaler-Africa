@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 
 class DiapalerBottomNav extends StatelessWidget {
@@ -41,27 +42,34 @@ class DiapalerBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 8,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(_items.length, (i) {
-              return Expanded(
-                child: _NavButton(
-                  item: _items[i],
-                  selected: currentIndex == i,
-                  onTap: () => onTap(i),
-                ),
-              );
-            }),
+    return ValueListenableBuilder<List<NotificationItem>>(
+      valueListenable: NotificationService.notifications,
+      builder: (context, notifs, _) {
+        final unreadCount = notifs.where((n) => !n.isRead).length;
+        return Material(
+          color: Colors.white,
+          elevation: 8,
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(_items.length, (i) {
+                  return Expanded(
+                    child: _NavButton(
+                      item: _items[i],
+                      selected: currentIndex == i,
+                      badge: i == 0 ? unreadCount : 0,
+                      onTap: () => onTap(i),
+                    ),
+                  );
+                }),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -69,12 +77,14 @@ class DiapalerBottomNav extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   final _NavItem item;
   final bool selected;
+  final int badge;
   final VoidCallback onTap;
 
   const _NavButton({
     required this.item,
     required this.selected,
     required this.onTap,
+    this.badge = 0,
   });
 
   @override
@@ -98,10 +108,38 @@ class _NavButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                selected ? item.active : item.icon,
-                color: color,
-                size: 22,
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    selected ? item.active : item.icon,
+                    color: color,
+                    size: 22,
+                  ),
+                  if (badge > 0)
+                    Positioned(
+                      top: -4,
+                      right: -6,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          color: AppColors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            badge > 9 ? '9+' : '$badge',
+                            style: const TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
