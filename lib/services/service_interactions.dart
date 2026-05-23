@@ -74,19 +74,34 @@ class InteractionsService {
     required String senderId,
     required String senderName,
     required String recipientId,
+    required String recipientName,
     required String text,
   }) async {
     final msgId = DateTime.now().millisecondsSinceEpoch.toString();
+    final now = DateTime.now();
     final message = ChatMessage(
       id: msgId,
       senderId: senderId,
       senderName: senderName,
       recipientId: recipientId,
       text: text,
-      timestamp: DateTime.now(),
+      timestamp: now,
       isRead: false,
     );
     await _db.child('messages/$conversationId/$msgId').set(message.toJson());
+
+    // Sync conversation list so both users see the thread.
+    final ids = [senderId, recipientId]..sort();
+    await createOrUpdateConversation(Conversation(
+      id: conversationId,
+      user1Id: ids[0],
+      user2Id: ids[1],
+      user1Name: ids[0] == senderId ? senderName : recipientName,
+      user2Name: ids[0] == senderId ? recipientName : senderName,
+      lastMessage: text,
+      lastMessageTime: now,
+      unreadCount: 1,
+    ));
   }
 
   static Stream<List<ChatMessage>> getMessages(String conversationId) {

@@ -44,6 +44,7 @@ class _ChatPageState extends State<ChatPage> {
         senderId: currentProfile.email,
         senderName: currentProfile.fullName,
         recipientId: widget.otherUserId,
+        recipientName: widget.otherUserName,
         text: text,
       );
 

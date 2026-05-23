@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../data/donnees_mentors.dart';
 import '../services/service_interactions.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 
@@ -41,6 +42,11 @@ class _SendRequestPageState extends State<SendRequestPage> {
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,
         message: _messageCtrl.text,
+      );
+      NotificationService.addNotification(
+        title: 'Demande envoyée',
+        message: 'Ta demande de mentorat à ${widget.mentor.name} a bien été transmise.',
+        type: 'mentor_request',
       );
 
       if (!mounted) return;

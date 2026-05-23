@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_agenda.dart';
+import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import 'page_send_request.dart';
+import 'page_chat.dart';
 
 class MentorDetailPage extends StatefulWidget {
   final Mentor mentor;
@@ -32,10 +34,17 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     UserProfileController.update(
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
+    // Ajoute la session dans l'agenda, planifiée 7 jours plus tard à 14h.
+    final sessionDate = DateTime.now().add(const Duration(days: 7));
+    AgendaController.add(BookedSession(
+      mentorName: widget.mentor.name,
+      mentorInitials: widget.mentor.initials,
+      scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
+    ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Session réservée avec ${widget.mentor.name.split(" ").first} 🎉',
+          'Session réservée avec ${widget.mentor.name.split(" ").first} !',
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.green,
@@ -268,11 +277,22 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SendRequestPage(mentor: mentor),
-                          ),
-                        ),
+                        onPressed: () {
+                          final profile = UserProfileController.profile.value;
+                          final convId = InteractionsService.generateConversationId(
+                            profile.email,
+                            mentor.name,
+                          );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ChatPage(
+                                conversationId: convId,
+                                otherUserName: mentor.name,
+                                otherUserId: mentor.name,
+                              ),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.chat_bubble_outline_rounded,
                             size: 18),
                         label: const Text('Message'),

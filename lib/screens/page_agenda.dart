@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
+import '../services/service_agenda.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -100,31 +101,42 @@ class AgendaPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Agenda')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
-        children: [
-          _SummaryCard(upcomingCount: upcoming.length),
-          const SizedBox(height: 20),
-          const _SectionLabel('À venir'),
-          const SizedBox(height: 10),
-          if (upcoming.isEmpty)
-            const _EmptyHint('Aucune session planifiée pour le moment.')
-          else
-            for (final s in upcoming) ...[
-              _SessionCard(session: s),
+      body: ValueListenableBuilder<List<BookedSession>>(
+        valueListenable: AgendaController.sessions,
+        builder: (context, bookedSessions, _) {
+          final totalUpcoming = upcoming.length + bookedSessions.length;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
+            children: [
+              _SummaryCard(upcomingCount: totalUpcoming),
+              const SizedBox(height: 20),
+              const _SectionLabel('À venir'),
               const SizedBox(height: 10),
-            ],
-          const SizedBox(height: 12),
-          const _SectionLabel('Passées'),
-          const SizedBox(height: 10),
-          if (past.isEmpty)
-            const _EmptyHint('Tes sessions terminées apparaîtront ici.')
-          else
-            for (final s in past) ...[
-              _SessionCard(session: s),
+              if (totalUpcoming == 0)
+                const _EmptyHint('Aucune session planifiée pour le moment.')
+              else ...[
+                for (final s in bookedSessions) ...[
+                  _BookedSessionCard(session: s),
+                  const SizedBox(height: 10),
+                ],
+                for (final s in upcoming) ...[
+                  _SessionCard(session: s),
+                  const SizedBox(height: 10),
+                ],
+              ],
+              const SizedBox(height: 12),
+              const _SectionLabel('Passées'),
               const SizedBox(height: 10),
+              if (past.isEmpty)
+                const _EmptyHint('Tes sessions terminées apparaîtront ici.')
+              else
+                for (final s in past) ...[
+                  _SessionCard(session: s),
+                  const SizedBox(height: 10),
+                ],
             ],
-        ],
+          );
+        },
       ),
     );
   }
@@ -505,6 +517,145 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Carte pour une session réservée dynamiquement (via page_detail_mentor).
+class _BookedSessionCard extends StatelessWidget {
+  final BookedSession session;
+  const _BookedSessionCard({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    return HoverGlowCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.navy,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      s.day,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      s.month,
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Session avec ${s.mentorName}',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Avatar(
+                          initials: s.mentorInitials,
+                          size: 22,
+                          background: AppColors.blue,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            s.mentorName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'En attente',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.amber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.schedule_rounded, size: 15, color: AppColors.muted),
+              const SizedBox(width: 5),
+              Text(
+                '${s.weekday} · ${s.timeRange}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyDeep,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.videocam_rounded, size: 15, color: AppColors.muted),
+              const SizedBox(width: 5),
+              const Text(
+                'En ligne',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
