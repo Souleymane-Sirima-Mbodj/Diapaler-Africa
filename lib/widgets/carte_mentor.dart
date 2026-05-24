@@ -105,9 +105,14 @@ class MentorCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: mentor.sectors
-                    .map((s) => Chip(label: Text(s)))
-                    .toList(),
+                children: [
+                  ...mentor.sectors.take(3).map((s) => Chip(label: Text(s))),
+                  if (mentor.sectors.length > 3)
+                    Chip(
+                      label: Text('+${mentor.sectors.length - 3}'),
+                      backgroundColor: AppColors.fieldBg,
+                    ),
+                ],
               ),
               const SizedBox(height: 12),
               Row(
