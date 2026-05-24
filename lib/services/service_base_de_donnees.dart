@@ -15,6 +15,47 @@ class DatabaseService {
     return _userRef(uid).update(_toMap(profile));
   }
 
+  // ───────────────────────────── Pitchs publics ────────────────────────────
+
+  /// Publie un pitch dans le nœud global `pitches/` — visible par tous.
+  static Future<void> publishPitch({
+    required String userId,
+    required String userName,
+    required String title,
+    required String sector,
+    required String description,
+    required String amount,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    await _db.ref('pitches/$id').set({
+      'id': id,
+      'userId': userId,
+      'userName': userName,
+      'title': title,
+      'sector': sector,
+      'description': description,
+      'amount': amount,
+      'createdAt': ServerValue.timestamp,
+    });
+  }
+
+  /// Stream temps réel de tous les pitchs publiés.
+  static Stream<List<Map<String, dynamic>>> getPitches() {
+    return _db.ref('pitches').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return [];
+      final list = data.values
+          .map((v) => Map<String, dynamic>.from(v as Map))
+          .toList();
+      list.sort((a, b) {
+        final aT = (a['createdAt'] as num?) ?? 0;
+        final bT = (b['createdAt'] as num?) ?? 0;
+        return bT.compareTo(aT);
+      });
+      return list;
+    });
+  }
+
   static Future<UserProfile?> readUserProfile(String uid) async {
     final snap = await _userRef(uid).get();
     if (!snap.exists || snap.value == null) return null;

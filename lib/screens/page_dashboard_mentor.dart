@@ -6,6 +6,7 @@ import '../widgets/avatar.dart';
 import 'page_agenda.dart';
 import 'page_messages.dart';
 import 'page_notifications.dart';
+import 'page_pitches_publics.dart';
 import 'page_planning.dart';
 import 'page_requests.dart';
 
@@ -304,6 +305,26 @@ class _MentorDashboardState extends State<MentorDashboard> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PublicPitchesPage()),
+                      ),
+                      icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                      label: const Text(
+                        'Voir les pitchs publiés',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.amber,
+                        side: const BorderSide(color: AppColors.amber),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
                   ),
                 ]),
               ),
