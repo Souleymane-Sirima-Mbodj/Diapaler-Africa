@@ -12,6 +12,74 @@ import 'page_messages.dart';
 import 'page_agenda.dart';
 import 'page_profil.dart';
 
+// ── FAB chatbot avec anneau de pulse ──────────────────────────────
+class _PulseFab extends StatefulWidget {
+  final VoidCallback onPressed;
+  const _PulseFab({required this.onPressed});
+
+  @override
+  State<_PulseFab> createState() => _PulseFabState();
+}
+
+class _PulseFabState extends State<_PulseFab>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+    _scale = Tween<double>(begin: 1.0, end: 2.2).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _opacity = Tween<double>(begin: 0.55, end: 0.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => Transform.scale(
+            scale: _scale.value,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.amber.withValues(alpha: _opacity.value),
+              ),
+            ),
+          ),
+        ),
+        FloatingActionButton(
+          onPressed: widget.onPressed,
+          backgroundColor: AppColors.amber,
+          foregroundColor: AppColors.navyDeep,
+          elevation: 4,
+          tooltip: 'DIALI IA — Assistant entrepreneurial',
+          child: const Icon(Icons.psychology_rounded, size: 26),
+        ),
+      ],
+    );
+  }
+}
+
 /// Conteneur principal de l'application après connexion.
 /// Gère la barre de navigation inférieure à cinq onglets et conserve
 /// l'état de chaque onglet grâce à un [IndexedStack].
@@ -53,14 +121,10 @@ class _RootShellState extends State<RootShell> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _PulseFab(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ChatbotPage()),
         ),
-        backgroundColor: AppColors.amber,
-        foregroundColor: AppColors.navyDeep,
-        tooltip: 'DIALI IA — Assistant entrepreneurial',
-        child: const Icon(Icons.psychology_rounded, size: 26),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
