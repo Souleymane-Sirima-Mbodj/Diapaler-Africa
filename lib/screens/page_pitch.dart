@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../theme/theme_app.dart';
 
 /// Stepper 3 étapes pour déposer un pitch (correspond à l'Écran 8 du doc).
@@ -12,6 +15,7 @@ class PitchPage extends StatefulWidget {
 
 class _PitchPageState extends State<PitchPage> {
   int _step = 0;
+  bool _loading = false;
   static const _total = 3;
 
   final _title = TextEditingController();
@@ -33,18 +37,68 @@ class _PitchPageState extends State<PitchPage> {
     super.dispose();
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (_step < _total - 1) {
       setState(() => _step++);
-    } else {
+      return;
+    }
+    // Dernière étape → sauvegarde réelle
+    setState(() => _loading = true);
+    try {
+      final profile = UserProfileController.profile.value;
+      final uid = AuthService.currentUid;
+      final title =
+          _title.text.trim().isEmpty ? 'Mon Pitch' : _title.text.trim();
+      final description = _description.text.trim();
+      final sector = _sector ?? profile.sector;
+
+      // 1. Ajoute au profil de l'entrepreneur comme projet
+      final project = Project(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: title,
+        description: description,
+        sector: sector,
+        step: 1,
+        totalSteps: 5,
+      );
+      final updated = profile.copyWith(
+        projects: [...profile.projects, project],
+      );
+      UserProfileController.update(updated);
+      if (uid != null) {
+        await DatabaseService.updateUserProfile(uid, updated);
+      }
+
+      // 2. Publie dans le nœud global pitches/ → visible mentors & investisseurs
+      await DatabaseService.publishPitch(
+        userId: profile.email,
+        userName: profile.fullName,
+        title: title,
+        sector: sector,
+        description: description,
+        amount: _amount.text.trim(),
+      );
+
+      if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🎉 Pitch déposé ! Visible auprès des mentors.'),
+          content: Text('🎉 Pitch publié ! Visible auprès des mentors et investisseurs.'),
           backgroundColor: AppColors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de la publication. Réessaie.'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -82,17 +136,24 @@ class _PitchPageState extends State<PitchPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _next,
-                  child: Text(
-                    _step == _total - 1
-                        ? 'PUBLIER MON PITCH'
-                        : 'CONTINUER',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
-                      fontSize: 14,
-                    ),
-                  ),
+                  onPressed: _loading ? null : _next,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _step == _total - 1 ? 'PUBLIER MON PITCH' : 'CONTINUER',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                            fontSize: 14,
+                          ),
+                        ),
                 ),
               ),
             ),

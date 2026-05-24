@@ -7,6 +7,7 @@ import 'page_agenda.dart';
 import 'page_matching.dart';
 import 'page_messages.dart';
 import 'page_notifications.dart';
+import 'page_pitches_publics.dart';
 import 'page_requests.dart';
 
 class InvestorDashboard extends StatefulWidget {
@@ -252,7 +253,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                         child: OutlinedButton.icon(
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                                builder: (_) => const RequestsPage()),
+                                builder: (_) => const PublicPitchesPage()),
                           ),
                           icon: const Icon(Icons.inbox_rounded, size: 18),
                           label: const Text('Pitchs reçus'),
