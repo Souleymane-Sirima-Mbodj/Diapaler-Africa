@@ -198,8 +198,9 @@ class _MatchingPageState extends State<MatchingPage> {
               ),
             ),
           ),
-          // Pills rôle
-          Padding(
+          // Pills rôle — SingleChildScrollView pour éviter l'overflow
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Row(
               children: [
@@ -210,18 +211,34 @@ class _MatchingPageState extends State<MatchingPage> {
                       onTap: () => setState(() => _role = r),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: _role == r ? AppColors.navyDeep : Colors.white,
+                          color:
+                              _role == r ? AppColors.navyDeep : Colors.white,
                           border: Border.all(
-                            color: _role == r ? AppColors.navyDeep : AppColors.border,
+                            color: _role == r
+                                ? AppColors.navyDeep
+                                : AppColors.border,
                           ),
                           borderRadius: BorderRadius.circular(999),
+                          boxShadow: _role == r
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.navyDeep
+                                        .withValues(alpha: 0.18),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ]
+                              : null,
                         ),
                         child: Text(
                           r,
                           style: TextStyle(
-                            color: _role == r ? Colors.white : AppColors.navyDeep,
+                            color: _role == r
+                                ? Colors.white
+                                : AppColors.navyDeep,
                             fontWeight: FontWeight.w700,
                             fontSize: 12.5,
                           ),
