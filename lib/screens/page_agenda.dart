@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../theme/theme_app.dart';
@@ -541,10 +542,12 @@ class _BookedSessionCardState extends State<_BookedSessionCard> {
     if (reason == null || reason.trim().isEmpty) return;
     final uid = AuthService.currentUid;
     if (uid == null) return;
+    final userName = UserProfileController.profile.value.fullName;
     setState(() => _cancelling = true);
     try {
       await AgendaController.cancel(
         userId: uid,
+        userName: userName,
         session: widget.session,
         reason: reason.trim(),
       );
