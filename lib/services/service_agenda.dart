@@ -39,10 +39,10 @@ class BookedSession {
   };
 
   factory BookedSession.fromJson(Map<String, dynamic> json) => BookedSession(
-    id: json['id'] as String,
-    mentorName: json['mentorName'] as String,
-    mentorInitials: json['mentorInitials'] as String,
-    scheduledAt: DateTime.parse(json['scheduledAt'] as String),
+    id: json['id']?.toString() ?? '',
+    mentorName: json['mentorName']?.toString() ?? '',
+    mentorInitials: json['mentorInitials']?.toString() ?? '?',
+    scheduledAt: DateTime.tryParse(json['scheduledAt']?.toString() ?? '') ?? DateTime.now(),
   );
 }
 
@@ -59,13 +59,17 @@ class AgendaController {
         sessions.value = [];
         return;
       }
-      final list = data.values
-          .map<BookedSession>(
-              (v) => BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
-          .toList()
-        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-      sessions.value = list;
-    });
+      try {
+        final list = data.values
+            .map<BookedSession>(
+                (v) => BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
+            .toList()
+          ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        sessions.value = list;
+      } catch (_) {
+        sessions.value = [];
+      }
+    }, onError: (_) => sessions.value = []);
   }
 
   static Future<void> add(String userId, BookedSession session) async {
