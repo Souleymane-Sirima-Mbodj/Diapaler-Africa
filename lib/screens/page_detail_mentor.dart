@@ -32,22 +32,28 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
   void _bookSession() {
     final profile = UserProfileController.profile.value;
+    final uid = AuthService.currentUid;
+    if (uid == null) return;
+
     UserProfileController.update(
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
-    // Ajoute la session dans l'agenda (Firebase), planifiée 7 jours plus tard à 14h.
+
+    // RDV planifié 7 jours plus tard à 14h.
     final sessionDate = DateTime.now().add(const Duration(days: 7));
-    final session = BookedSession(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      mentorName: widget.mentor.name,
-      mentorInitials: widget.mentor.initials,
-      scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
-      otherUid: widget.mentor.uid, // Vide si mentor statique, sinon UID réel.
+    final scheduledAt = DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14);
+
+    // Écriture bilatérale : le mentor (s'il a un compte) voit aussi le RDV.
+    AgendaController.bookBilateral(
+      requesterUid: uid,
+      requesterName: profile.fullName,
+      requesterInitials: profile.initials,
+      otherUid: widget.mentor.uid,
+      otherName: widget.mentor.name,
+      otherInitials: widget.mentor.initials,
+      scheduledAt: scheduledAt,
     );
-    final uid = AuthService.currentUid;
-    if (uid != null) {
-      AgendaController.add(uid, session);
-    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
