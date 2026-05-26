@@ -88,15 +88,67 @@ class AgendaController {
     // Le ValueNotifier est mis à jour par le listener Firebase en temps réel.
   }
 
-  /// Annule une session : la retire de Firebase et envoie une notification
-  /// au demandeur (récap) ainsi qu'à l'autre partie (si son UID est connu).
+  /// Réserve un RDV bilatéral : écrit la session dans les agendas des deux
+  /// parties, avec un libellé miroir (chacun voit l'autre comme "other").
+  /// Si [otherUid] est vide (mentor statique de demo), écrit uniquement côté
+  /// demandeur — comportement équivalent à [add].
+  static Future<void> bookBilateral({
+    required String requesterUid,
+    required String requesterName,
+    required String requesterInitials,
+    required String otherUid,
+    required String otherName,
+    required String otherInitials,
+    required DateTime scheduledAt,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    // Côté demandeur : "l'autre" c'est le mentor/investisseur ciblé.
+    final requesterSession = BookedSession(
+      id: id,
+      mentorName: otherName,
+      mentorInitials: otherInitials,
+      scheduledAt: scheduledAt,
+      otherUid: otherUid,
+    );
+    await _db.child('bookedSessions/$requesterUid/$id').set(requesterSession.toJson());
+
+    if (otherUid.isEmpty) return; // Mentor statique : pas de miroir.
+
+    // Côté autre partie : "l'autre" c'est le demandeur.
+    final otherSession = BookedSession(
+      id: id,
+      mentorName: requesterName,
+      mentorInitials: requesterInitials,
+      scheduledAt: scheduledAt,
+      otherUid: requesterUid,
+    );
+    await _db.child('bookedSessions/$otherUid/$id').set(otherSession.toJson());
+
+    // Notification au mentor/investisseur de la nouvelle réservation.
+    await NotificationService.notifyUser(
+      uid: otherUid,
+      title: 'Nouveau rendez-vous',
+      message:
+          '$requesterName a réservé une session avec toi le ${_formatDate(scheduledAt)}.',
+      type: 'session_booked',
+    );
+  }
+
+  /// Annule une session : la retire de Firebase chez les deux parties et
+  /// envoie une notification au demandeur (récap) ainsi qu'à l'autre partie
+  /// (si son UID est connu).
   static Future<void> cancel({
     required String userId,
     required String userName,
     required BookedSession session,
     required String reason,
   }) async {
+    // Suppression côté annulant.
     await _db.child('bookedSessions/$userId/${session.id}').remove();
+    // Suppression côté autre partie si elle a un compte.
+    if (session.otherUid.isNotEmpty) {
+      await _db.child('bookedSessions/${session.otherUid}/${session.id}').remove();
+    }
     // Notif côté annulant : récap de son action.
     await NotificationService.addNotification(
       title: 'Rendez-vous annulé',
@@ -112,5 +164,13 @@ class AgendaController {
           '$userName a annulé votre session — motif : $reason',
       type: 'session_cancelled',
     );
+  }
+
+  static String _formatDate(DateTime d) {
+    const months = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+    ];
+    return '${d.day} ${months[d.month - 1]} à ${d.hour.toString().padLeft(2, '0')}h';
   }
 }
