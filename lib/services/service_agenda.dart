@@ -1,6 +1,8 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
+import 'service_notifications.dart';
+
 class BookedSession {
   final String id;
   final String mentorName;
@@ -75,5 +77,21 @@ class AgendaController {
   static Future<void> add(String userId, BookedSession session) async {
     await _db.child('bookedSessions/$userId/${session.id}').set(session.toJson());
     // Le ValueNotifier est mis à jour par le listener Firebase en temps réel.
+  }
+
+  /// Annule une session : la retire de Firebase et envoie une notification
+  /// récapitulative à l'utilisateur (motif + nom du mentor).
+  static Future<void> cancel({
+    required String userId,
+    required BookedSession session,
+    required String reason,
+  }) async {
+    await _db.child('bookedSessions/$userId/${session.id}').remove();
+    await NotificationService.addNotification(
+      title: 'Rendez-vous annulé',
+      message:
+          'Session avec ${session.mentorName} annulée — motif : $reason',
+      type: 'session_cancelled',
+    );
   }
 }
