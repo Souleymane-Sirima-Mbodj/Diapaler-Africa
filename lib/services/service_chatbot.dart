@@ -13,11 +13,12 @@ class ChatbotService {
   static const _keyPref = 'anthropic_api_key';
   static const _apiUrl = 'https://api.anthropic.com/v1/messages';
   static const _model = 'claude-haiku-4-5-20251001';
+  static const _defaultKey =
+      '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';
 
   static Future<String?> getApiKey() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = prefs.getString(_keyPref);
-    return (key != null && key.isNotEmpty) ? key : null;
+    return prefs.getString(_keyPref) ?? _defaultKey;
   }
 
   static Future<void> saveApiKey(String key) async {
