@@ -107,6 +107,14 @@ class UserProfile {
   final int favoritesCount;
   final double score;
 
+  /// Spécifique aux mentors : nombre d'années d'expérience professionnelle.
+  /// 0 si non renseigné.
+  final int yearsExperience;
+
+  /// Spécifique aux investisseurs : ticket d'investissement typique
+  /// (ex. "500 000 – 5 000 000 FCFA"). Chaîne libre, vide si non renseigné.
+  final String investmentRange;
+
   const UserProfile({
     required this.firstName,
     required this.lastName,
@@ -128,6 +136,8 @@ class UserProfile {
     this.sessionsCount = 0,
     this.favoritesCount = 0,
     this.score = 0.0,
+    this.yearsExperience = 0,
+    this.investmentRange = '',
   });
 
   String get fullName => '$firstName $lastName';
@@ -189,6 +199,8 @@ class UserProfile {
     int? sessionsCount,
     int? favoritesCount,
     double? score,
+    int? yearsExperience,
+    String? investmentRange,
   }) {
     return UserProfile(
       firstName: firstName ?? this.firstName,
@@ -211,6 +223,8 @@ class UserProfile {
       sessionsCount: sessionsCount ?? this.sessionsCount,
       favoritesCount: favoritesCount ?? this.favoritesCount,
       score: score ?? this.score,
+      yearsExperience: yearsExperience ?? this.yearsExperience,
+      investmentRange: investmentRange ?? this.investmentRange,
     );
   }
 }
@@ -277,7 +291,6 @@ class UserProfileController {
     birthDate: DateTime(2001, 6, 14),
     address: 'Sicap Liberté 6, Villa 1234',
     city: 'Dakar',
-    country: 'Sénégal',
     sector: 'Mode & Textile',
     role: 'Entrepreneure',
     linkedin: 'linkedin.com/in/marieme-tine',
@@ -285,7 +298,7 @@ class UserProfileController {
         "Diplômée de l'École Supérieure Polytechnique de Dakar, je porte le projet "
         'Téranga Mode — une marque de prêt-à-porter qui valorise les tissus '
         'traditionnels sénégalais (bogolan, wax, bazin) à travers des coupes '
-        "contemporaines. Je cherche un mentor pour structurer mon modèle "
+        'contemporaines. Je cherche un mentor pour structurer mon modèle '
         'économique et accéder au financement DER/FJ.',
     interests: const [
       'Mode & Textile',
@@ -303,7 +316,6 @@ class UserProfileController {
             'sénégalais à travers des coupes contemporaines.',
         sector: 'Mode & Textile',
         step: 3,
-        totalSteps: 5,
       ),
     ],
     mentorsActive: 4,
