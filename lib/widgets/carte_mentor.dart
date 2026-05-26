@@ -21,14 +21,17 @@ class MentorCard extends StatelessWidget {
                   builder: (_) => MentorDetailPage(mentor: mentor),
                 ),
               ),
-      padding: const EdgeInsets.all(14),
       child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Avatar(initials: mentor.initials, size: 52),
+                  Avatar(
+                    initials: mentor.initials,
+                    size: 52,
+                    photoBase64: mentor.photoBase64,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

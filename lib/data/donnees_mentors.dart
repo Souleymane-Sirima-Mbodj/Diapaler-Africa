@@ -12,6 +12,13 @@ class Mentor {
   final bool cis;
   final String role; // 'Mentor' ou 'Investisseur'
 
+  /// UID Firebase si ce mentor est un vrai utilisateur inscrit via SignUpPage.
+  /// Vide pour les mentors statiques de la liste de demo.
+  final String uid;
+
+  /// Photo de profil encodée en base64 (mentors inscrits seulement).
+  final String photoBase64;
+
   const Mentor({
     required this.initials,
     required this.name,
@@ -25,6 +32,8 @@ class Mentor {
     required this.compatibility,
     this.cis = false,
     this.role = 'Mentor',
+    this.uid = '',
+    this.photoBase64 = '',
   });
 
   bool get isInvestor => role == 'Investisseur';

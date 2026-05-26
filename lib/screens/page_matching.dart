@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../data/donnees_mentors.dart';
 import '../services/service_geolocation.dart';
+import '../services/service_utilisateurs.dart';
 import '../theme/theme_app.dart';
 import '../widgets/carte_mentor.dart';
 
@@ -22,6 +23,10 @@ class _MatchingPageState extends State<MatchingPage> {
   bool _nearMe = false;
   bool _loadingLocation = false;
 
+  /// Membres réels DIAPALER (inscrits via SignUpPage avec rôle Mentor/Investisseur).
+  /// Affichés en tête de liste avec un badge "Membre DIAPALER".
+  List<Mentor> _members = const [];
+
   static const _topSectors = <String>[
     'Tous',
     'Agro-industrie',
@@ -41,6 +46,17 @@ class _MatchingPageState extends State<MatchingPage> {
     _searchCtrl.addListener(() {
       setState(() => _query = _searchCtrl.text);
     });
+    _loadMembers();
+  }
+
+  Future<void> _loadMembers() async {
+    try {
+      final members = await UsersService.listMembers();
+      if (!mounted) return;
+      setState(() => _members = members);
+    } catch (_) {
+      // En cas d'échec, on garde la liste statique uniquement.
+    }
   }
 
   @override
@@ -50,7 +66,8 @@ class _MatchingPageState extends State<MatchingPage> {
   }
 
   List<Mentor> get _filtered {
-    final list = mentors.where((m) {
+    final all = [..._members, ...mentors];
+    final list = all.where((m) {
       if (!m.matches(_query)) return false;
       if (_sector != 'Tous' &&
           !m.sectors.any((s) => s.toLowerCase() == _sector.toLowerCase())) {
@@ -68,13 +85,20 @@ class _MatchingPageState extends State<MatchingPage> {
         return da.compareTo(db);
       });
     } else {
-      list.sort((a, b) => b.compatibility.compareTo(a.compatibility));
+      // Membres DIAPALER (uid non vide) en priorité, puis tri par compatibilité.
+      list.sort((a, b) {
+        final aIsMember = a.uid.isNotEmpty ? 1 : 0;
+        final bIsMember = b.uid.isNotEmpty ? 1 : 0;
+        if (aIsMember != bIsMember) return bIsMember - aIsMember;
+        return b.compatibility.compareTo(a.compatibility);
+      });
     }
     return list;
   }
 
   List<String> get _cities {
-    final s = mentors.map((m) => m.city).toSet().toList()..sort();
+    final all = [..._members, ...mentors];
+    final s = all.map((m) => m.city).toSet().toList()..sort();
     return ['Toutes', ...s];
   }
 

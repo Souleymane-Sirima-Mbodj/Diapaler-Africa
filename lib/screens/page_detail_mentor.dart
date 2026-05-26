@@ -42,6 +42,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       mentorName: widget.mentor.name,
       mentorInitials: widget.mentor.initials,
       scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
+      otherUid: widget.mentor.uid, // Vide si mentor statique, sinon UID réel.
     );
     final uid = AuthService.currentUid;
     if (uid != null) {
@@ -109,6 +110,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                               size: 70,
                               background: AppColors.amber,
                               foreground: AppColors.navyDeep,
+                              photoBase64: mentor.photoBase64,
+                              tappable: true,
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -287,16 +290,22 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         onPressed: () {
                           final uid = AuthService.currentUid;
                           if (uid == null) return;
+                          // Si le mentor a un compte Firebase, on utilise son UID
+                          // pour que la conversation soit visible côté mentor.
+                          // Sinon on retombe sur son nom (mentor statique demo).
+                          final otherId = mentor.uid.isNotEmpty
+                              ? mentor.uid
+                              : mentor.name;
                           final convId = InteractionsService.generateConversationId(
                             uid,
-                            mentor.name,
+                            otherId,
                           );
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => ChatPage(
                                 conversationId: convId,
                                 otherUserName: mentor.name,
-                                otherUserId: mentor.name,
+                                otherUserId: otherId,
                               ),
                             ),
                           );

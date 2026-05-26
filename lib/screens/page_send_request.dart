@@ -45,9 +45,13 @@ class _SendRequestPageState extends State<SendRequestPage> {
         );
         return;
       }
+      // UID Firebase si le mentor est un membre inscrit, sinon nom (fallback demo).
+      final toId = widget.mentor.uid.isNotEmpty
+          ? widget.mentor.uid
+          : widget.mentor.name;
       await InteractionsService.sendMentorRequest(
         fromUserId: uid,
-        toUserId: widget.mentor.name, // Mentor n'a pas ID, on utilise le name
+        toUserId: toId,
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,
         message: _messageCtrl.text,
@@ -57,6 +61,15 @@ class _SendRequestPageState extends State<SendRequestPage> {
         message: 'Ta demande de mentorat à ${widget.mentor.name} a bien été transmise.',
         type: 'mentor_request',
       );
+      // Notif côté destinataire si c'est un vrai membre.
+      if (widget.mentor.uid.isNotEmpty) {
+        await NotificationService.notifyUser(
+          uid: widget.mentor.uid,
+          title: 'Nouvelle demande de mentorat',
+          message: '${currentProfile.fullName} souhaite te contacter — "${_messageCtrl.text}"',
+          type: 'mentor_request',
+        );
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +118,6 @@ class _SendRequestPageState extends State<SendRequestPage> {
                   initials: '${widget.mentor.name[0]}${widget.mentor.name.split(' ').length > 1 ? widget.mentor.name.split(' ')[1][0] : ''}',
                   size: 56,
                   background: AppColors.blue,
-                  foreground: Colors.white,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -122,7 +134,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.mentor.sectors.join(", "),
+                        widget.mentor.sectors.join(', '),
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.muted,
