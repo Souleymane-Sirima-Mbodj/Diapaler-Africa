@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
@@ -42,7 +43,10 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       mentorInitials: widget.mentor.initials,
       scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
     );
-    AgendaController.add(profile.email, session);
+    final uid = AuthService.currentUid;
+    if (uid != null) {
+      AgendaController.add(uid, session);
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -82,7 +86,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+              background: DecoratedBox(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -281,9 +285,10 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          final profile = UserProfileController.profile.value;
+                          final uid = AuthService.currentUid;
+                          if (uid == null) return;
                           final convId = InteractionsService.generateConversationId(
-                            profile.email,
+                            uid,
                             mentor.name,
                           );
                           Navigator.of(context).push(
@@ -513,7 +518,6 @@ class _CompaniesList extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: AppColors.amber.withValues(alpha: 0.4),
-              width: 1,
             ),
           ),
           child: Row(

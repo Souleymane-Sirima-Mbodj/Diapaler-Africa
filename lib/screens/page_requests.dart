@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
-import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 
@@ -14,7 +14,7 @@ class RequestsPage extends StatefulWidget {
 class _RequestsPageState extends State<RequestsPage> {
   @override
   Widget build(BuildContext context) {
-    final currentProfile = UserProfileController.profile.value;
+    final currentUid = AuthService.currentUid ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +31,7 @@ class _RequestsPageState extends State<RequestsPage> {
         ),
       ),
       body: StreamBuilder<List<MentorRequest>>(
-        stream: InteractionsService.getReceivedRequests(currentProfile.email),
+        stream: InteractionsService.getReceivedRequests(currentUid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

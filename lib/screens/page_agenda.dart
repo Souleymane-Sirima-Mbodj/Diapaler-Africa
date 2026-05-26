@@ -420,7 +420,6 @@ class _SessionCard extends StatelessWidget {
                 Avatar(
                   initials: s.mentor.initials,
                   size: 46,
-                  background: AppColors.navy,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

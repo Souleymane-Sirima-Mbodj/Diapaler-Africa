@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 
@@ -42,13 +43,16 @@ class _ChatPageState extends State<ChatPage> {
     if (_messageCtrl.text.isEmpty) return;
 
     final currentProfile = UserProfileController.profile.value;
+    final currentUid = AuthService.currentUid;
     final text = _messageCtrl.text;
     _messageCtrl.clear();
+
+    if (currentUid == null) return;
 
     try {
       await InteractionsService.sendMessage(
         conversationId: widget.conversationId,
-        senderId: currentProfile.email,
+        senderId: currentUid,
         senderName: currentProfile.fullName,
         recipientId: widget.otherUserId,
         recipientName: widget.otherUserName,
@@ -74,7 +78,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentProfile = UserProfileController.profile.value;
+    final currentUid = AuthService.currentUid ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -148,7 +152,7 @@ class _ChatPageState extends State<ChatPage> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMe = message.senderId == currentProfile.email;
+                    final isMe = message.senderId == currentUid;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),

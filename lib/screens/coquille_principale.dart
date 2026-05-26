@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
+import '../services/service_authentification.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
@@ -96,9 +96,10 @@ class _RootShellState extends State<RootShell> {
   @override
   void initState() {
     super.initState();
-    // Charge les sessions agenda depuis Firebase au démarrage.
-    final uid = UserProfileController.profile.value.email;
-    if (uid.isNotEmpty) {
+    // Charge sessions et notifications avec l'UID Firebase Auth (alphanumérique).
+    // L'email contient des points, interdits dans les chemins Realtime Database.
+    final uid = AuthService.currentUid;
+    if (uid != null && uid.isNotEmpty) {
       AgendaController.load(uid);
       NotificationService.init(uid);
     }
