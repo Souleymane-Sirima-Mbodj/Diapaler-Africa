@@ -88,6 +88,31 @@ class NotificationService {
     }
   }
 
+  /// Pousse une notification dans la boîte d'un AUTRE utilisateur. Utilisé
+  /// pour les notifs croisées (annulation de RDV qui prévient les deux côtés).
+  /// No-op silencieux si [uid] est vide ou si l'écriture échoue.
+  static Future<void> notifyUser({
+    required String uid,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    if (uid.isEmpty) return;
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final item = NotificationItem(
+      id: id,
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      type: type,
+    );
+    try {
+      await _db.child('notifications/$uid/$id').set(item.toJson());
+    } catch (_) {
+      // Échec silencieux : la notif côté annulant a déjà été créée.
+    }
+  }
+
   static Future<void> markAsRead(String id) async {
     if (_userId != null) {
       await _db.child('notifications/$_userId/$id').update({'isRead': true});

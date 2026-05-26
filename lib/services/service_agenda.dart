@@ -9,11 +9,18 @@ class BookedSession {
   final String mentorInitials;
   final DateTime scheduledAt;
 
+  /// UID Firebase de l'autre partie (mentor/investisseur si l'entrepreneur a
+  /// réservé, ou inversement). Permet de lui envoyer une notification croisée
+  /// lors d'une annulation. Reste vide quand l'autre partie n'a pas de
+  /// compte (mentor de la liste statique [donnees_mentors.dart]).
+  final String otherUid;
+
   const BookedSession({
     required this.id,
     required this.mentorName,
     required this.mentorInitials,
     required this.scheduledAt,
+    this.otherUid = '',
   });
 
   static const _weekdays = [
@@ -38,6 +45,7 @@ class BookedSession {
     'mentorName': mentorName,
     'mentorInitials': mentorInitials,
     'scheduledAt': scheduledAt.toIso8601String(),
+    'otherUid': otherUid,
   };
 
   factory BookedSession.fromJson(Map<String, dynamic> json) => BookedSession(
@@ -45,6 +53,7 @@ class BookedSession {
     mentorName: json['mentorName']?.toString() ?? '',
     mentorInitials: json['mentorInitials']?.toString() ?? '?',
     scheduledAt: DateTime.tryParse(json['scheduledAt']?.toString() ?? '') ?? DateTime.now(),
+    otherUid: json['otherUid']?.toString() ?? '',
   );
 }
 
@@ -80,17 +89,27 @@ class AgendaController {
   }
 
   /// Annule une session : la retire de Firebase et envoie une notification
-  /// récapitulative à l'utilisateur (motif + nom du mentor).
+  /// au demandeur (récap) ainsi qu'à l'autre partie (si son UID est connu).
   static Future<void> cancel({
     required String userId,
+    required String userName,
     required BookedSession session,
     required String reason,
   }) async {
     await _db.child('bookedSessions/$userId/${session.id}').remove();
+    // Notif côté annulant : récap de son action.
     await NotificationService.addNotification(
       title: 'Rendez-vous annulé',
       message:
           'Session avec ${session.mentorName} annulée — motif : $reason',
+      type: 'session_cancelled',
+    );
+    // Notif croisée : avertit l'autre partie s'il a un compte (UID connu).
+    await NotificationService.notifyUser(
+      uid: session.otherUid,
+      title: 'Rendez-vous annulé',
+      message:
+          '$userName a annulé votre session — motif : $reason',
       type: 'session_cancelled',
     );
   }
