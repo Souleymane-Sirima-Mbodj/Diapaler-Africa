@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatbotMessage {
   final String role; // 'user' ou 'assistant'
@@ -10,26 +9,13 @@ class ChatbotMessage {
 }
 
 class ChatbotService {
-  static const _keyPref = 'anthropic_api_key';
-  static const _apiUrl = 'https://api.anthropic.com/v1/messages';
+  /// URL du proxy Cloudflare Worker qui détient la clé Anthropic côté serveur.
+  /// Voir [proxy/worker.js] et [proxy/README.md] pour le déploiement.
+  /// Remplace cette valeur par l'URL retournée par Cloudflare après déploiement.
+  static const _proxyUrl =
+      'https://diali-proxy.sirimambodj.workers.dev/chat';
+
   static const _model = 'claude-haiku-4-5-20251001';
-  static const _defaultKey =
-      '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';
-
-  static Future<String?> getApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyPref) ?? _defaultKey;
-  }
-
-  static Future<void> saveApiKey(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyPref, key.trim());
-  }
-
-  static Future<void> clearApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyPref);
-  }
 
   static String _systemPrompt({
     required String userName,
@@ -65,19 +51,10 @@ Directives :
     required String userSector,
     required String userCity,
   }) async {
-    final key = await getApiKey();
-    if (key == null || key.isEmpty) {
-      throw Exception('no_key');
-    }
-
     final response = await http
         .post(
-          Uri.parse(_apiUrl),
-          headers: {
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
+          Uri.parse(_proxyUrl),
+          headers: {'content-type': 'application/json'},
           body: jsonEncode({
             'model': _model,
             'max_tokens': 1024,
@@ -93,12 +70,8 @@ Directives :
         .timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
       return data['content'][0]['text'] as String;
-    } else if (response.statusCode == 401) {
-      throw Exception(
-        'Clé API invalide. Tape sur ⚙️ pour la corriger.',
-      );
     } else if (response.statusCode == 429) {
       throw Exception(
         'Limite d\'utilisation atteinte. Réessaie dans quelques instants.',
