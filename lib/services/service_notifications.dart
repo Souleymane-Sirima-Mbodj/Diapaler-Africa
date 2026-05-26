@@ -29,11 +29,11 @@ class NotificationItem {
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) =>
       NotificationItem(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        message: json['message'] as String,
-        timestamp: DateTime.parse(json['timestamp'] as String),
-        type: json['type'] as String,
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        message: json['message']?.toString() ?? '',
+        timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now(),
+        type: json['type']?.toString() ?? 'info',
         isRead: json['isRead'] as bool? ?? false,
       );
 }
@@ -53,13 +53,17 @@ class NotificationService {
         notifications.value = [];
         return;
       }
-      final list = data.values
-          .map<NotificationItem>(
-              (v) => NotificationItem.fromJson(Map<String, dynamic>.from(v as Map)))
-          .toList()
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      notifications.value = list;
-    });
+      try {
+        final list = data.values
+            .map<NotificationItem>(
+                (v) => NotificationItem.fromJson(Map<String, dynamic>.from(v as Map)))
+            .toList()
+          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        notifications.value = list;
+      } catch (_) {
+        notifications.value = [];
+      }
+    }, onError: (_) => notifications.value = []);
   }
 
   static Future<void> addNotification({
