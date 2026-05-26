@@ -446,7 +446,7 @@ class _SignUpPageState extends State<SignUpPage> {
             onTap: _pickBirthDate,
           ),
         ] else ...[
-          const _Label('Date de naissance (optionnelle)'),
+          const _LabelRequired('Date de naissance'),
           const SizedBox(height: 6),
           _DatePickerField(
             value: _birthDate,
