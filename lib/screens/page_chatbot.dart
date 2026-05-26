@@ -17,7 +17,6 @@ class _ChatbotPageState extends State<ChatbotPage>
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
   bool _loading = false;
-  bool _hasKey = false;
   late AnimationController _dotCtrl;
 
   static const _welcome =
@@ -36,7 +35,6 @@ class _ChatbotPageState extends State<ChatbotPage>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat();
-    _checkApiKey();
   }
 
   @override
@@ -45,110 +43,6 @@ class _ChatbotPageState extends State<ChatbotPage>
     _scroll.dispose();
     _dotCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkApiKey() async {
-    final key = await ChatbotService.getApiKey();
-    if (!mounted) return;
-    if (key == null || key.isEmpty) {
-      await _showKeySetup(canCancel: true);
-    } else {
-      setState(() => _hasKey = true);
-    }
-  }
-
-  Future<void> _showKeySetup({bool canCancel = false}) async {
-    final ctrl = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: canCancel,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
-          children: [
-            Icon(Icons.psychology_rounded, color: AppColors.blue, size: 22),
-            SizedBox(width: 10),
-            Text(
-              'Activer DIALI IA',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.navyDeep,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.blueTint,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'DIALI utilise l\'API Anthropic (Claude). Obtiens une clé gratuite sur console.anthropic.com puis colle-la ci-dessous.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: AppColors.navy,
-                  height: 1.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: ctrl,
-              obscureText: true,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'sk-ant-api03-…',
-                prefixIcon: const Icon(
-                  Icons.key_rounded,
-                  size: 18,
-                  color: AppColors.subtle,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          if (canCancel)
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(null),
-              child: const Text('Annuler'),
-            ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.navy,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'Enregistrer',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    ctrl.dispose();
-    if (!mounted) return;
-
-    if (result != null && result.isNotEmpty) {
-      await ChatbotService.saveApiKey(result);
-      setState(() => _hasKey = true);
-    } else if (!_hasKey) {
-      Navigator.of(context).pop();
-    }
   }
 
   void _scrollToBottom() {
@@ -192,19 +86,15 @@ class _ChatbotPageState extends State<ChatbotPage>
     } on Exception catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      if (msg == 'no_key') {
-        await _showKeySetup(canCancel: true);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: AppColors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        // On retire le message utilisateur si l'envoi a échoué
-        setState(() => _messages.removeLast());
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      // On retire le message utilisateur si l'envoi a échoué
+      setState(() => _messages.removeLast());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -263,17 +153,8 @@ class _ChatbotPageState extends State<ChatbotPage>
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () => _showKeySetup(canCancel: true),
-            icon: const Icon(Icons.settings_rounded, size: 20),
-            tooltip: 'Changer la clé API',
-          ),
-        ],
       ),
-      body: !_hasKey
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Column(
               children: [
                 Expanded(
                   child: ListView(
@@ -576,7 +457,7 @@ class _InputBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
                 color: loading ? AppColors.border : AppColors.navyDeep,
                 shape: BoxShape.circle,
