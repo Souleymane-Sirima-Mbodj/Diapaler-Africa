@@ -30,6 +30,15 @@ class PublicPitchesPage extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Erreur de chargement.\n${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.muted),
+              ),
+            );
+          }
 
           final pitches = snapshot.data ?? [];
 

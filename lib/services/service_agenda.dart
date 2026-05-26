@@ -61,7 +61,7 @@ class AgendaController {
       }
       final list = data.values
           .map<BookedSession>(
-              (v) => BookedSession.fromJson(v as Map<String, dynamic>))
+              (v) => BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       sessions.value = list;
