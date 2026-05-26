@@ -58,7 +58,7 @@ class DaySchedule {
     day: json['day'] as String,
     isAvailable: json['isAvailable'] as bool,
     timeSlots: (json['timeSlots'] as List?)
-        ?.map((ts) => TimeSlot.fromJson(ts as Map<String, dynamic>))
+        ?.map((ts) => TimeSlot.fromJson(Map<String, dynamic>.from(ts as Map)))
         .toList() ?? [],
   );
 }
@@ -82,10 +82,10 @@ class Availability {
   };
 
   factory Availability.fromJson(Map<String, dynamic> json) => Availability(
-    userId: json['userId'] as String,
+    userId: json['userId']?.toString() ?? '',
     schedule: (json['schedule'] as Map?)?.map((k, v) =>
-        MapEntry(k as String, DaySchedule.fromJson(v as Map<String, dynamic>))) ?? {},
-    lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+        MapEntry(k.toString(), DaySchedule.fromJson(Map<String, dynamic>.from(v as Map)))) ?? {},
+    lastUpdated: DateTime.tryParse(json['lastUpdated']?.toString() ?? '') ?? DateTime.now(),
   );
 
   static Availability empty(String userId) => Availability(
@@ -140,15 +140,15 @@ class MentorRequest {
   };
 
   factory MentorRequest.fromJson(Map<String, dynamic> json) => MentorRequest(
-    id: json['id'] as String,
-    fromUserId: json['fromUserId'] as String,
-    toUserId: json['toUserId'] as String,
-    fromName: json['fromName'] as String,
-    toName: json['toName'] as String,
-    message: json['message'] as String,
-    createdAt: DateTime.parse(json['createdAt'] as String),
-    status: RequestStatus.values.byName(json['status'] as String),
-    respondedAt: json['respondedAt'] as String?,
+    id: json['id']?.toString() ?? '',
+    fromUserId: json['fromUserId']?.toString() ?? '',
+    toUserId: json['toUserId']?.toString() ?? '',
+    fromName: json['fromName']?.toString() ?? '',
+    toName: json['toName']?.toString() ?? '',
+    message: json['message']?.toString() ?? '',
+    createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+    status: RequestStatus.values.byName(json['status']?.toString() ?? 'pending'),
+    respondedAt: json['respondedAt']?.toString(),
   );
 }
 
@@ -183,13 +183,13 @@ class ChatMessage {
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-    id: json['id'] as String,
-    senderId: json['senderId'] as String,
-    senderName: json['senderName'] as String,
-    recipientId: json['recipientId'] as String,
-    text: json['text'] as String,
-    timestamp: DateTime.parse(json['timestamp'] as String),
-    isRead: json['isRead'] as bool,
+    id: json['id']?.toString() ?? '',
+    senderId: json['senderId']?.toString() ?? '',
+    senderName: json['senderName']?.toString() ?? '',
+    recipientId: json['recipientId']?.toString() ?? '',
+    text: json['text']?.toString() ?? '',
+    timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now(),
+    isRead: json['isRead'] as bool? ?? false,
   );
 }
 
@@ -227,13 +227,13 @@ class Conversation {
   };
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
-    id: json['id'] as String,
-    user1Id: json['user1Id'] as String,
-    user2Id: json['user2Id'] as String,
-    user1Name: json['user1Name'] as String,
-    user2Name: json['user2Name'] as String,
-    lastMessage: json['lastMessage'] as String,
-    lastMessageTime: DateTime.parse(json['lastMessageTime'] as String),
-    unreadCount: json['unreadCount'] as int? ?? 0,
+    id: json['id']?.toString() ?? '',
+    user1Id: json['user1Id']?.toString() ?? '',
+    user2Id: json['user2Id']?.toString() ?? '',
+    user1Name: json['user1Name']?.toString() ?? '',
+    user2Name: json['user2Name']?.toString() ?? '',
+    lastMessage: json['lastMessage']?.toString() ?? '',
+    lastMessageTime: DateTime.tryParse(json['lastMessageTime']?.toString() ?? '') ?? DateTime.now(),
+    unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
   );
 }

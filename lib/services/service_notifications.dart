@@ -55,7 +55,7 @@ class NotificationService {
       }
       final list = data.values
           .map<NotificationItem>(
-              (v) => NotificationItem.fromJson(v as Map<String, dynamic>))
+              (v) => NotificationItem.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       notifications.value = list;

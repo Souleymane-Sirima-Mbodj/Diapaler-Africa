@@ -33,7 +33,7 @@ class InteractionsService {
       if (data == null) return [];
       return data.values
           .where((v) => v is Map && v['toUserId'] == userId)
-          .map<MentorRequest>((v) => MentorRequest.fromJson(v as Map<String, dynamic>))
+          .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     });
@@ -59,7 +59,7 @@ class InteractionsService {
     return _db.child('availability/$userId').onValue.map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return null;
-      return Availability.fromJson(data as Map<String, dynamic>);
+      return Availability.fromJson(Map<String, dynamic>.from(data));
     });
   }
 
@@ -109,7 +109,7 @@ class InteractionsService {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .map<ChatMessage>((v) => ChatMessage.fromJson(v as Map<String, dynamic>))
+          .map<ChatMessage>((v) => ChatMessage.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     });
@@ -132,7 +132,7 @@ class InteractionsService {
       if (data == null) return [];
       return data.values
           .where((v) => v is Map && (v['user1Id'] == userId || v['user2Id'] == userId))
-          .map<Conversation>((v) => Conversation.fromJson(v as Map<String, dynamic>))
+          .map<Conversation>((v) => Conversation.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
     });
