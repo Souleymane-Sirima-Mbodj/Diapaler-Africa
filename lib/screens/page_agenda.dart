@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../services/service_agenda.dart';
+import '../services/service_authentification.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -521,13 +522,57 @@ class _DetailRow extends StatelessWidget {
 }
 
 /// Carte pour une session réservée dynamiquement (via page_detail_mentor).
-class _BookedSessionCard extends StatelessWidget {
+class _BookedSessionCard extends StatefulWidget {
   final BookedSession session;
   const _BookedSessionCard({required this.session});
 
   @override
+  State<_BookedSessionCard> createState() => _BookedSessionCardState();
+}
+
+class _BookedSessionCardState extends State<_BookedSessionCard> {
+  bool _cancelling = false;
+
+  Future<void> _confirmCancel() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => _CancelDialog(mentorName: widget.session.mentorName),
+    );
+    if (reason == null || reason.trim().isEmpty) return;
+    final uid = AuthService.currentUid;
+    if (uid == null) return;
+    setState(() => _cancelling = true);
+    try {
+      await AgendaController.cancel(
+        userId: uid,
+        session: widget.session,
+        reason: reason.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rendez-vous annulé. Notification envoyée.'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de l\'annulation : $e'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final s = session;
+    final s = widget.session;
     return HoverGlowCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,8 +698,105 @@ class _BookedSessionCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _cancelling ? null : _confirmCancel,
+              icon: _cancelling
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.red,
+                      ),
+                    )
+                  : const Icon(Icons.event_busy_rounded, size: 16),
+              label: const Text('Annuler le rendez-vous'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.red,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: const Size(0, 32),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Dialog qui demande un motif d'annulation et renvoie le texte saisi.
+class _CancelDialog extends StatefulWidget {
+  final String mentorName;
+  const _CancelDialog({required this.mentorName});
+
+  @override
+  State<_CancelDialog> createState() => _CancelDialogState();
+}
+
+class _CancelDialogState extends State<_CancelDialog> {
+  final _ctrl = TextEditingController();
+  bool _empty = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.addListener(() {
+      final next = _ctrl.text.trim().isEmpty;
+      if (next != _empty) setState(() => _empty = next);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Annuler avec ${widget.mentorName} ?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Indique brièvement le motif. Une notification sera envoyée.',
+            style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            maxLines: 3,
+            maxLength: 160,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Ex. Conflit d\'agenda, imprévu professionnel…',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Garder le RDV'),
+        ),
+        ElevatedButton(
+          onPressed: _empty ? null : () => Navigator.of(context).pop(_ctrl.text),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Confirmer'),
+        ),
+      ],
     );
   }
 }

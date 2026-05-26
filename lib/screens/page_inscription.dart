@@ -52,7 +52,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _error;
 
   static final _emailRegex =
-      RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
 
   @override
@@ -95,7 +95,9 @@ class _SignUpPageState extends State<SignUpPage> {
   bool get _step2Valid =>
       supportedCountries.contains(_country) &&
       citiesOf(_country).contains(_city);
-  bool get _step3Valid => _interests.isNotEmpty;
+  bool get _photoRequired => _role != UserRole.entrepreneur;
+  bool get _step3Valid =>
+      _interests.isNotEmpty && (!_photoRequired || _photoBytes != null);
   bool get _step4Valid =>
       _phoneValid &&
       _password.text.length >= 6 &&
@@ -121,7 +123,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
+      initialDate: _birthDate ?? DateTime(now.year - 22, 1),
       firstDate: DateTime(1940),
       lastDate: DateTime(now.year - 13, 12, 31),
       helpText: 'Ta date de naissance',
@@ -514,7 +516,10 @@ class _SignUpPageState extends State<SignUpPage> {
       key: const ValueKey('step3'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
-        const _Label('Photo de profil'),
+        if (_photoRequired)
+          const _LabelRequired('Photo de profil')
+        else
+          const _Label('Photo de profil'),
         const SizedBox(height: 10),
         InkWell(
           onTap: _pickProfilePhoto,
@@ -526,7 +531,9 @@ class _SignUpPageState extends State<SignUpPage> {
               color: AppColors.fieldBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _photoBytes != null ? AppColors.blue : AppColors.border,
+                color: _photoBytes != null
+                    ? AppColors.blue
+                    : (_photoRequired ? AppColors.red : AppColors.border),
                 width: 2,
               ),
             ),
@@ -538,16 +545,16 @@ class _SignUpPageState extends State<SignUpPage> {
                       fit: BoxFit.cover,
                     ),
                   )
-                : const Column(
+                : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.camera_alt_rounded,
                         size: 40,
                         color: AppColors.muted,
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'Ajouter une photo',
                         style: TextStyle(
                           fontSize: 13,
@@ -555,12 +562,17 @@ class _SignUpPageState extends State<SignUpPage> {
                           color: AppColors.muted,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Optionnel',
+                        _photoRequired ? 'Obligatoire' : 'Optionnel',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.muted,
+                          color: _photoRequired
+                              ? AppColors.red
+                              : AppColors.muted,
+                          fontWeight: _photoRequired
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                         ),
                       ),
                     ],
@@ -591,8 +603,11 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
         const SizedBox(height: 8),
-        const _Hint(
-            text: 'À propos, LinkedIn et photo sont optionnels — tu peux les ajouter plus tard.'),
+        _Hint(
+          text: _photoRequired
+              ? 'À propos et LinkedIn sont optionnels — la photo est obligatoire pour ton rôle.'
+              : 'À propos, LinkedIn et photo sont optionnels — tu peux les ajouter plus tard.',
+        ),
         const SizedBox(height: 18),
         Row(
           children: [
