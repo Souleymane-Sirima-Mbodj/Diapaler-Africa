@@ -18,6 +18,11 @@ class Avatar extends StatelessWidget {
   /// Photo de profil encodée en base64 (chaîne vide = avatar à initiales).
   final String photoBase64;
 
+  /// Si true, un tap ouvre la photo en plein écran avec zoom (uniquement si
+  /// [photoBase64] est non vide). Désactivé par défaut pour ne pas voler les
+  /// taps des avatars utilisés dans des listes (qui naviguent ailleurs).
+  final bool tappable;
+
   const Avatar({
     super.key,
     required this.initials,
@@ -26,6 +31,7 @@ class Avatar extends StatelessWidget {
     this.foreground = Colors.white,
     this.online = false,
     this.photoBase64 = '',
+    this.tappable = false,
   });
 
   /// Décode la photo en octets, ou renvoie `null` si absente / invalide.
@@ -41,7 +47,8 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = _photoBytes;
-    return SizedBox(
+    final canZoom = tappable && bytes != null;
+    final avatar = SizedBox(
       width: size,
       height: size,
       child: Stack(
@@ -77,6 +84,26 @@ class Avatar extends StatelessWidget {
         ],
       ),
     );
+    if (!canZoom) return avatar;
+    return MouseRegion(
+      cursor: SystemMouseCursors.zoomIn,
+      child: GestureDetector(
+        onTap: () => _openPhotoViewer(context, bytes),
+        child: avatar,
+      ),
+    );
+  }
+
+  void _openPhotoViewer(BuildContext context, Uint8List bytes) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        pageBuilder: (_, __, ___) => _PhotoViewer(bytes: bytes),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   /// Cercle coloré affichant les initiales (avatar par défaut).
@@ -96,6 +123,54 @@ class Avatar extends StatelessWidget {
           fontSize: size * 0.36,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Visionneuse plein écran zoomable pour une photo (octets décodés).
+class _PhotoViewer extends StatelessWidget {
+  final Uint8List bytes;
+  const _PhotoViewer({required this.bytes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).maybePop(),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  tooltip: 'Fermer',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

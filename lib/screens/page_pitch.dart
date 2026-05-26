@@ -71,7 +71,7 @@ class _PitchPageState extends State<PitchPage> {
 
       // 2. Publie dans le nœud global pitches/ → visible mentors & investisseurs
       await DatabaseService.publishPitch(
-        userId: profile.email,
+        userId: uid ?? '',
         userName: profile.fullName,
         title: title,
         sector: sector,

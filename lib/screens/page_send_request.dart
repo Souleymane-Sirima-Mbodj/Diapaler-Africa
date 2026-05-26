@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../data/donnees_mentors.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
@@ -36,8 +37,16 @@ class _SendRequestPageState extends State<SendRequestPage> {
     setState(() => _loading = true);
     try {
       final currentProfile = UserProfileController.profile.value;
+      final uid = AuthService.currentUid;
+      if (uid == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connexion requise.')),
+        );
+        return;
+      }
       await InteractionsService.sendMentorRequest(
-        fromUserId: currentProfile.email,
+        fromUserId: uid,
         toUserId: widget.mentor.name, // Mentor n'a pas ID, on utilise le name
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,

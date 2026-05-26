@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
-import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
@@ -57,12 +57,12 @@ class _MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentEmail = UserProfileController.profile.value.email;
+    final currentUid = AuthService.currentUid ?? '';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: StreamBuilder<List<Conversation>>(
-        stream: InteractionsService.getConversations(currentEmail),
+        stream: InteractionsService.getConversations(currentUid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -81,7 +81,7 @@ class _MessagesPageState extends State<MessagesPage> {
           final filtered = _search.isEmpty
               ? all
               : all.where((c) {
-                  final otherName = c.user1Id == currentEmail
+                  final otherName = c.user1Id == currentUid
                       ? c.user2Name
                       : c.user1Name;
                   return otherName
@@ -141,10 +141,10 @@ class _MessagesPageState extends State<MessagesPage> {
                             const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final conv = filtered[i];
-                          final otherName = conv.user1Id == currentEmail
+                          final otherName = conv.user1Id == currentUid
                               ? conv.user2Name
                               : conv.user1Name;
-                          final otherId = conv.user1Id == currentEmail
+                          final otherId = conv.user1Id == currentUid
                               ? conv.user2Id
                               : conv.user1Id;
                           final unread = conv.unreadCount > 0;

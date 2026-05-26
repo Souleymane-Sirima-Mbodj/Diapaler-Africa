@@ -113,11 +113,6 @@ class _HomePageState extends State<HomePage> {
         padding: EdgeInsets.symmetric(horizontal: 20),
         child: _RecommendedMentors(),
       ),
-      const SizedBox(height: 4),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: _DerCard(),
-      ),
     ];
   }
 
@@ -133,7 +128,7 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SkeletonBox(width: 160, height: 16),
+                  SkeletonBox(width: 160),
                   SizedBox(height: 6),
                   SkeletonBox(width: 130, height: 11),
                 ],
@@ -1228,52 +1223,3 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _DerCard extends StatelessWidget {
-  const _DerCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverGlowCard(
-      padding: const EdgeInsets.all(14),
-      background: AppColors.blueTint,
-      hoverBorder: AppColors.blue,
-      onTap: () => _showDerFjSheet(context),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.navy,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Icon(Icons.account_balance_rounded,
-                color: AppColors.amber, size: 21),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PAVIE 2 · DER/FJ',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.navyDeep,
-                    fontSize: 13.5,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Candidater pour un financement',
-                  style: TextStyle(fontSize: 11.5, color: AppColors.muted),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.navy),
-        ],
-      ),
-    );
-  }
-}

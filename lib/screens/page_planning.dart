@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
-import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 
@@ -17,7 +17,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentProfile = UserProfileController.profile.value;
+    final currentUid = AuthService.currentUid ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +34,7 @@ class _SchedulePageState extends State<SchedulePage> {
         ),
       ),
       body: StreamBuilder<Availability?>(
-        stream: InteractionsService.getAvailability(currentProfile.email),
+        stream: InteractionsService.getAvailability(currentUid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -49,7 +49,7 @@ class _SchedulePageState extends State<SchedulePage> {
             );
           }
 
-          final availability = snapshot.data ?? Availability.empty(currentProfile.email);
+          final availability = snapshot.data ?? Availability.empty(currentUid);
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
@@ -136,11 +136,75 @@ class _DayScheduleCard extends StatefulWidget {
 
 class _DayScheduleCardState extends State<_DayScheduleCard> {
   late bool _isAvailable;
+  late List<TimeSlot> _slots;
 
   @override
   void initState() {
     super.initState();
     _isAvailable = widget.schedule?.isAvailable ?? true;
+    _slots = List<TimeSlot>.from(widget.schedule?.timeSlots ?? const []);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DayScheduleCard old) {
+    super.didUpdateWidget(old);
+    // Resync depuis Firebase si le snapshot change pendant qu'on est sur la page.
+    final next = widget.schedule;
+    if (next != null && next != old.schedule) {
+      _isAvailable = next.isAvailable;
+      _slots = List<TimeSlot>.from(next.timeSlots);
+    }
+  }
+
+  void _emit() {
+    widget.onChanged(
+      DaySchedule(
+        day: widget.day,
+        isAvailable: _isAvailable,
+        timeSlots: _isAvailable ? _slots : const [],
+      ),
+    );
+  }
+
+  Future<void> _addSlot() async {
+    final start = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+      helpText: 'Heure de début',
+    );
+    if (start == null || !mounted) return;
+    final end = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: (start.hour + 1).clamp(0, 23), minute: start.minute),
+      helpText: 'Heure de fin',
+    );
+    if (end == null) return;
+
+    final startMin = start.hour * 60 + start.minute;
+    final endMin = end.hour * 60 + end.minute;
+    if (endMin <= startMin) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('L\'heure de fin doit être après l\'heure de début.')),
+      );
+      return;
+    }
+    setState(() {
+      _slots.add(TimeSlot(
+        startHour: start.hour,
+        startMinute: start.minute,
+        endHour: end.hour,
+        endMinute: end.minute,
+      ));
+      _slots.sort((a, b) =>
+          (a.startHour * 60 + a.startMinute).compareTo(b.startHour * 60 + b.startMinute));
+    });
+    _emit();
+  }
+
+  void _removeSlot(int index) {
+    setState(() => _slots.removeAt(index));
+    _emit();
   }
 
   @override
@@ -171,50 +235,77 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
               Switch(
                 value: _isAvailable,
                 onChanged: (v) {
-                  setState(() => _isAvailable = v);
-                  widget.onChanged(
-                    DaySchedule(
-                      day: widget.day,
-                      isAvailable: v,
-                      timeSlots: v ? widget.schedule?.timeSlots ?? [] : [],
-                    ),
-                  );
+                  setState(() {
+                    _isAvailable = v;
+                    if (!v) _slots = [];
+                  });
+                  _emit();
                 },
               ),
             ],
           ),
-          if (_isAvailable && (widget.schedule?.timeSlots.isEmpty ?? true)) ...[
+          if (_isAvailable) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Disponible toute la journée',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.muted,
-                fontStyle: FontStyle.italic,
+            if (_slots.isEmpty)
+              const Text(
+                'Disponible toute la journée',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.muted,
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              ...List.generate(_slots.length, (i) {
+                final slot = _slots[i];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 16, color: AppColors.amber),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${slot.startTime} – ${slot.endTime}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navyDeep,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _removeSlot(i),
+                        borderRadius: BorderRadius.circular(999),
+                        child: const Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Icon(Icons.close_rounded,
+                              size: 16, color: AppColors.muted),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _addSlot,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Ajouter un créneau'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.blue,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                  minimumSize: const Size(0, 32),
+                  textStyle: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-          ] else if (_isAvailable) ...[
-            const SizedBox(height: 8),
-            ...widget.schedule!.timeSlots.map((slot) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.schedule_rounded,
-                        size: 16, color: AppColors.amber),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${slot.startTime} - ${slot.endTime}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
           ],
         ],
       ),
