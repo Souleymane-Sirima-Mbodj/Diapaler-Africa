@@ -86,6 +86,8 @@ class DatabaseService {
         'sessionsCount': p.sessionsCount,
         'favoritesCount': p.favoritesCount,
         'score': p.score,
+        'yearsExperience': p.yearsExperience,
+        'investmentRange': p.investmentRange,
         'updatedAt': ServerValue.timestamp,
       };
 
@@ -152,6 +154,8 @@ class DatabaseService {
       sessionsCount: (m['sessionsCount'] as num?)?.toInt() ?? 0,
       favoritesCount: (m['favoritesCount'] as num?)?.toInt() ?? 0,
       score: (m['score'] as num?)?.toDouble() ?? 0.0,
+      yearsExperience: (m['yearsExperience'] as num?)?.toInt() ?? 0,
+      investmentRange: m['investmentRange']?.toString() ?? '',
     );
   }
 }

@@ -43,9 +43,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   children: [
                     Avatar(
                       initials: profile.initials,
-                      size: 44,
                       background: AppColors.roleMentor,
-                      foreground: Colors.white,
                       photoBase64: profile.photoBase64,
                     ),
                     const SizedBox(width: 12),
@@ -149,9 +147,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _StatCard(
-                          icon: Icons.star_rounded,
-                          label: 'Score',
-                          value: profile.score.toStringAsFixed(1),
+                          icon: Icons.workspace_premium_rounded,
+                          label: profile.yearsExperience > 1 ? 'Années expé.' : 'Année expé.',
+                          value: profile.yearsExperience > 0
+                              ? '${profile.yearsExperience}'
+                              : '—',
                         ),
                       ),
                     ],

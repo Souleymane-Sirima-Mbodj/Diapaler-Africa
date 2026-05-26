@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/interactions.dart';
 import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 
 class RequestsPage extends StatefulWidget {
@@ -222,8 +223,7 @@ class _RequestCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _rejectRequest(context, request.id),
+                    onPressed: () => _rejectRequest(context),
                     icon: const Icon(Icons.close_rounded),
                     label: const Text('Refuser'),
                     style: ElevatedButton.styleFrom(
@@ -235,8 +235,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _acceptRequest(context, request.id),
+                    onPressed: () => _acceptRequest(context),
                     icon: const Icon(Icons.check_rounded),
                     label: const Text('Accepter'),
                     style: ElevatedButton.styleFrom(
@@ -253,19 +252,33 @@ class _RequestCard extends StatelessWidget {
     );
   }
 
-  Future<void> _acceptRequest(BuildContext context, String requestId) async {
-    await InteractionsService.acceptRequest(requestId);
+  Future<void> _acceptRequest(BuildContext context) async {
+    await InteractionsService.acceptRequest(request.id);
+    // Prévient le demandeur que sa demande a été acceptée.
+    await NotificationService.notifyUser(
+      uid: request.fromUserId,
+      title: 'Demande acceptée',
+      message: '${request.toName} a accepté ta demande de mentorat.',
+      type: 'mentor_request_accepted',
+    );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Demande acceptée!')),
+      const SnackBar(content: Text('Demande acceptée — notification envoyée.')),
     );
   }
 
-  Future<void> _rejectRequest(BuildContext context, String requestId) async {
-    await InteractionsService.rejectRequest(requestId);
+  Future<void> _rejectRequest(BuildContext context) async {
+    await InteractionsService.rejectRequest(request.id);
+    // Prévient le demandeur du refus.
+    await NotificationService.notifyUser(
+      uid: request.fromUserId,
+      title: 'Demande refusée',
+      message: '${request.toName} a décliné ta demande de mentorat.',
+      type: 'mentor_request_rejected',
+    );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Demande refusée.')),
+      const SnackBar(content: Text('Demande refusée — notification envoyée.')),
     );
   }
 

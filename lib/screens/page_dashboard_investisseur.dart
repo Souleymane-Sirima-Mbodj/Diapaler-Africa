@@ -42,9 +42,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                   children: [
                     Avatar(
                       initials: profile.initials,
-                      size: 44,
                       background: AppColors.blue,
-                      foreground: Colors.white,
                       photoBase64: profile.photoBase64,
                     ),
                     const SizedBox(width: 12),
@@ -155,6 +153,51 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  // Ticket d'investissement (visible si renseigné)
+                  if (profile.investmentRange.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.green.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.payments_rounded,
+                              color: AppColors.green, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Ticket d\'investissement',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.muted,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  profile.investmentRange,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.navyDeep,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 20),
 
                   // Secteurs d'intérêt

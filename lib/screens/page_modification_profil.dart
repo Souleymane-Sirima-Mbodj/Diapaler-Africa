@@ -24,6 +24,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _address;
   late final TextEditingController _linkedin;
   late final TextEditingController _bio;
+  late final TextEditingController _yearsExperience;
+  late final TextEditingController _investmentRange;
   late String _city;
   late String _country;
   late String _sector;
@@ -31,6 +33,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   DateTime? _birthDate;
   late Set<String> _interests;
   late String _photoBase64;
+
+  bool get _isMentor => _initial.role == 'Mentor';
+  bool get _isInvestor => _initial.role == 'Investisseur';
 
   @override
   void initState() {
@@ -42,6 +47,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _address = TextEditingController(text: _initial.address);
     _linkedin = TextEditingController(text: _initial.linkedin);
     _bio = TextEditingController(text: _initial.bio);
+    _yearsExperience = TextEditingController(
+      text: _initial.yearsExperience > 0
+          ? _initial.yearsExperience.toString()
+          : '',
+    );
+    _investmentRange = TextEditingController(text: _initial.investmentRange);
     // Si le pays courant n'est pas dans la liste supportée, on défaut à Sénégal.
     _country = supportedCountries.contains(_initial.country)
         ? _initial.country
@@ -63,6 +74,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _address.dispose();
     _linkedin.dispose();
     _bio.dispose();
+    _yearsExperience.dispose();
+    _investmentRange.dispose();
     super.dispose();
   }
 
@@ -70,7 +83,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 25, 1, 1),
+      initialDate: _birthDate ?? DateTime(now.year - 25),
       firstDate: DateTime(1940),
       lastDate: now,
       helpText: 'Ta date de naissance',
@@ -107,6 +120,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _save() async {
+    final yearsParsed = int.tryParse(_yearsExperience.text.trim()) ?? 0;
     final next = _initial.copyWith(
       firstName: _firstName.text.trim(),
       lastName: _lastName.text.trim(),
@@ -121,6 +135,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       bio: _bio.text.trim(),
       photoBase64: _photoBase64,
       interests: _interests.toList()..sort(),
+      yearsExperience: _isMentor ? yearsParsed : _initial.yearsExperience,
+      investmentRange:
+          _isInvestor ? _investmentRange.text.trim() : _initial.investmentRange,
     );
     UserProfileController.update(next);
 
@@ -299,6 +316,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
             controller: _linkedin,
             hint: 'linkedin.com/in/...',
           ),
+          if (_isMentor) ...[
+            const SizedBox(height: 10),
+            _Field(
+              label: 'Années d\'expérience',
+              icon: Icons.workspace_premium_rounded,
+              controller: _yearsExperience,
+              hint: 'Ex. 12',
+            ),
+          ],
+          if (_isInvestor) ...[
+            const SizedBox(height: 10),
+            _Field(
+              label: 'Ticket d\'investissement',
+              icon: Icons.payments_rounded,
+              controller: _investmentRange,
+              hint: '500 000 – 5 000 000 FCFA',
+            ),
+          ],
           const SizedBox(height: 22),
           _InterestsPicker(
             selected: _interests,

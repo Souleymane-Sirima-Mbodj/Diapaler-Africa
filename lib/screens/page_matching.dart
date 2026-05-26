@@ -26,6 +26,7 @@ class _MatchingPageState extends State<MatchingPage> {
   /// Membres réels DIAPALER (inscrits via SignUpPage avec rôle Mentor/Investisseur).
   /// Affichés en tête de liste avec un badge "Membre DIAPALER".
   List<Mentor> _members = const [];
+  bool _loadingMembers = true;
 
   static const _topSectors = <String>[
     'Tous',
@@ -53,9 +54,13 @@ class _MatchingPageState extends State<MatchingPage> {
     try {
       final members = await UsersService.listMembers();
       if (!mounted) return;
-      setState(() => _members = members);
+      setState(() {
+        _members = members;
+        _loadingMembers = false;
+      });
     } catch (_) {
-      // En cas d'échec, on garde la liste statique uniquement.
+      if (!mounted) return;
+      setState(() => _loadingMembers = false);
     }
   }
 
@@ -328,14 +333,33 @@ class _MatchingPageState extends State<MatchingPage> {
                   onChanged: (v) => setState(() => _city = v),
                 ),
                 const Spacer(),
-                Text(
-                  '${filtered.length} profil${filtered.length > 1 ? "s" : ""}',
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+                if (_loadingMembers) ...[
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.muted,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Chargement…',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ] else
+                  Text(
+                    '${filtered.length} profil${filtered.length > 1 ? "s" : ""}',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
               ],
             ),
           ),
