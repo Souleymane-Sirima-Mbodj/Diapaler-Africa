@@ -96,6 +96,9 @@
   - [8.1 Dashboard Mentor](#81-dashboard-mentor-page_dashboard_mentordart)
   - [8.2 Dashboard Investisseur](#82-dashboard-investisseur-page_dashboard_investisseurdart)
 - [9. Page Détail Mentor](#9-page-détail-mentor-page_detail_mentordart)
+- [10. Partage sur Réseaux Sociaux](#10-partage-sur-réseaux-sociaux)
+- [11. Paiement Mobile — Wave Premium](#11-paiement-mobile--wave-premium)
+- [12. Déploiement](#12-déploiement)
 - [Conclusion](#conclusion-du-livrable-5)
 
 ---
@@ -2022,7 +2025,7 @@ connecte entrepreneurs, mentors et investisseurs au Sénégal.
 
 ---
 
-## 12. Paiement Mobile — Wave Premium
+## 11. Paiement Mobile — Wave Premium
 
 ### 12.1 Architecture simplifiée (lien marchand)
 
@@ -2179,7 +2182,7 @@ await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
 
 ---
 
-## 11. Déploiement
+## 12. Déploiement
 
 L'application a été compilée en **APK release signé** prêt à l'installation :
 
@@ -2237,5 +2240,5 @@ Les trois fonctionnalités avancées mentionnées dans le sujet sont toutes impl
 | Fonctionnalité | Statut |
 |---|---|
 | Partage sur réseaux sociaux | ✅ Implémenté — voir section 10 |
-| Paiement mobile (Wave) | ✅ Implémenté — voir section 12 |
-| Déploiement | ✅ Implémenté — voir section 11 |
+| Paiement mobile (Wave) | ✅ Implémenté — voir section 11 |
+| Déploiement | ✅ Implémenté — voir section 12 |
