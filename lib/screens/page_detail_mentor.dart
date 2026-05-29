@@ -4,6 +4,7 @@ import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_chat.dart';
@@ -89,6 +90,16 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
             elevation: 0,
             expandedHeight: 218,
             actions: [
+              IconButton(
+                tooltip: 'Partager ce profil',
+                onPressed: () => ShareService.shareMentorProfile(
+                  name: mentor.name,
+                  role: mentor.role,
+                  sector: mentor.sectors.isNotEmpty ? mentor.sectors.first : '',
+                  city: mentor.city,
+                ),
+                icon: const Icon(Icons.share_rounded, color: Colors.white),
+              ),
               IconButton(
                 onPressed: _toggleFavorite,
                 icon: AnimatedSwitcher(

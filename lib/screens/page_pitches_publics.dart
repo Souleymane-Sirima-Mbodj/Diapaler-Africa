@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_chat.dart';
@@ -266,6 +267,22 @@ class _PitchCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              // Bouton Partager
+              IconButton(
+                onPressed: () => ShareService.sharePitch(
+                  title: title,
+                  sector: sector,
+                  description: description,
+                  authorName: userName,
+                  amount: amount.isNotEmpty ? amount : null,
+                ),
+                icon: const Icon(Icons.share_rounded, size: 18),
+                color: AppColors.muted,
+                tooltip: 'Partager ce pitch',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
               TextButton(
                 onPressed: () {
                   final currentUid = AuthService.currentUid;
