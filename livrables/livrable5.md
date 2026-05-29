@@ -1,0 +1,1879 @@
+---
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+# ![Logo ESP]  École Supérieure Polytechnique de Dakar
+
+&nbsp;
+
+---
+
+# DIAPALER AFRICA
+## Plateforme mobile de mentorat entrepreneurial
+
+&nbsp;
+
+# LIVRABLE 5
+## Fonctionnalités Avancées
+
+&nbsp;
+
+---
+
+| | |
+|---|---|
+| **Membre 1** | Alioune Badara Barry |
+| **Membre 2** | Anta Diama Kama |
+| **Membre 3** | Souleymane Sirima Mbodj |
+| **Membre 4** | Serigne Abdoul Aziz Ndiaye |
+| **Membre 5** | Mohamed Moctar Niang |
+| **Membre 6** | Mareme Tine |
+| **Classe / Filière** | [Ta Classe] |
+| **Enseignant** | [Nom du Professeur] |
+| **Module** | Développement d'Applications Mobiles |
+| **Institution** | École Supérieure Polytechnique (ESP) — Dakar |
+| **Année académique** | 2025 – 2026 |
+| **Date de remise** | [Date] |
+
+---
+
+&nbsp;
+
+> **📸 [Insérer ici le logo de l'ESP et/ou une capture de l'application]**
+
+&nbsp;
+
+---
+
+# LIVRABLE 5 — Fonctionnalités Avancées
+
+**Projet :** DIAPALER AFRICA  
+**Module :** Développement d'Applications Mobiles  
+**Institution :** École Supérieure Polytechnique (ESP) — Dakar, Sénégal  
+**Année académique :** 2025-2026
+
+---
+
+## Table des matières
+
+- [Introduction](#introduction)
+- [1. Système de Notifications](#1-système-de-notifications)
+  - [1.1 Modèle de données](#11-modèle-de-données)
+  - [1.2 Service de notifications](#12-service-de-notifications)
+  - [1.3 Badge de notifications dynamique](#13-badge-de-notifications-dynamique)
+  - [1.4 Centre de notifications](#14-centre-de-notifications-page_notificationsdart)
+- [2. Recherche et Filtres avancés](#2-recherche-et-filtres-avancés)
+  - [2.1 Barre de recherche textuelle en temps réel](#21-barre-de-recherche-textuelle-en-temps-réel)
+  - [2.2 Pills de filtre par rôle](#22-pills-de-filtre-par-rôle)
+  - [2.3 Pills de filtre par secteur](#23-pills-de-filtre-par-secteur)
+  - [2.4 Filtre par ville (dropdown)](#24-filtre-par-ville-dropdown)
+  - [2.5 Réinitialisation des filtres](#25-réinitialisation-des-filtres)
+  - [2.6 Membres DIAPALER réels en priorité](#26-membres-diapaler-réels-en-priorité)
+- [3. Géolocalisation GPS](#3-géolocalisation-gps)
+  - [3.1 Service de géolocalisation](#31-service-de-géolocalisation-service_geolocationdart)
+  - [3.2 Bouton "Près de moi"](#32-bouton-près-de-moi)
+  - [3.3 Affichage de la distance sur les cartes](#33-affichage-de-la-distance-sur-les-cartes)
+- [4. Chatbot IA — DIALI](#4-chatbot-ia--diali)
+  - [4.1 Présentation](#41-présentation)
+  - [4.2 FAB chatbot avec animation "pulse"](#42-fab-chatbot-avec-animation-pulse-coquille_principaledart)
+  - [4.3 Interface du chatbot](#43-interface-du-chatbot-page_chatbotdart)
+- [5. Messagerie temps réel](#5-messagerie-temps-réel)
+  - [5.1 Badge de messages non lus (ValueNotifier global)](#51-badge-de-messages-non-lus-valuenotifier-global)
+  - [5.2 Liste des conversations](#52-liste-des-conversations)
+  - [5.3 Chat individuel](#53-chat-individuel)
+- [6. Fonctionnalités supplémentaires bonus](#6-fonctionnalités-supplémentaires-bonus)
+  - [6.1 Agenda Firebase — Réservation bilatérale](#61-agenda-firebase--réservation-bilatérale-de-sessions)
+  - [6.2 Planning (disponibilités mentor)](#62-planning-disponibilités-mentor)
+  - [6.3 Demandes de mentorat](#63-demandes-de-mentorat)
+- [7. Système de Pitch Entrepreneurial](#7-système-de-pitch-entrepreneurial)
+  - [7.1 Dépôt de pitch — Formulaire 3 étapes](#71-dépôt-de-pitch--formulaire-3-étapes-page_pitchdart)
+  - [7.2 Fil des pitchs publics](#72-fil-des-pitchs-publics-page_pitches_publicsdart)
+- [8. Dashboards par rôle](#8-dashboards-par-rôle)
+  - [8.1 Dashboard Mentor](#81-dashboard-mentor-page_dashboard_mentordart)
+  - [8.2 Dashboard Investisseur](#82-dashboard-investisseur-page_dashboard_investisseurdart)
+- [9. Page Détail Mentor](#9-page-détail-mentor-page_detail_mentordart)
+- [Conclusion](#conclusion-du-livrable-5)
+
+---
+
+## Introduction
+
+DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées dans le sujet, plus plusieurs fonctionnalités bonus :
+
+| Fonctionnalité avancée (sujet) | Implémentation DIAPALER AFRICA | Statut |
+|---|---|---|
+| Notifications | `NotificationService` + badge dynamique + centre + swipe delete | ✅ |
+| Recherche | Barre textuelle en temps réel (nom, secteur, ville) | ✅ |
+| Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
+| Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km | ✅ |
+| Chatbot IA | DIALI (Claude claude-haiku-4-5-20251001) + proxy Cloudflare + FAB pulsant | ✅ |
+| Messagerie temps réel | Firebase WebSocket + badge `unreadMessagesCount` global | ✅ (bonus) |
+| Agenda | `AgendaController.bookBilateral()` + annulation bilatérale | ✅ (bonus) |
+| Planning | Gestion disponibilités mentor via Firebase | ✅ (bonus) |
+| Demandes mentorat | Envoi + accepter/refuser + notification croisée | ✅ (bonus) |
+| **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` global | ✅ (bonus) |
+| **Fil de pitchs publics** | `PublicPitchesPage` → stream Firebase temps réel | ✅ (bonus) |
+| **Dashboard Mentor** | `SliverAppBar` + stats + raccourcis | ✅ (bonus) |
+| **Dashboard Investisseur** | Header + accès Pitchs + Matching | ✅ (bonus) |
+| **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
+
+---
+
+## 1. Système de Notifications
+
+### 1.1 Modèle de données
+
+```dart
+// lib/services/service_notifications.dart
+
+// Types de notifications
+enum NotificationType {
+  message,   // Nouveau message reçu dans la messagerie
+  request,   // Nouvelle demande de mentorat reçue
+  pitch,     // Commentaire ou approbation d'un pitch
+  agenda,    // Rappel d'un événement agenda
+  system,    // Notification système (bienvenue, mise à jour...)
+}
+
+// Modèle d'une notification
+class NotificationItem {
+  final String           id;
+  final String           title;
+  final String           body;
+  final NotificationType type;
+  final DateTime         createdAt;
+  bool                   isRead;
+
+  NotificationItem({
+    required this.id, required this.title, required this.body,
+    required this.type, required this.createdAt, this.isRead = false,
+  });
+
+  // Horodatage relatif (ex: "il y a 5 min")
+  String get timeAgo {
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 1)  return 'À l\'instant';
+    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
+    if (diff.inHours < 24)   return 'Il y a ${diff.inHours} h';
+    if (diff.inDays < 7)     return 'Il y a ${diff.inDays} j';
+    return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
+  }
+}
+```
+
+---
+
+### 1.2 Service de notifications
+
+```dart
+class NotificationService {
+  // Notifier global — tous les widgets abonnés se reconstruisent automatiquement
+  static final ValueNotifier<List<NotificationItem>> notifications =
+      ValueNotifier<List<NotificationItem>>([]);
+
+  /// Ajoute une notification (en tête de liste)
+  static void add(NotificationItem item) {
+    notifications.value = [item, ...notifications.value];
+  }
+
+  /// Raccourci pour ajouter rapidement une notification
+  static void notify({
+    required String title,
+    required String body,
+    required NotificationType type,
+  }) {
+    add(NotificationItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title, body: body, type: type, createdAt: DateTime.now(),
+    ));
+  }
+
+  /// Marque une notification comme lue
+  static void markRead(String id) {
+    notifications.value = notifications.value.map((n) =>
+      n.id == id
+          ? NotificationItem(id: n.id, title: n.title, body: n.body,
+              type: n.type, createdAt: n.createdAt, isRead: true)
+          : n,
+    ).toList();
+  }
+
+  /// Marque TOUTES les notifications comme lues
+  static void markAllRead() {
+    notifications.value = notifications.value.map((n) =>
+        NotificationItem(id: n.id, title: n.title, body: n.body,
+            type: n.type, createdAt: n.createdAt, isRead: true),
+    ).toList();
+  }
+
+  /// Supprime une notification
+  static void remove(String id) {
+    notifications.value =
+        notifications.value.where((n) => n.id != id).toList();
+  }
+
+  /// Nombre de notifications non lues
+  static int get unreadCount =>
+      notifications.value.where((n) => !n.isRead).length;
+
+  /// Réinitialise toutes les notifications (à la déconnexion)
+  static void reset() {
+    notifications.value = [];
+  }
+}
+```
+
+---
+
+### 1.3 Badge de notifications dynamique
+
+Le badge rouge apparaît sur **l'icône cloche** des dashboards et se met à jour sans setState :
+
+```dart
+// Dans les dashboards (SliverAppBar)
+ValueListenableBuilder<List<NotificationItem>>(
+  valueListenable: NotificationService.notifications,
+  builder: (context, notifs, _) {
+    final unread = notifs.where((n) => !n.isRead).length;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          color: AppColors.navyDeep,
+          onPressed: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const NotificationsPage())),
+        ),
+        // Badge rouge — visible seulement si > 0 notifications non lues
+        if (unread > 0)
+          Positioned(
+            top: 6, right: 6,
+            child: Container(
+              width: 16, height: 16,
+              decoration: const BoxDecoration(
+                color: AppColors.red, shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  unread > 9 ? '9+' : '$unread',
+                  style: const TextStyle(
+                    fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  },
+),
+```
+
+> **📸 CAPTURE D'ÉCRAN — Badge rouge sur l'icône cloche (ex: 3 notifications non lues)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 1.4 Centre de notifications (`page_notifications.dart`)
+
+**Fonctionnalités complètes :**
+- Liste toutes les notifications (non lues en premier)
+- Icône et couleur distinctes selon le type (💬 bleu / 📋 vert / 🚀 amber / 📅 violet / ⚙️ gris)
+- Horodatage relatif ("il y a 5 min", "il y a 2 h"...)
+- Fond légèrement coloré pour les notifications non lues
+- Point bleu sur les non lues
+- Tap → marque comme lue
+- Bouton "Tout marquer comme lu"
+- **Swipe to delete** (Dismissible) avec fond rouge
+- État vide illustré si aucune notification
+
+```dart
+class _NotificationsPageState extends State<NotificationsPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: [
+          TextButton(
+            onPressed: () => NotificationService.markAllRead(),
+            child: const Text('Tout lu',
+                style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+      body: ValueListenableBuilder<List<NotificationItem>>(
+        valueListenable: NotificationService.notifications,
+        builder: (_, notifs, __) {
+          if (notifs.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.notifications_off_outlined, size: 72, color: AppColors.border),
+                  SizedBox(height: 16),
+                  Text('Aucune notification',
+                      style: TextStyle(color: AppColors.muted, fontSize: 16)),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: notifs.length,
+            itemBuilder: (_, i) {
+              final n = notifs[i];
+              return Dismissible(
+                key: Key(n.id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) => NotificationService.remove(n.id),
+                background: Container(
+                  color: AppColors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(Icons.delete_rounded, color: Colors.white),
+                ),
+                child: ListTile(
+                  leading: _NotifIcon(type: n.type),
+                  title: Text(n.title,
+                    style: TextStyle(
+                      fontWeight: n.isRead ? FontWeight.normal : FontWeight.w700,
+                    )),
+                  subtitle: Text(n.body,
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(n.timeAgo,
+                          style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                      if (!n.isRead)
+                        Container(
+                          width: 8, height: 8, margin: const EdgeInsets.only(top: 4),
+                          decoration: const BoxDecoration(
+                              color: AppColors.blue, shape: BoxShape.circle),
+                        ),
+                    ],
+                  ),
+                  tileColor: n.isRead ? null : AppColors.blue.withValues(alpha: 0.05),
+                  onTap: () => NotificationService.markRead(n.id),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Centre de notifications (plusieurs types de notifications)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Swipe gauche pour supprimer une notification**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 2. Recherche et Filtres avancés
+
+La page Matching (`page_matching.dart`) intègre un système de filtres multicritères complet.
+
+### 2.1 Barre de recherche textuelle en temps réel
+
+```dart
+// Champ de recherche — rebuild à chaque frappe via TextEditingController listener
+final _searchCtrl = TextEditingController();
+String _query = '';
+
+@override
+void initState() {
+  super.initState();
+  _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text));
+  _loadMembers(); // Charge les membres DIAPALER depuis Firebase
+}
+
+// Filtre textuel dans le getter _filtered
+if (!m.matches(_query)) return false;
+// matches() recherche dans : nom, titre, ville, secteurs, tags
+
+// Barre de recherche avec bouton clear
+TextField(
+  controller: _searchCtrl,
+  decoration: InputDecoration(
+    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.subtle),
+    hintText: 'Nom, secteur, ville…',
+    suffixIcon: _query.isNotEmpty
+        ? IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.subtle),
+            onPressed: () => _searchCtrl.clear(),
+          )
+        : null,
+  ),
+),
+```
+
+---
+
+### 2.2 Pills de filtre par rôle
+
+```dart
+// 3 pills : "Tous" | "Mentor" | "Investisseur"
+// Animés avec AnimatedContainer (180ms)
+String _role = 'Tous';
+
+SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+  child: Row(
+    children: [
+      for (final r in ['Tous', 'Mentor', 'Investisseur'])
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => setState(() => _role = r),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _role == r ? AppColors.navyDeep : Colors.white,
+                border: Border.all(
+                  color: _role == r ? AppColors.navyDeep : AppColors.border,
+                ),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: _role == r
+                    ? [BoxShadow(
+                        color: AppColors.navyDeep.withValues(alpha: 0.18),
+                        blurRadius: 8, offset: const Offset(0, 2))]
+                    : null,
+              ),
+              child: Text(
+                r,
+                style: TextStyle(
+                  color: _role == r ? Colors.white : AppColors.navyDeep,
+                  fontWeight: FontWeight.w700, fontSize: 12.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  ),
+),
+```
+
+---
+
+### 2.3 Pills de filtre par secteur
+
+10 secteurs sénégalais proposés en scroll horizontal :
+
+```dart
+String _sector = 'Tous';
+
+static const _topSectors = <String>[
+  'Tous', 'Agro-industrie', 'Tech & Digital', 'Gastronomie',
+  'FinTech', 'Mode & Textile', 'Cosmétique', 'Automobile', 'Énergie', 'Santé',
+];
+
+SizedBox(
+  height: 36,
+  child: ListView.separated(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    itemCount: _topSectors.length,
+    separatorBuilder: (_, __) => const SizedBox(width: 8),
+    itemBuilder: (_, i) {
+      final s = _topSectors[i];
+      final selected = s == _sector;
+      return GestureDetector(
+        onTap: () => setState(() => _sector = s),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.navy : Colors.white,
+            border: Border.all(
+              color: selected ? AppColors.navy : AppColors.border,
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Center(
+            child: Text(s, style: TextStyle(
+              color: selected ? Colors.white : AppColors.navyDeep,
+              fontWeight: FontWeight.w700, fontSize: 12.5,
+            )),
+          ),
+        ),
+      );
+    },
+  ),
+),
+```
+
+---
+
+### 2.4 Filtre par ville (dropdown)
+
+```dart
+String _city = 'Toutes';
+
+// Liste dynamique des villes extraites de tous les profils
+List<String> get _cities {
+  final all = [..._members, ...mentors];
+  final s = all.map((m) => m.city).toSet().toList()..sort();
+  return ['Toutes', ...s];
+}
+
+// Dropdown compact dans la barre de filtres
+_CityDropdown(
+  value: _city,
+  values: _cities,
+  onChanged: (v) => setState(() => _city = v),
+),
+
+class _CityDropdown extends StatelessWidget {
+  final String value;
+  final List<String> values;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value,
+        isDense: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.muted, size: 18),
+        style: const TextStyle(
+          fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.navyDeep,
+        ),
+        items: values.map((c) =>
+            DropdownMenuItem(value: c, child: Text(c))).toList(),
+        onChanged: (v) { if (v != null) onChanged(v); },
+      ),
+    );
+  }
+}
+```
+
+---
+
+### 2.5 Réinitialisation des filtres
+
+```dart
+// Bouton "Réinitialiser" visible dans l'AppBar dès qu'un filtre est actif
+bool get _hasFilter =>
+    _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
+
+AppBar(
+  title: const Text('Mentors & Investisseurs'),
+  actions: [
+    if (_hasFilter)
+      TextButton(
+        onPressed: _resetFilters,
+        child: const Text('Réinitialiser',
+            style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
+      ),
+  ],
+),
+
+void _resetFilters() {
+  setState(() {
+    _searchCtrl.clear();
+    _query   = '';
+    _sector  = 'Tous';
+    _city    = 'Toutes';
+    _role    = 'Tous';
+    _nearMe  = false;
+    _userPosition = null;
+  });
+}
+```
+
+---
+
+### 2.6 Membres DIAPALER réels en priorité
+
+```dart
+// Getter _filtered — logique de tri complet
+List<Mentor> get _filtered {
+  final all = [..._members, ...mentors]; // Membres Firebase + profils statiques
+
+  final list = all.where((m) {
+    if (!m.matches(_query)) return false;
+    if (_sector != 'Tous' &&
+        !m.sectors.any((s) => s.toLowerCase() == _sector.toLowerCase())) {
+      return false;
+    }
+    if (_city != 'Toutes' && m.city != _city) return false;
+    if (_role != 'Tous' && m.role != _role) return false;
+    return true;
+  }).toList();
+
+  if (_nearMe && _userPosition != null) {
+    // Tri par distance GPS (croissant)
+    list.sort((a, b) {
+      final da = _distanceFor(a) ?? double.infinity;
+      final db = _distanceFor(b) ?? double.infinity;
+      return da.compareTo(db);
+    });
+  } else {
+    // Tri : membres DIAPALER réels en premier, puis par compatibilité
+    list.sort((a, b) {
+      final aIsMember = a.uid.isNotEmpty ? 1 : 0;
+      final bIsMember = b.uid.isNotEmpty ? 1 : 0;
+      if (aIsMember != bIsMember) return bIsMember - aIsMember;
+      return b.compatibility.compareTo(a.compatibility);
+    });
+  }
+  return list;
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Matching : barre de recherche + pills rôle + pills secteur**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching : recherche "tech" active + compteur de résultats**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching : filtre "Mentor" + secteur "FinTech" actifs**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching : filtre ville actif (dropdown)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching : bouton "Réinitialiser" visible dans l'AppBar**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching : état vide (aucun résultat)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 3. Géolocalisation GPS
+
+### 3.1 Service de géolocalisation (`service_geolocation.dart`)
+
+```dart
+// lib/services/service_geolocation.dart
+import 'package:geolocator/geolocator.dart';
+
+class GeolocationService {
+  /// Coordonnées GPS de toutes les villes du Sénégal (14 régions, 40+ villes)
+  static const Map<String, List<double>> cityCoordinates = {
+    'Dakar':       [14.6928, -17.4467],
+    'Pikine':      [14.7500, -17.3833],
+    'Thiès':       [14.7833, -16.9167],
+    'Saint-Louis': [16.0333, -16.5000],
+    'Kaolack':     [14.1500, -16.0667],
+    'Ziguinchor':  [12.5667, -16.2667],
+    'Touba':       [14.8500, -15.8833],
+    // ... 33 autres villes sénégalaises
+  };
+
+  /// Distance en km entre la position utilisateur et une ville (formule Haversine)
+  static double? distanceKmToCity(Position userPos, String city) {
+    final coords = cityCoordinates[city];
+    if (coords == null) return null;
+    return Geolocator.distanceBetween(
+      userPos.latitude, userPos.longitude,
+      coords[0], coords[1],
+    ) / 1000;  // Conversion mètres → km
+  }
+
+  /// Demande la permission puis retourne la position GPS actuelle
+  static Future<Position?> getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings(); // Invite l'utilisateur
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;  // Permission refusée
+      }
+
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,  // ~10 mètres
+      );
+    } catch (e) {
+      return null;  // GPS non disponible (web, simulateur...)
+    }
+  }
+
+  /// Formate une distance km de façon lisible
+  static String formatDistance(double km) {
+    if (km < 1)  return '< 1 km';
+    if (km < 10) return '${km.toStringAsFixed(1)} km';
+    return '${km.round()} km';
+  }
+}
+```
+
+**Permissions Android (`AndroidManifest.xml`) :**
+```xml
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+```
+
+---
+
+### 3.2 Bouton "Près de moi"
+
+Un bouton dédié (sous la barre de recherche) active le tri par distance GPS avec animation et état visuel :
+
+```dart
+Position? _userPosition;
+bool _nearMe = false;
+bool _loadingLocation = false;
+
+// Activation/désactivation du tri par distance
+Future<void> _toggleNearMe() async {
+  if (_nearMe) {
+    setState(() { _nearMe = false; _userPosition = null; });
+    return;
+  }
+  setState(() => _loadingLocation = true);
+  final pos = await GeolocationService.getCurrentLocation();
+  if (!mounted) return;
+  if (pos != null) {
+    setState(() { _userPosition = pos; _nearMe = true; });
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Impossible d\'obtenir ta position.')),
+    );
+  }
+  setState(() => _loadingLocation = false);
+}
+
+// Bouton animé — change de couleur et de texte selon l'état
+GestureDetector(
+  onTap: _loadingLocation ? null : _toggleNearMe,
+  child: AnimatedContainer(
+    duration: const Duration(milliseconds: 200),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+    decoration: BoxDecoration(
+      color: _nearMe ? AppColors.purple : Colors.white,
+      border: Border.all(
+        color: _nearMe ? AppColors.purple : AppColors.border,
+      ),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _loadingLocation
+            ? const SizedBox(width: 14, height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : Icon(Icons.near_me_rounded, size: 16,
+                color: _nearMe ? Colors.white : AppColors.purple),
+        const SizedBox(width: 7),
+        Text(
+          _nearMe ? 'Trié par distance ✓' : 'Près de moi',
+          style: TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w700,
+            color: _nearMe ? Colors.white : AppColors.purple,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+
+// Calcul de la distance pour un profil
+double? _distanceFor(Mentor m) {
+  if (_userPosition == null) return null;
+  return GeolocationService.distanceKmToCity(_userPosition!, m.city);
+}
+```
+
+---
+
+### 3.3 Affichage de la distance sur les cartes
+
+```dart
+// carte_mentor.dart — puce de distance en km (visible si position disponible)
+if (distanceKm != null)
+  Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: AppColors.green.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.location_on_rounded, size: 12, color: AppColors.green),
+        const SizedBox(width: 3),
+        Text(
+          GeolocationService.formatDistance(distanceKm!),
+          style: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.green,
+          ),
+        ),
+      ],
+    ),
+  ),
+```
+
+> **📸 CAPTURE D'ÉCRAN — Bouton "Près de moi" (état inactif)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Matching avec distances en km sur chaque carte**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Bouton "Trié par distance ✓" (état actif, violet)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 4. Chatbot IA — DIALI
+
+### 4.1 Présentation
+
+**DIALI** (wolof : "aller de l'avant") est l'assistant IA de DIAPALER AFRICA. Propulsé par **Claude claude-haiku-4-5** d'Anthropic, il accompagne les entrepreneurs, mentors et investisseurs avec des conseils contextualisés à l'écosystème sénégalais.
+
+| Caractéristique | Détail |
+|---|---|
+| API | Anthropic Messages API |
+| Modèle | claude-haiku-4-5 (rapide + haute qualité) |
+| Langue | Français (compréhension du wolof) |
+| Contexte système | DER/FJ, BNDE, FONGIP, FONSIS, secteurs porteurs |
+| Accès | FAB pulsant amber visible depuis tous les onglets |
+
+---
+
+### 4.2 FAB chatbot avec animation "pulse" (`coquille_principale.dart`)
+
+Le bouton du chatbot est visible sur **tous les écrans** de l'app via un `FloatingActionButton` dans le `Scaffold` principal. Un anneau animé attire l'attention :
+
+```dart
+// Animation pulse : anneau qui s'agrandit de 1x à 2.2x tout en s'estompant
+class _PulseFabState extends State<_PulseFab>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();  // Boucle infinie
+
+    _scale   = Tween<double>(begin: 1.0, end: 2.2)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _opacity = Tween<double>(begin: 0.55, end: 0.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // ── Anneau animé (derrière le FAB)
+        AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => Transform.scale(
+            scale: _scale.value,
+            child: Container(
+              width: 56, height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.amber.withValues(alpha: _opacity.value),
+              ),
+            ),
+          ),
+        ),
+        // ── Bouton principal
+        FloatingActionButton(
+          onPressed: widget.onPressed,
+          backgroundColor: AppColors.amber,
+          foregroundColor: AppColors.navyDeep,
+          elevation: 4,
+          tooltip: 'DIALI IA — Assistant entrepreneurial',
+          child: const Icon(Icons.psychology_rounded, size: 26),
+        ),
+      ],
+    );
+  }
+}
+```
+
+**Positionnement dans `coquille_principale.dart` :**
+```dart
+// Scaffold principal — FAB visible sur tous les onglets
+floatingActionButton: _PulseFab(
+  onPressed: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const ChatbotPage()),
+  ),
+),
+floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+```
+
+> **📸 CAPTURE D'ÉCRAN — FAB chatbot DIALI (bouton doré avec anneau pulsant amber)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 4.3 Interface du chatbot (`page_chatbot.dart`)
+
+**Fonctionnalités :**
+- En-tête : avatar IA amber + "DIALI IA" + "Assistant entrepreneurial"
+- Message de bienvenue **personnalisé selon le rôle** de l'utilisateur
+- Bulles de messages : utilisateur → droite (navy) / DIALI → gauche (blanc)
+- **Indicateur de frappe animé** (3 points) pendant la génération
+- Scroll automatique vers le dernier message
+- Champ de saisie multi-lignes + bouton envoi (désactivé pendant la génération)
+- Historique conservé pendant toute la session
+
+```dart
+class _ChatbotPageState extends State<ChatbotPage> {
+  final List<Map<String, String>> _messages = [];
+  final _ctrl       = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Message de bienvenue personnalisé selon le rôle
+    final profile = UserProfileController.profile.value;
+    final greeting = switch (profile.role) {
+      'Mentor' =>
+        'Bonjour ${profile.firstName} ! Je suis DIALI. Je peux t\'aider à '
+        'mieux accompagner tes mentorés ou structurer tes sessions.',
+      'Investisseur' =>
+        'Bonjour ${profile.firstName} ! Je suis DIALI. Je peux t\'aider à '
+        'identifier des opportunités d\'investissement au Sénégal.',
+      _ =>
+        'Bonjour ${profile.firstName} ! Je suis DIALI, ton assistant '
+        'entrepreneurial. Je t\'aide avec ton business plan, le financement, '
+        'ou l\'écosystème sénégalais (DER/FJ, BNDE, FONGIP…).',
+    };
+    _messages.add({'role': 'assistant', 'content': greeting});
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _loading) return;
+    _ctrl.clear();
+
+    setState(() {
+      _messages.add({'role': 'user', 'content': text});
+      _loading = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final reply = await ChatbotService.sendMessage(_messages);
+      setState(() => _messages.add({'role': 'assistant', 'content': reply}));
+    } catch (e) {
+      setState(() => _messages.add({
+        'role': 'assistant',
+        'content': 'Désolé, je rencontre une difficulté technique. Réessaie.',
+      }));
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+        _scrollToBottom();
+      }
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppColors.amber, radius: 16,
+              child: Icon(Icons.psychology_rounded, size: 18, color: AppColors.navyDeep),
+            ),
+            SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('DIALI IA',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                Text('Assistant entrepreneurial',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          // ── Liste des messages
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length + (_loading ? 1 : 0),
+              itemBuilder: (_, i) {
+                if (_loading && i == _messages.length) {
+                  return const _TypingIndicator(); // Indicateur "..."
+                }
+                final msg    = _messages[i];
+                final isUser = msg['role'] == 'user';
+                return _ChatBubble(text: msg['content']!, isUser: isUser);
+              },
+            ),
+          ),
+
+          // ── Champ de saisie
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    maxLines: 4, minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    decoration: const InputDecoration(
+                      hintText: 'Pose ta question à DIALI…',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FloatingActionButton.small(
+                  onPressed: _loading ? null : _send,
+                  backgroundColor: AppColors.amber,
+                  child: _loading
+                      ? const CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2)
+                      : const Icon(Icons.send_rounded, color: AppColors.navyDeep),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Chatbot DIALI IA (message de bienvenue personnalisé)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Chatbot DIALI IA (conversation active)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Indicateur de frappe "..." pendant la génération**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 5. Messagerie temps réel
+
+### 5.1 Badge de messages non lus (ValueNotifier global)
+
+Le badge sur l'onglet Messages se met à jour en temps réel grâce à un `ValueNotifier<int>` global dans `service_navigation.dart` :
+
+```dart
+// lib/services/service_navigation.dart
+import 'package:flutter/foundation.dart';
+
+/// Nombre total de messages non lus — mis à jour par MessagesPage dès que
+/// le stream Firebase émet de nouvelles données, même si l'onglet est inactif.
+final ValueNotifier<int> unreadMessagesCount = ValueNotifier<int>(0);
+
+/// Index de l'onglet actif (0=Accueil, 1=Matching, 2=Messages, 3=Agenda, 4=Profil)
+final ValueNotifier<int> appTabIndex = ValueNotifier<int>(0);
+```
+
+**Mise à jour dans `page_messages.dart` :**
+```dart
+// Le stream Firebase met à jour le compteur global dès qu'il y a un changement
+@override
+void initState() {
+  super.initState();
+  _conversationsStream = InteractionsService.getConversations(currentUid);
+  _conversationsStream.listen((conversations) {
+    final total = conversations.fold<int>(
+        0, (sum, c) => sum + c.unreadCount);
+    // Mise à jour du ValueNotifier global (reconstruit la NavBar)
+    unreadMessagesCount.value = total;
+  });
+}
+```
+
+**Affichage dans la barre de navigation (`coquille_principale.dart`) :**
+```dart
+// Badge sur l'onglet Messages
+ValueListenableBuilder<int>(
+  valueListenable: unreadMessagesCount,
+  builder: (_, count, __) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.chat_bubble_outline_rounded),
+        if (count > 0)
+          Positioned(
+            top: -4, right: -4,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: AppColors.red, shape: BoxShape.circle,
+              ),
+              child: Text(
+                count > 9 ? '9+' : '$count',
+                style: const TextStyle(fontSize: 8, color: Colors.white,
+                    fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+      ],
+    );
+  },
+),
+```
+
+---
+
+### 5.2 Liste des conversations
+
+```dart
+// page_messages.dart — StreamBuilder sur conversations Firebase
+StreamBuilder<List<Conversation>>(
+  stream: InteractionsService.getConversations(currentUid),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final conversations = snapshot.data!;
+    if (conversations.isEmpty) {
+      return const _EmptyState(
+        icon: Icons.chat_bubble_outline_rounded,
+        label: 'Aucune conversation',
+        hint: 'Contacte un mentor ou un investisseur depuis le Matching.',
+      );
+    }
+    return ListView.separated(
+      itemCount: conversations.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) => _ConversationTile(
+        conversation: conversations[i],
+        currentUid: currentUid,
+      ),
+    );
+  },
+)
+```
+
+---
+
+### 5.3 Chat individuel
+
+```dart
+// page_chat.dart — WebSocket Firebase en temps réel
+StreamBuilder<List<ChatMessage>>(
+  stream: InteractionsService.getMessages(conversationId),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final messages = snapshot.data!;
+    return ListView.builder(
+      reverse: false,
+      controller: _scrollCtrl,
+      itemCount: messages.length,
+      itemBuilder: (_, i) {
+        final msg     = messages[i];
+        final isMe    = msg.senderId == currentUid;
+        return _MessageBubble(message: msg, isMe: isMe);
+      },
+    );
+  },
+)
+```
+
+> **📸 CAPTURE D'ÉCRAN — Badge rouge sur l'onglet Messages (NavBar)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Messagerie : liste des conversations**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Chat individuel (messages en temps réel)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 6. Fonctionnalités supplémentaires bonus
+
+### 6.1 Agenda Firebase — Réservation bilatérale de sessions
+
+L'agenda utilise `AgendaController` avec `ValueNotifier<List<BookedSession>>`. La réservation est **bilatérale** : la session s'écrit dans le calendrier des **deux parties** simultanément.
+
+**Modèle `BookedSession` :**
+```dart
+// lib/services/service_agenda.dart
+class BookedSession {
+  final String id;
+  final String mentorName;
+  final String mentorInitials;
+  final DateTime scheduledAt;
+  final String otherUid; // UID de l'autre partie (notif croisée)
+
+  String get weekday  => ['Lundi','Mardi','Mercredi','Jeudi','Vendredi',
+                          'Samedi','Dimanche'][scheduledAt.weekday - 1];
+  String get day      => scheduledAt.day.toString().padLeft(2, '0');
+  String get month    => ['JAN','FÉV','MAR','AVR','MAI','JUIN',
+                          'JUIL','AOÛT','SEP','OCT','NOV','DÉC'][scheduledAt.month - 1];
+  String get timeRange {
+    final h = scheduledAt.hour.toString().padLeft(2, '0');
+    final hEnd = (scheduledAt.hour + 1).toString().padLeft(2, '0');
+    return '$h:00 – $hEnd:00';
+  }
+}
+```
+
+**Contrôleur `AgendaController` :**
+```dart
+class AgendaController {
+  static final _db = FirebaseDatabase.instance.ref();
+  static final sessions = ValueNotifier<List<BookedSession>>([]);
+
+  /// Écoute Firebase en temps réel (WebSocket).
+  static Future<void> load(String userId) async {
+    _db.child('bookedSessions/$userId').onValue.listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) { sessions.value = []; return; }
+      final list = data.values
+          .map<BookedSession>((v) =>
+              BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
+          .toList()
+        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+      sessions.value = list;
+    });
+  }
+
+  /// Écriture bilatérale : agenda demandeur + agenda mentor/investisseur.
+  static Future<void> bookBilateral({
+    required String requesterUid,
+    required String requesterName,
+    required String requesterInitials,
+    required String otherUid,
+    required String otherName,
+    required String otherInitials,
+    required DateTime scheduledAt,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    // Côté demandeur
+    await _db.child('bookedSessions/$requesterUid/$id').set(
+      BookedSession(id: id, mentorName: otherName,
+          mentorInitials: otherInitials, scheduledAt: scheduledAt,
+          otherUid: otherUid).toJson(),
+    );
+    if (otherUid.isEmpty) return; // Mentor statique → pas de miroir
+    // Côté mentor/investisseur
+    await _db.child('bookedSessions/$otherUid/$id').set(
+      BookedSession(id: id, mentorName: requesterName,
+          mentorInitials: requesterInitials, scheduledAt: scheduledAt,
+          otherUid: requesterUid).toJson(),
+    );
+    // Notification push au mentor
+    await NotificationService.notifyUser(
+      uid: otherUid,
+      title: 'Nouveau rendez-vous',
+      message: '$requesterName a réservé une session avec toi.',
+      type: 'session_booked',
+    );
+  }
+
+  /// Annulation bilatérale + notification de l'autre partie.
+  static Future<void> cancel({
+    required String userId,
+    required String userName,
+    required BookedSession session,
+    required String reason,
+  }) async {
+    await _db.child('bookedSessions/$userId/${session.id}').remove();
+    if (session.otherUid.isNotEmpty) {
+      await _db.child('bookedSessions/${session.otherUid}/${session.id}').remove();
+      await NotificationService.notifyUser(
+        uid: session.otherUid,
+        title: 'Rendez-vous annulé',
+        message: '$userName a annulé votre session — motif : $reason',
+        type: 'session_cancelled',
+      );
+    }
+  }
+}
+```
+
+**Page `page_agenda.dart` avec `ValueListenableBuilder` :**
+```dart
+class AgendaPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Agenda')),
+      body: ValueListenableBuilder<List<BookedSession>>(
+        valueListenable: AgendaController.sessions,
+        builder: (context, sessions, _) {
+          final now      = DateTime.now();
+          final upcoming = sessions.where((s) => s.scheduledAt.isAfter(now)).toList();
+          final past     = sessions.where((s) => !s.scheduledAt.isAfter(now)).toList();
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
+            children: [
+              _SummaryCard(upcomingCount: upcoming.length),
+              const _SectionLabel('À VENIR'),
+              ...upcoming.map((s) => _BookedSessionCard(session: s)),
+              const _SectionLabel('PASSÉES'),
+              ...past.map((s) => _BookedSessionCard(session: s, isPast: true)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Agenda : sessions à venir (date + heure + bouton "Annuler le rendez-vous")**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 6.2 Planning (disponibilités mentor)
+
+```dart
+// page_planning.dart — Gestion des créneaux disponibles
+StreamBuilder<Availability?>(
+  stream: InteractionsService.getAvailability(currentUid),
+  builder: (context, snapshot) {
+    final availability = snapshot.data;
+    // Affichage + modification des créneaux
+    return _AvailabilityEditor(
+      availability: availability,
+      onSave: (updated) => InteractionsService.updateAvailability(updated),
+    );
+  },
+)
+```
+
+> **📸 CAPTURE D'ÉCRAN — Planning du mentor : créneaux disponibles**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 6.3 Demandes de mentorat
+
+```dart
+// page_send_request.dart — Envoi d'une demande
+Future<void> _sendRequest() async {
+  await InteractionsService.sendMentorRequest(
+    fromUserId: currentUid,
+    toUserId: mentor.uid,
+    fromName: UserProfileController.profile.value.fullName,
+    toName: mentor.name,
+    message: _message.text.trim(),
+  );
+  NotificationService.notify(
+    title: 'Demande envoyée',
+    body: 'Ta demande a été envoyée à ${mentor.name}.',
+    type: NotificationType.request,
+  );
+}
+
+// page_requests.dart — Liste des demandes reçues (Mentor)
+StreamBuilder<List<MentorRequest>>(
+  stream: InteractionsService.getReceivedRequests(currentUid),
+  builder: (context, snapshot) {
+    final requests = snapshot.data ?? [];
+    return ListView.builder(
+      itemCount: requests.length,
+      itemBuilder: (_, i) => _RequestCard(
+        request: requests[i],
+        onAccept: () => InteractionsService.acceptRequest(requests[i].id),
+        onReject: () => InteractionsService.rejectRequest(requests[i].id),
+      ),
+    );
+  },
+)
+```
+
+> **📸 CAPTURE D'ÉCRAN — Envoi d'une demande de mentorat**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Demandes reçues (Mentor) avec boutons Accepter/Refuser**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 7. Système de Pitch Entrepreneurial
+
+### 7.1 Dépôt de pitch — Formulaire 3 étapes (`page_pitch.dart`)
+
+Les entrepreneurs déposent leur pitch via un **stepper 3 étapes** avec `AnimatedSwitcher` pour les transitions.
+
+```dart
+// lib/screens/page_pitch.dart
+class PitchPage extends StatefulWidget { ... }
+
+class _PitchPageState extends State<PitchPage> {
+  int _step = 0;
+  static const _total = 3;
+
+  // Contrôleurs de champs
+  final _title       = TextEditingController(); // Nom du projet
+  final _description = TextEditingController(); // Résumé (étape 1)
+  final _detailDesc  = TextEditingController(); // Détails (étape 2)
+  final _amount      = TextEditingController(); // Besoin financement (étape 3)
+  String? _sector;
+
+  static const _steps = [
+    ('Informations', 'Présente ton projet en quelques mots'),
+    ('Détails',      'Secteur, description, ambition'),
+    ('Documents',    'Pitch deck, vidéo, besoin de financement'),
+  ];
+```
+
+**AppBar dynamique :**
+```dart
+AppBar(
+  title: Text('Étape ${_step + 1} / $_total · ${_steps[_step].$1}'),
+  leading: IconButton(
+    onPressed: () {
+      if (_step > 0) setState(() => _step--); // Retour à l'étape précédente
+      else Navigator.of(context).pop();
+    },
+    icon: const Icon(Icons.arrow_back_rounded),
+  ),
+)
+```
+
+**Barre de progression (`_StepBar`) :**
+```dart
+class _StepBar extends StatelessWidget {
+  final int step, total;
+  @override
+  Widget build(BuildContext context) {
+    return LinearProgressIndicator(
+      value: (step + 1) / total,
+      backgroundColor: AppColors.fieldBg,
+      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.navyDeep),
+      minHeight: 4,
+    );
+  }
+}
+```
+
+**Soumission finale — double sauvegarde :**
+```dart
+Future<void> _next() async {
+  if (_step < _total - 1) { setState(() => _step++); return; }
+
+  setState(() => _loading = true);
+  try {
+    final profile = UserProfileController.profile.value;
+    final uid     = AuthService.currentUid;
+
+    // 1. Ajout au profil entrepreneur (nœud users/ → projects[])
+    final project = Project(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _title.text.trim().isEmpty ? 'Mon Pitch' : _title.text.trim(),
+      description: [_description.text.trim(), _detailDesc.text.trim()]
+          .where((s) => s.isNotEmpty).join('\n\n'),
+      sector: _sector ?? profile.sector,
+      step: 1, totalSteps: 5,
+    );
+    final updated = profile.copyWith(projects: [...profile.projects, project]);
+    UserProfileController.update(updated);
+    if (uid != null) await DatabaseService.updateUserProfile(uid, updated);
+
+    // 2. Publication dans pitches/ → visible par TOUS (mentors + investisseurs)
+    await DatabaseService.publishPitch(
+      userId: uid ?? '',
+      userName: profile.fullName,
+      title: project.name,
+      sector: project.sector,
+      description: project.description,
+      amount: _amount.text.trim(),
+    );
+
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Pitch publié ! Visible auprès des mentors et investisseurs.'),
+      backgroundColor: AppColors.green,
+    ));
+  } finally {
+    if (mounted) setState(() => _loading = false);
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Étape 1 du formulaire Pitch (champ titre + secteur)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Étape 3 du formulaire Pitch (besoin financement) + bouton "PUBLIER MON PITCH"**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 7.2 Fil des pitchs publics (`page_pitches_publics.dart`)
+
+Les mentors et investisseurs voient tous les pitchs en **temps réel** grâce à `DatabaseService.getPitches()` (stream Firebase WebSocket).
+
+```dart
+// lib/screens/page_pitches_publics.dart
+class PublicPitchesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pitchs publiés')),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: DatabaseService.getPitches(), // Stream WebSocket Firebase
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final pitches = snapshot.data ?? [];
+          if (pitches.isEmpty) {
+            return const Center(
+              child: Text('Aucun pitch publié pour le moment.'),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+            itemCount: pitches.length,
+            itemBuilder: (_, i) => _PitchCard(pitch: pitches[i]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PitchCard extends StatelessWidget {
+  final Map<String, dynamic> pitch;
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Avatar(initials: pitch['userName']?.toString().substring(0,1) ?? '?'),
+        title: Text(pitch['title'] ?? ''),
+        subtitle: Text('${pitch['sector']} · ${pitch['userName']}'),
+        trailing: pitch['amount']?.toString().isNotEmpty == true
+            ? Chip(label: Text(pitch['amount']))
+            : null,
+        onTap: () => InteractionsService.generateConversationId(
+          AuthService.currentUid ?? '',
+          pitch['userId'] ?? '',
+        ).then((convId) => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ChatPage(
+            conversationId: convId,
+            otherUserId: pitch['userId'],
+            otherUserName: pitch['userName'],
+          )))),
+      ),
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Fil des pitchs publics (liste temps réel)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 8. Dashboards par rôle
+
+### 8.1 Dashboard Mentor (`page_dashboard_mentor.dart`)
+
+Le dashboard Mentor est une `SliverAppBar` + `CustomScrollView`. Il agrège :
+- Header avec avatar + badge notifications
+- Statistiques (mentorés actifs, sessions, note)
+- Raccourcis vers Pitchs publiés, Planning, Demandes reçues
+
+```dart
+// lib/screens/page_dashboard_mentor.dart
+class MentorDashboard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (context, profile, _) {
+        return CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          slivers: [
+            // ── Header collant ──────────────────────────────────────
+            SliverAppBar(
+              pinned: true,
+              toolbarHeight: 68,
+              title: Row(children: [
+                Avatar(initials: profile.initials,
+                       background: AppColors.roleMentor,
+                       photoBase64: profile.photoBase64),
+                const SizedBox(width: 12),
+                Expanded(child: Column(children: [
+                  Text('Bienvenue ${profile.firstName} 👋'),
+                  Text(profile.role, style: const TextStyle(color: AppColors.muted)),
+                ])),
+                // Badge notifications
+                ValueListenableBuilder<List<NotificationItem>>(
+                  valueListenable: NotificationService.notifications,
+                  builder: (_, notifs, __) {
+                    final unread = notifs.where((n) => !n.isRead).length;
+                    return Stack(children: [
+                      IconButton(icon: const Icon(Icons.notifications_outlined),
+                          onPressed: () => Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const NotificationsPage()))),
+                      if (unread > 0) Positioned(
+                        right: 4, top: 4,
+                        child: Container(
+                          width: 18, height: 18,
+                          decoration: const BoxDecoration(
+                              color: AppColors.red, shape: BoxShape.circle),
+                          child: Center(child: Text('$unread',
+                              style: const TextStyle(color: Colors.white, fontSize: 10))),
+                        ),
+                      ),
+                    ]);
+                  },
+                ),
+              ]),
+            ),
+            // ── Statistiques ───────────────────────────────────────
+            SliverToBoxAdapter(child: _StatsGrid(profile: profile)),
+            // ── Actions rapides ────────────────────────────────────
+            SliverToBoxAdapter(child: Column(children: [
+              _ActionTile(label: 'Voir les Pitchs',
+                  icon: Icons.upload_file_rounded,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const PublicPitchesPage()))),
+              _ActionTile(label: 'Mon Planning',
+                  icon: Icons.calendar_today_rounded,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const PlanningPage()))),
+              _ActionTile(label: 'Demandes reçues',
+                  icon: Icons.handshake_rounded,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const RequestsPage()))),
+            ])),
+          ],
+        );
+      },
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Dashboard Mentor (header + stats + actions rapides)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 8.2 Dashboard Investisseur (`page_dashboard_investisseur.dart`)
+
+Le dashboard Investisseur est similaire mais orienté découverte de projets :
+- Header avatar + badge notifications
+- Raccourci "Voir les Pitchs" (fil public entrepreneurs)
+- Raccourci "Trouver des entrepreneurs" → page Matching
+
+```dart
+// lib/screens/page_dashboard_investisseur.dart
+class InvestorDashboard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (context, profile, _) {
+        return CustomScrollView(slivers: [
+          SliverAppBar(
+            pinned: true,
+            title: Row(children: [
+              Avatar(initials: profile.initials,
+                     background: AppColors.blue,
+                     photoBase64: profile.photoBase64),
+              const SizedBox(width: 12),
+              Column(children: [
+                Text('Bienvenue ${profile.firstName} 👋'),
+                Text(profile.role, style: const TextStyle(color: AppColors.muted)),
+              ]),
+              const Spacer(),
+              // Badge notifications (même pattern que MentorDashboard)
+              _NotificationBadge(),
+            ]),
+          ),
+          SliverToBoxAdapter(child: Column(children: [
+            _ActionTile(label: 'Pitchs des entrepreneurs',
+                icon: Icons.bar_chart_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const PublicPitchesPage()))),
+            _ActionTile(label: 'Matching entrepreneurs',
+                icon: Icons.people_rounded,
+                onTap: () => appTabIndex.value = 1), // Onglet Matching
+          ])),
+        ]);
+      },
+    );
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Dashboard Investisseur (header + accès rapide Pitchs)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 9. Page Détail Mentor (`page_detail_mentor.dart`)
+
+La page détail affiche le profil complet d'un mentor/investisseur et permet de :
+1. **Réserver une session** (avec choix du créneau horaire)
+2. **Ajouter aux favoris** (incrémente `favoritesCount` dans le profil)
+3. **Ouvrir un chat** direct via `InteractionsService`
+
+```dart
+// lib/screens/page_detail_mentor.dart
+class MentorDetailPage extends StatefulWidget {
+  final Mentor mentor;
+  const MentorDetailPage({super.key, required this.mentor});
+}
+
+class _MentorDetailPageState extends State<MentorDetailPage> {
+  bool _isFavorite = false;
+  int? _selectedSlotIndex; // Créneau sélectionné dans _SlotsRow
+
+  // Ajoute/retire le mentor des favoris et met à jour le compteur dans le profil
+  void _toggleFavorite() {
+    final profile = UserProfileController.profile.value;
+    final delta   = _isFavorite ? -1 : 1;
+    UserProfileController.update(profile.copyWith(
+      favoritesCount: (profile.favoritesCount + delta).clamp(0, 999),
+    ));
+    setState(() => _isFavorite = !_isFavorite);
+  }
+
+  // Calcule le prochain créneau disponible et réserve bilatéralement
+  void _bookSession() {
+    final profile = UserProfileController.profile.value;
+    final uid     = AuthService.currentUid;
+    if (uid == null) return;
+
+    // Incrémente sessionsCount dans le profil
+    UserProfileController.update(
+      profile.copyWith(sessionsCount: profile.sessionsCount + 1),
+    );
+
+    // Calcule la date du prochain créneau (Lun–Ven, 10h–16h)
+    const slotWeekdays = [1, 2, 3, 4, 5];
+    const slotHours    = [14, 10, 15, 11, 16];
+    final idx          = _selectedSlotIndex ?? 0;
+    final now          = DateTime.now();
+    var daysUntil      = slotWeekdays[idx] - now.weekday;
+    if (daysUntil <= 0) daysUntil += 7;
+    final scheduledAt  = DateTime(
+      now.year, now.month, now.day + daysUntil, slotHours[idx],
+    );
+
+    // Écriture Firebase bilatérale
+    AgendaController.bookBilateral(
+      requesterUid:      uid,
+      requesterName:     profile.fullName,
+      requesterInitials: profile.initials,
+      otherUid:          widget.mentor.uid,   // Vide si mentor statique
+      otherName:         widget.mentor.name,
+      otherInitials:     widget.mentor.initials,
+      scheduledAt:       scheduledAt,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Session réservée avec ${widget.mentor.name.split(" ").first} !'),
+      backgroundColor: AppColors.green,
+    ));
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Profil détail mentor (bio + secteurs + créneaux disponibles)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Confirmation de réservation de session (SnackBar vert)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## Conclusion du Livrable 5
+
+### Bilan des fonctionnalités implémentées
+
+| Fonctionnalité (sujet) | Implémentation | Statut |
+|---|---|---|
+| Notifications | `NotificationService` + badge dynamique + centre + swipe delete | ✅ |
+| Recherche | Filtre textuel temps réel (nom, secteur, ville) | ✅ |
+| Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
+| Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km | ✅ |
+| Chatbot IA | DIALI (claude-haiku-4-5-20251001) + proxy Cloudflare + FAB pulsant | ✅ |
+| Messagerie temps réel | Firebase WebSocket + badge global `unreadMessagesCount` | ✅ (bonus) |
+| Badge messages non lus | `ValueNotifier<int>` global dans `service_navigation.dart` | ✅ (bonus) |
+| Bouton "Près de moi" | GPS + tri distance + animation couleur | ✅ (bonus) |
+| Membres DIAPALER réels | `UsersService.listMembers()` en tête de liste Matching | ✅ (bonus) |
+| Agenda Firebase | `AgendaController.bookBilateral()` + `cancel()` bilatéral | ✅ (bonus) |
+| Planning mentor | Gestion disponibilités via `InteractionsService` | ✅ (bonus) |
+| Demandes de mentorat | Envoi + accepter/refuser + notification automatique | ✅ (bonus) |
+| **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` | ✅ (bonus) |
+| **Fil de pitchs publics** | `PublicPitchesPage` → stream temps réel `DatabaseService.getPitches()` | ✅ (bonus) |
+| **Dashboard Mentor** | SliverAppBar + stats + raccourcis Pitchs/Planning/Demandes | ✅ (bonus) |
+| **Dashboard Investisseur** | SliverAppBar + accès Pitchs + Matching | ✅ (bonus) |
+| **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
+
+---
+
+### Perspectives de développement
+
+Trois fonctionnalités avancées mentionnées dans le sujet ont été identifiées comme évolutions naturelles de l'application mais n'ont pas été intégrées dans cette version, par choix de priorisation :
+
+| Fonctionnalité | Justification du report | Technologie envisagée |
+|---|---|---|
+| **Partage sur réseaux sociaux** | Fonctionnalité de visibilité — intéressante une fois que la base d'utilisateurs est établie | Package Flutter `share_plus` · partage de pitchs et profils via lien deep link |
+| **Paiement mobile** | Nécessite un compte marchand (Wave, Orange Money) et une certification — hors périmètre académique | Package `flutter_wave` ou API Orange Money + webhooks |
+| **Déploiement Play Store** | Requiert un compte développeur Google Play (25 $) + révision humaine (7 jours) — processus en cours | `flutter build appbundle --release` + signature keystore + console Google Play |
+
+Ces trois fonctionnalités sont architecturalement prévues : les pitchs ont un identifiant unique (`id` timestamp) qui permettrait un deep link, et l'écran de pitch comporte déjà un champ "Besoin de financement" (`_amount`) qui préfigure l'intégration d'un module de paiement.

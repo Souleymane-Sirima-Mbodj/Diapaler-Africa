@@ -4,6 +4,7 @@ import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -46,6 +47,17 @@ class ProfilePage extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Mon profil'),
             actions: [
+              IconButton(
+                tooltip: 'Partager mon profil',
+                onPressed: () => ShareService.shareMyProfile(
+                  name: p.fullName,
+                  role: p.role,
+                  sector: p.sector,
+                  city: p.city,
+                  projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
+                ),
+                icon: const Icon(Icons.share_rounded),
+              ),
               IconButton(
                 tooltip: 'Modifier',
                 onPressed: () => Navigator.of(context).push(
