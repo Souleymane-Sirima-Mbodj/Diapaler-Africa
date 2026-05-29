@@ -661,6 +661,7 @@ void initState() {
 
   _firstName = TextEditingController(text: _initial.firstName);
   _lastName  = TextEditingController(text: _initial.lastName);
+  _email     = TextEditingController(text: _initial.email);
   _phone     = TextEditingController(text: _initial.phone);
   _address   = TextEditingController(text: _initial.address);
   _bio       = TextEditingController(text: _initial.bio);
@@ -1120,7 +1121,7 @@ class Avatar extends StatelessWidget {
 |---|---|---|
 | Modifier son nom | Champs prénom + nom pré-remplis | ✅ |
 | Modifier son téléphone | Champ téléphone +221 modifiable | ✅ |
-| Modifier son email | Email affiché (non modifiable — identifiant Firebase) | ✅ |
+| Modifier son email | Champ email modifiable, mis à jour dans Firebase et cache | ✅ |
 | Ajouter une photo de profil | Galerie + caméra → redim 512×512 → base64 | ✅ |
 | Changer sa photo de profil | Même flux, remplace la photo existante | ✅ |
 | Persistance Firebase | `UserProfileController.update()` → Firebase + cache | ✅ |

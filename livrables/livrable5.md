@@ -2185,18 +2185,18 @@ L'application a été compilée en **APK release signé** prêt à l'installatio
 
 ```
 flutter build apk --release
-✓ Built build\app\outputs\flutter-apk\app-release.apk (54.2MB)
+✓ Built build\app\outputs\flutter-apk\app-release.apk (57.9MB)
 ```
 
 | Paramètre | Valeur |
 |---|---|
 | Type | APK release signé |
-| Taille | 54.2 MB |
+| Taille | 57.9 MB |
 | Keystore | RSA 2048 bits, 10 000 jours de validité |
 | Tree-shaking | MaterialIcons : −99 % (1,6 MB → 16 Ko) |
 | Lien de téléchargement | https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing |
 
-> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (54.2MB)`**
+> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (57.9MB)`**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -2226,7 +2226,7 @@ flutter build apk --release
 | **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
 | **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
-| **Déploiement APK signé** | `flutter build apk --release` — APK 54.2 MB disponible en téléchargement | ✅ (bonus) |
+| **Déploiement APK signé** | `flutter build apk --release` — APK 57.9 MB disponible en téléchargement | ✅ (bonus) |
 
 ---
 
