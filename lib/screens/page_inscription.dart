@@ -123,7 +123,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 22, 1),
+      initialDate: _birthDate ?? DateTime(now.year - 22),
       firstDate: DateTime(1940),
       lastDate: DateTime(now.year - 13, 12, 31),
       helpText: 'Ta date de naissance',
