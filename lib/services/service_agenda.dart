@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
@@ -62,9 +63,12 @@ class AgendaController {
 
   static final _db = FirebaseDatabase.instance.ref();
   static final sessions = ValueNotifier<List<BookedSession>>([]);
+  static StreamSubscription? _subscription;
 
   static Future<void> load(String userId) async {
-    _db.child('bookedSessions/$userId').onValue.listen((event) {
+    // Annule l'ancien listener avant d'en créer un nouveau (évite les doublons entre sessions).
+    await _subscription?.cancel();
+    _subscription = _db.child('bookedSessions/$userId').onValue.listen((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) {
         sessions.value = [];
@@ -81,6 +85,13 @@ class AgendaController {
         sessions.value = [];
       }
     }, onError: (_) => sessions.value = []);
+  }
+
+  /// Vide les sessions en mémoire et annule le listener Firebase (appelé à la déconnexion).
+  static Future<void> reset() async {
+    await _subscription?.cancel();
+    _subscription = null;
+    sessions.value = [];
   }
 
   static Future<void> add(String userId, BookedSession session) async {

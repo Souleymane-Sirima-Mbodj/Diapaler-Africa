@@ -3,6 +3,7 @@ import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
 import '../services/service_navigation.dart';
+import '../services/service_agenda.dart';
 import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
@@ -1433,6 +1434,7 @@ class _LogoutButton extends StatelessWidget {
     await CacheService.clear();
     // Réinitialise les états globaux pour éviter la fuite entre sessions.
     NotificationService.reset();
+    await AgendaController.reset();
     UserProfileController.reset();
     appTabIndex.value = 0;
     if (!context.mounted) return;

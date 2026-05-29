@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
@@ -41,13 +42,16 @@ class NotificationItem {
 class NotificationService {
   static final _db = FirebaseDatabase.instance.ref();
   static String? _userId;
+  static StreamSubscription? _subscription;
 
   static final ValueNotifier<List<NotificationItem>> notifications =
       ValueNotifier<List<NotificationItem>>([]);
 
   static void init(String userId) {
+    // Annule l'ancien listener avant d'en créer un nouveau (évite les doublons entre sessions).
+    _subscription?.cancel();
     _userId = userId;
-    _db.child('notifications/$userId').onValue.listen((event) {
+    _subscription = _db.child('notifications/$userId').onValue.listen((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) {
         notifications.value = [];
@@ -138,6 +142,8 @@ class NotificationService {
 
   /// Réinitialise le service après déconnexion (évite la fuite de données entre sessions).
   static void reset() {
+    _subscription?.cancel();
+    _subscription = null;
     _userId = null;
     notifications.value = [];
   }

@@ -13,6 +13,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _ctrl = PageController();
   int _index = 0;
 
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   static const _slides = [
     (
       Icons.handshake_rounded,

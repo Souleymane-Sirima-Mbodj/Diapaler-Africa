@@ -5,6 +5,7 @@ import '../screens/page_choix_role.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
 import '../services/service_navigation.dart';
+import '../services/service_agenda.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import 'avatar.dart';
@@ -152,6 +153,7 @@ class _ProfileSheet extends StatelessWidget {
                 // Nettoyage complet avant déconnexion (même séquence que ProfilePage)
                 await CacheService.clear();
                 NotificationService.reset();
+                await AgendaController.reset();
                 UserProfileController.reset();
                 appTabIndex.value = 0;
                 await AuthService.signOut();
