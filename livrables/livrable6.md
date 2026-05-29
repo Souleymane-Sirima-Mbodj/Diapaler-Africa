@@ -51,7 +51,7 @@
 
 ## Résumé exécutif
 
-**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Claude Anthropic, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **10 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
+**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Claude Anthropic, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
 
 ---
 

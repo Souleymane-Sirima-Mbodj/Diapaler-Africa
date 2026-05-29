@@ -872,5 +872,5 @@ AnimatedSwitcher(
 | Accès aux détails | `page_detail_mentor.dart` depuis `MatchingPage` | ✅ |
 | Navigation fluide | IndexedStack, AnimatedSwitcher, `appTabIndex` global | ✅ |
 | Bonus — 26 écrans | Bien au-delà du minimum requis | ✅ |
-| Bonus — 10 services métier | Architecture professionnelle couche services | ✅ |
+| Bonus — 12 services métier | Architecture professionnelle couche services | ✅ |
 | Bonus — 13 widgets réutilisables | Composants partagés dans toute l'app | ✅ |
