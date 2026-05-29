@@ -1133,3 +1133,5 @@ class Avatar extends StatelessWidget {
 | Déconnexion sécurisée | `reset()` + cache + Firebase signOut | ✅ |
 | Membres DIAPALER réels | `UsersService.listMembers()` + badge dans Matching | ✅ (bonus) |
 | Champs spécifiques rôle | `yearsExperience` (Mentor), `investmentRange` (Investisseur) | ✅ (bonus) |
+| Bouton partage profil | `ShareService.shareMyProfile()` dans AppBar — WhatsApp, Telegram… | ✅ (bonus) |
+| Badge ⭐ Premium | Affiché sous le nom si `isPremium = true` — activé via Wave (L5) | ✅ (bonus) |
