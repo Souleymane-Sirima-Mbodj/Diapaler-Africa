@@ -961,12 +961,12 @@ if (distanceKm != null)
 
 ### 4.1 Présentation
 
-**DIALI** (wolof : "aller de l'avant") est l'assistant IA de DIAPALER AFRICA. Propulsé par **Claude claude-haiku-4-5** d'Anthropic, il accompagne les entrepreneurs, mentors et investisseurs avec des conseils contextualisés à l'écosystème sénégalais.
+**DIALI** (wolof : "aller de l'avant") est l'assistant IA de DIAPALER AFRICA. Propulsé par **Claude claude-haiku-4-5-20251001** d'Anthropic, il accompagne les entrepreneurs, mentors et investisseurs avec des conseils contextualisés à l'écosystème sénégalais.
 
 | Caractéristique | Détail |
 |---|---|
 | API | Anthropic Messages API |
-| Modèle | claude-haiku-4-5 (rapide + haute qualité) |
+| Modèle | claude-haiku-4-5-20251001 (rapide + haute qualité) |
 | Langue | Français (compréhension du wolof) |
 | Contexte système | DER/FJ, BNDE, FONGIP, FONSIS, secteurs porteurs |
 | Accès | FAB pulsant amber visible depuis tous les onglets |
@@ -2312,6 +2312,8 @@ await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
 
 ## 12. Déploiement
 
+### 12.1 Build release signé
+
 L'application a été compilée en **APK release signé** prêt à l'installation :
 
 ```
@@ -2325,9 +2327,43 @@ flutter build apk --release
 | Taille | 57.9 MB |
 | Keystore | RSA 2048 bits, 10 000 jours de validité |
 | Tree-shaking | MaterialIcons : −99 % (1,6 MB → 16 Ko) |
-| Lien de téléchargement | https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing |
 
 > **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (57.9MB)`**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 12.2 Distribution via Google Drive (au lieu du Play Store)
+
+**Pourquoi Google Drive et non le Google Play Store ?**
+
+La publication sur le **Google Play Store** nécessite le paiement d'un **frais d'inscription unique de 25 USD** (~15 000 FCFA) pour créer un compte développeur Google. Ce frais est obligatoire et non remboursable, quelle que soit la nature du projet (académique, commercial ou personnel).
+
+Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense ne se justifie pas. L'APK release signé est donc distribué via **Google Drive**, ce qui :
+- Permet une installation directe sur tout appareil Android (APK sideloading)
+- Ne nécessite aucun frais
+- Est suffisant pour démontrer la compilation, la signature et le déploiement d'une application Flutter production-ready
+
+> **Note :** L'APK est bien un **release signé** avec un keystore RSA 2048 bits (procédure identique à une publication Play Store). La seule différence est le canal de distribution.
+
+**Si le projet devait passer en production commerciale :**
+- Création d'un compte Google Play Developer (25 USD, paiement unique)
+- Publication dans le Play Store avec l'APK déjà signé (aucune recompilation nécessaire)
+- Mise en ligne en 24-48h après validation Google
+
+| Canal | Coût | Adapté pour |
+|---|---|---|
+| **Google Drive** ← choix actuel | Gratuit | Projet académique / démo |
+| **Google Play Store** | 25 USD (unique) | Publication commerciale |
+| **APK direct** (email, QR code) | Gratuit | Tests internes |
+
+**Lien de téléchargement APK :**
+> 📦 https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing
+
+> **📸 CAPTURE D'ÉCRAN — Google Drive : APK DIAPALER AFRICA disponible au téléchargement**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Installation de l'APK sur Android (autoriser les sources inconnues)**
 > *(Insérer ici la capture d'écran)*
 
 ---
