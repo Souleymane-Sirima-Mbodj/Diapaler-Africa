@@ -72,6 +72,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _firstName.dispose();
     _lastName.dispose();
+    _email.dispose();
     _phone.dispose();
     _address.dispose();
     _linkedin.dispose();
