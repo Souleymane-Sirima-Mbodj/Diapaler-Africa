@@ -1,23 +1,25 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import '../services/service_base_de_donnees.dart';
+import '../services/service_authentification.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ServiceWave — Intégration Wave Checkout API (compte marchand sénégalais).
+// ServiceWave — Paiement Premium via lien marchand Wave.
 //
-// Architecture sécurisée : la clé API Wave n'est PAS dans le code Flutter.
-// Elle est stockée côté Cloudflare Worker (même pattern que DIALI IA).
-//
-// Proxy endpoint : https://diali-proxy.sirimambodj.workers.dev/wave-checkout
+// Lien marchand : https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/
+// Le paramètre ?amount=XXXX ajoute le montant dynamiquement.
 //
 // Flux de paiement :
-//   1. App Flutter → POST /wave-checkout (montant + metadata)
-//   2. Worker → POST api.wave.com/v1/checkout/sessions (clé Wave côté serveur)
-//   3. Worker → retourne { wave_launch_url, checkout_id }
-//   4. App → ouvre l'URL Wave via url_launcher (app Wave ou navigateur)
-//   5. Wave → deep link retour vers diapaler://premium/success?session_id=...
-//   6. App → vérifie le statut via GET /wave-checkout?session_id=...
+//   1. App Flutter → construit l'URL Wave avec le montant
+//   2. url_launcher → ouvre l'app Wave (ou le navigateur)
+//   3. Utilisateur paie dans Wave
+//   4. Revient dans l'app → confirme en tapant "J'ai payé"
+//   5. Firebase → nœud users/{uid}/premium = true
+//
+// Note : en production, une vérification webhook côté serveur serait ajoutée.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const _waveBaseUrl = 'https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/';
 
 /// Plans d'abonnement DIAPALER PREMIUM.
 enum PremiumPlan {
@@ -38,10 +40,15 @@ enum PremiumPlan {
         PremiumPlan.investisseur => 15000,
       };
 
-  String get amountDisplay => '${amountXof.toString().replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+$)'),
-        (m) => '${m[1]} ',
-      )} FCFA / mois';
+  String get amountDisplay {
+    final s = amountXof.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
+      buf.write(s[i]);
+    }
+    return '$buf FCFA / mois';
+  }
 
   List<String> get benefits => switch (this) {
         PremiumPlan.entrepreneur => [
@@ -65,71 +72,34 @@ enum PremiumPlan {
             'Badge 💎 Investisseur Vérifié',
           ],
       };
-}
 
-/// Résultat d'une session de paiement Wave.
-class WaveCheckoutResult {
-  final String checkoutId;
-  final String waveLaunchUrl;  // URL à ouvrir dans l'app Wave ou le navigateur
-  const WaveCheckoutResult({
-    required this.checkoutId,
-    required this.waveLaunchUrl,
-  });
+  /// URL Wave avec montant pré-rempli.
+  String get waveUrl =>
+      '$_waveBaseUrl?amount=$amountXof'
+      '&label=Abonnement+Premium+DIAPALER+AFRICA';
 }
 
 class WaveService {
-  static const _proxyBase =
-      'https://diali-proxy.sirimambodj.workers.dev';
-
-  /// Crée une session de checkout Wave pour un abonnement Premium.
-  /// Retourne l'URL Wave à ouvrir + l'ID de session pour vérification.
-  static Future<WaveCheckoutResult> createCheckout({
-    required PremiumPlan plan,
-    required String userUid,
-    required String userEmail,
-  }) async {
-    final response = await http
-        .post(
-          Uri.parse('$_proxyBase/wave-checkout'),
-          headers: {'content-type': 'application/json'},
-          body: jsonEncode({
-            'amount':    plan.amountXof,
-            'currency':  'XOF',
-            'error_url': 'diapaler://premium/error',
-            'success_url': 'diapaler://premium/success',
-            'client_reference': userUid,
-            'restrict_mobile_money_countries': ['SN'],
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return WaveCheckoutResult(
-        checkoutId:    data['id'] as String,
-        waveLaunchUrl: data['wave_launch_url'] as String,
-      );
+  /// Ouvre l'URL Wave (app ou navigateur).
+  static Future<void> openPayment(PremiumPlan plan) async {
+    final uri = Uri.parse(plan.waveUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw Exception('Impossible d\'ouvrir Wave. Vérifie que l\'app Wave est installée.');
     }
-    throw Exception('Wave API : ${response.statusCode} — ${response.body}');
   }
 
-  /// Vérifie si une session de paiement a bien été complétée.
-  static Future<bool> verifyCheckout(String checkoutId) async {
-    final response = await http
-        .get(Uri.parse('$_proxyBase/wave-checkout?id=$checkoutId'))
-        .timeout(const Duration(seconds: 10));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return data['payment_status'] == 'succeeded';
-    }
-    return false;
+  /// Marque l'utilisateur comme Premium dans Firebase.
+  static Future<void> activatePremium(PremiumPlan plan) async {
+    final uid = AuthService.currentUid;
+    if (uid == null) return;
+    await DatabaseService.setPremium(uid: uid, plan: plan.name);
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WavePremiumSheet — Bottom sheet d'abonnement Premium.
-// S'affiche quand l'utilisateur clique sur un contenu Premium verrouillé.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class WavePremiumSheet extends StatefulWidget {
@@ -150,34 +120,42 @@ class WavePremiumSheet extends StatefulWidget {
 }
 
 class _WavePremiumSheetState extends State<WavePremiumSheet> {
-  bool _loading = false;
+  // Étape : false = avant paiement, true = après retour de Wave
+  bool _waitingConfirmation = false;
+  bool _activating = false;
 
-  Future<void> _subscribe() async {
-    setState(() => _loading = true);
+  Future<void> _openWave() async {
     try {
-      final result = await WaveService.createCheckout(
-        plan: widget.plan,
-        userUid: 'uid_placeholder',   // à remplacer par AuthService.currentUid
-        userEmail: '',
-      );
+      await WaveService.openPayment(widget.plan);
+      // Après retour de Wave, on passe en mode confirmation
+      if (mounted) setState(() => _waitingConfirmation = true);
+    } catch (e) {
       if (!mounted) return;
-      // Ouvre l'URL Wave (app Wave ou navigateur)
-      Navigator.of(context).pop();
-      // L'URL est gérée par page_wave_checkout.dart
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => WaveCheckoutPage(
-          plan: widget.plan,
-          checkoutResult: result,
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  Future<void> _confirmPayment() async {
+    setState(() => _activating = true);
+    try {
+      await WaveService.activatePremium(widget.plan);
+      if (!mounted) return;
+      Navigator.of(context).pop(true); // retourne true = Premium activé
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('🌟 Compte Premium activé ! Merci.'),
+        backgroundColor: Color(0xFF22C55E),
       ));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur : $e'),
+        content: Text('Erreur activation : $e'),
         backgroundColor: Colors.red,
       ));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _activating = false);
     }
   }
 
@@ -205,6 +183,7 @@ class _WavePremiumSheetState extends State<WavePremiumSheet> {
             ),
           ),
           const SizedBox(height: 20),
+
           // Titre
           Row(children: [
             Container(
@@ -213,49 +192,119 @@ class _WavePremiumSheetState extends State<WavePremiumSheet> {
                 color: const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 24),
+              child: const Icon(Icons.star_rounded,
+                  color: Color(0xFFF59E0B), size: 24),
             ),
             const SizedBox(width: 12),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(plan.label,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0A1628))),
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0A1628))),
               Text(plan.amountDisplay,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600)),
             ]),
           ]),
           const SizedBox(height: 20),
+
           // Avantages
           ...plan.benefits.map((b) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF22C55E), size: 20),
-              const SizedBox(width: 10),
-              Expanded(child: Text(b, style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155)))),
-            ]),
-          )),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF22C55E), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text(b,
+                          style: const TextStyle(
+                              fontSize: 13.5, color: Color(0xFF334155)))),
+                ]),
+              )),
+
           const SizedBox(height: 20),
-          // Bouton Wave
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: _loading ? null : _subscribe,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1BA9FF), // Bleu Wave
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              icon: _loading
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.waves_rounded),
-              label: Text(
-                _loading ? 'Connexion Wave…' : 'Payer avec Wave — ${plan.amountDisplay}',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+
+          // Bouton principal
+          if (!_waitingConfirmation) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _openWave,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1BA9FF),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.waves_rounded),
+                label: Text(
+                  'Payer avec Wave — ${plan.amountDisplay}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 14),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
+          ] else ...[
+            // Après retour de Wave
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.4)),
+              ),
+              child: const Row(children: [
+                Icon(Icons.check_circle_outline_rounded,
+                    color: Color(0xFF22C55E), size: 22),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Paiement effectué sur Wave ?\nClique ci-dessous pour activer ton compte.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF166534)),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _activating ? null : _confirmPayment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: _activating
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.verified_rounded),
+                label: Text(
+                  _activating ? 'Activation…' : 'Oui, j\'ai payé — Activer Premium',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _waitingConfirmation = false),
+                child: const Text('← Revenir au paiement',
+                    style: TextStyle(color: Color(0xFF64748B))),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 8),
           const Center(
             child: Text(
               'Paiement sécurisé · Wave Sénégal · Résiliable à tout moment',
@@ -264,116 +313,6 @@ class _WavePremiumSheetState extends State<WavePremiumSheet> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WaveCheckoutPage — WebView de confirmation du paiement Wave.
-// ─────────────────────────────────────────────────────────────────────────────
-
-class WaveCheckoutPage extends StatefulWidget {
-  final PremiumPlan plan;
-  final WaveCheckoutResult checkoutResult;
-  const WaveCheckoutPage({super.key, required this.plan, required this.checkoutResult});
-
-  @override
-  State<WaveCheckoutPage> createState() => _WaveCheckoutPageState();
-}
-
-class _WaveCheckoutPageState extends State<WaveCheckoutPage> {
-  bool _verifying = false;
-  bool? _success;
-
-  Future<void> _verify() async {
-    setState(() => _verifying = true);
-    try {
-      final ok = await WaveService.verifyCheckout(widget.checkoutResult.checkoutId);
-      setState(() => _success = ok);
-    } finally {
-      if (mounted) setState(() => _verifying = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Abonnement ${widget.plan.label}'),
-        backgroundColor: const Color(0xFF1BA9FF),
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: _success == null
-            ? Column(mainAxisSize: MainAxisSize.min, children: [
-                // QR Code / lien Wave
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF1BA9FF).withValues(alpha: 0.3)),
-                  ),
-                  child: Column(children: [
-                    const Icon(Icons.waves_rounded, color: Color(0xFF1BA9FF), size: 48),
-                    const SizedBox(height: 12),
-                    const Text('Ouvrez l\'application Wave', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                    const SizedBox(height: 6),
-                    Text('Montant : ${widget.plan.amountDisplay}',
-                        style: const TextStyle(color: Color(0xFF64748B))),
-                    const SizedBox(height: 16),
-                    // Lien de paiement cliquable
-                    SelectableText(
-                      widget.checkoutResult.waveLaunchUrl,
-                      style: const TextStyle(color: Color(0xFF1BA9FF), fontSize: 12),
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _verifying ? null : _verify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _verifying
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('J\'ai payé — Vérifier', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ])
-            : _success!
-              ? Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.check_circle_rounded, color: Color(0xFF22C55E), size: 72),
-                  const SizedBox(height: 16),
-                  const Text('Paiement confirmé !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 8),
-                  const Text('Votre compte Premium est activé.', style: TextStyle(color: Color(0xFF64748B))),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-                    child: const Text('Retour à l\'accueil'),
-                  ),
-                ])
-              : Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_rounded, color: Colors.red, size: 72),
-                  const SizedBox(height: 16),
-                  const Text('Paiement non confirmé', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
-                  const Text('Réessaie ou contacte le support Wave.', style: TextStyle(color: Color(0xFF64748B))),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _verify,
-                    child: const Text('Réessayer'),
-                  ),
-                ]),
-        ),
       ),
     );
   }
