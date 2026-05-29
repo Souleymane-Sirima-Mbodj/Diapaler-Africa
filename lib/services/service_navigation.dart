@@ -7,3 +7,8 @@ import 'package:flutter/foundation.dart';
 ///   0 → Accueil     1 → Matching
 ///   2 → Messages    3 → Agenda    4 → Profil
 final ValueNotifier<int> appTabIndex = ValueNotifier<int>(0);
+
+/// Nombre total de messages non lus — mis à jour par MessagesPage dès que
+/// le stream Firebase émet de nouvelles données, même si l'onglet est inactif.
+/// Utilisé par la barre de navigation pour afficher le badge sur l'onglet Messages.
+final ValueNotifier<int> unreadMessagesCount = ValueNotifier<int>(0);
