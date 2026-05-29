@@ -126,7 +126,7 @@ class _SignUpPageState extends State<SignUpPage> {
       initialDate: _birthDate ?? DateTime(now.year - 22),
       firstDate: DateTime(1940),
       lastDate: DateTime(now.year - 13, 12, 31),
-      helpText: 'Ta date de naissance',
+      helpText: 'Date de naissance',
     );
     if (picked != null) setState(() => _birthDate = picked);
   }
