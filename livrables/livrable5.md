@@ -2027,7 +2027,7 @@ connecte entrepreneurs, mentors et investisseurs au Sénégal.
 
 ## 11. Paiement Mobile — Wave Premium
 
-### 12.1 Architecture simplifiée (lien marchand)
+### 11.1 Architecture simplifiée (lien marchand)
 
 DIAPALER AFRICA intègre le paiement via **Wave**, le portefeuille mobile le plus utilisé au Sénégal. L'approche choisie utilise le **lien marchand Wave** avec paramètre de montant dynamique — aucun backend supplémentaire nécessaire.
 
@@ -2049,7 +2049,7 @@ Firebase → users/{uid}/isPremium = true
 - Fonctionne avec l'app Wave installée ou le navigateur
 - Montant pré-rempli automatiquement selon le plan choisi
 
-### 12.2 Plans d'abonnement
+### 11.2 Plans d'abonnement
 
 | Plan | Tarif / mois | Avantages |
 |---|---|---|
@@ -2057,7 +2057,7 @@ Firebase → users/{uid}/isPremium = true
 | **Mentor Certifié** | 5 000 FCFA | Filtres avancés pitchs, badge ✅, suivi mentorés |
 | **Investisseur Vérifié** | 15 000 FCFA | Pitchs complets, alertes secteur, badge 💎 |
 
-### 12.3 Implémentation — `ServiceWave`
+### 11.3 Implémentation — `ServiceWave`
 
 **Fichier :** `lib/services/service_wave.dart`
 
@@ -2135,7 +2135,7 @@ class UserProfile {
 
 Le champ `isPremium` est sérialisé dans **Firebase** (`_toMap`/`_fromMap`) ET dans le **cache offline** (`CacheService`) — le statut Premium est donc disponible même sans connexion.
 
-### 12.4 Interface — `WavePremiumSheet` + badge ⭐
+### 11.4 Interface — `WavePremiumSheet` + badge ⭐
 
 La bottom sheet s'affiche quand l'utilisateur souhaite passer en Premium. Elle a **deux états** :
 
