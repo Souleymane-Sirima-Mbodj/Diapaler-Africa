@@ -817,7 +817,7 @@ L'application a été compilée en APK release signé (57.9 MB) et est disponibl
 | Tree-shaking icônes | MaterialIcons réduit de 1 645 184 → 16 040 octets (−99 %) |
 | Signature | `diapaler-release.jks`, alias `diapaler` |
 
-> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built build\app\outputs\flutter-apk\app-release.apk (54.2MB)`**
+> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built build\app\outputs\flutter-apk\app-release.apk (57.9MB)`**
 > *(Insérer ici la capture d'écran)*
 
 ---
