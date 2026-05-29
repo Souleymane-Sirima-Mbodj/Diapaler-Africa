@@ -181,7 +181,7 @@ diapaler_africa/
 │   │   ├── page_detail_mentor.dart      # Profil détaillé + contacter + demande
 │   │   ├── page_messages.dart           # Liste des conversations (StreamBuilder)
 │   │   ├── page_chat.dart               # Chat individuel temps réel Firebase
-│   │   ├── page_notifications.dart      # Centre de notifications + swipe delete
+│   │   ├── page_notifications.dart      # Centre de notifications + badge + "Effacer tout"
 │   │   ├── page_profil.dart             # Mon profil + jauge de complétion
 │   │   ├── page_modification_profil.dart# Modifier mon profil (photo + tous champs)
 │   │   ├── page_pitch.dart              # Déposer un pitch (stepper 3 étapes)
@@ -199,7 +199,7 @@ diapaler_africa/
 │   │   ├── service_base_de_donnees.dart  # Firebase RTDB : profils + pitchs
 │   │   ├── service_interactions.dart     # RTDB : messages, conversations, demandes mentorat
 │   │   ├── service_chatbot.dart          # API Anthropic Claude (HTTP REST)
-│   │   ├── service_notifications.dart    # Notifications in-app (ValueNotifier)
+│   │   ├── service_notifications.dart    # Notifications Firebase temps réel (ValueNotifier + StreamSubscription)
 │   │   ├── service_agenda.dart           # Agenda Firebase (CRUD événements)
 │   │   ├── service_geolocation.dart      # GPS + calcul distances (Haversine)
 │   │   ├── service_cache.dart            # Cache local SharedPreferences (hors-ligne)
@@ -560,12 +560,11 @@ class AppColors {
 ### 2.13 Notifications — `page_notifications.dart`
 
 **Fonctionnalités :**
-- Liste toutes les notifications (non lues en tête)
-- Icône et couleur selon le type : 💬 message / 📋 demande / 🚀 pitch / 📅 agenda / ⚙️ système
-- Horodatage relatif ("il y a 5 min", "hier"…)
-- Fond légèrement coloré pour les notifications non lues
-- Bouton "Tout marquer comme lu"
-- Swipe-to-delete sur chaque notification
+- Liste toutes les notifications triées par date décroissante (Firebase temps réel)
+- Icône et couleur distinctes selon le type (string) : `mentor_request`, `session_booked`, `session_cancelled`, `message`…
+- Horodatage relatif ("Il y a 5m", "Il y a 2h"…)
+- Fond légèrement coloré pour les notifications non lues + point coloré
+- Bouton **"Effacer tout"** → supprime le nœud Firebase
 - Badge rouge dynamique sur l'icône cloche (dans les dashboards)
 - État vide illustré si aucune notification
 
