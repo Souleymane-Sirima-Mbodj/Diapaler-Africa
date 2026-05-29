@@ -2087,16 +2087,24 @@ class WaveService {
     }
   }
 
-  /// Marque l'utilisateur Premium dans Firebase après confirmation.
+  /// Marque l'utilisateur Premium dans Firebase ET met à jour le profil en mémoire.
+  /// Le badge ⭐ apparaît instantanément sans redémarrer l'app.
   static Future<void> activatePremium(PremiumPlan plan) async {
     final uid = AuthService.currentUid;
     if (uid == null) return;
+    // 1. Persistance Firebase
     await DatabaseService.setPremium(uid: uid, plan: plan.name);
+    // 2. Mise à jour immédiate en mémoire → badge visible instantanément
+    final updated = UserProfileController.profile.value.copyWith(
+      isPremium: true,
+      premiumPlan: plan.name,
+    );
+    UserProfileController.update(updated); // → cache + Firebase
   }
 }
 ```
 
-**Nœud Firebase activé lors du paiement :**
+**Nœud Firebase mis à jour lors du paiement :**
 ```dart
 // lib/services/service_base_de_donnees.dart
 static Future<void> setPremium({
@@ -2111,13 +2119,40 @@ static Future<void> setPremium({
 }
 ```
 
-### 12.4 Interface — `WavePremiumSheet`
+**Champ `isPremium` dans le modèle `UserProfile` :**
+```dart
+// lib/data/profil_utilisateur.dart
+@immutable
+class UserProfile {
+  // ... autres champs ...
+  final bool isPremium;     // true après activation Wave
+  final String premiumPlan; // 'entrepreneur' | 'mentor' | 'investisseur' | ''
+}
+```
+
+Le champ `isPremium` est sérialisé dans **Firebase** (`_toMap`/`_fromMap`) ET dans le **cache offline** (`CacheService`) — le statut Premium est donc disponible même sans connexion.
+
+### 12.4 Interface — `WavePremiumSheet` + badge ⭐
 
 La bottom sheet s'affiche quand l'utilisateur souhaite passer en Premium. Elle a **deux états** :
 
 **État 1 — Avant paiement :** affiche les avantages du plan + bouton "Payer avec Wave" (bleu Wave `#1BA9FF`)
 
 **État 2 — Après retour de Wave :** affiche un bandeau vert + bouton "Oui, j'ai payé — Activer Premium"
+
+**Badge ⭐ sur la page profil :** dès que `isPremium = true`, un badge amber apparaît sous le nom :
+```dart
+// lib/screens/page_profil.dart
+if (profile.isPremium) Container(
+  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+  decoration: BoxDecoration(
+    color: const Color(0xFFF59E0B),
+    borderRadius: BorderRadius.circular(20),
+  ),
+  child: const Text('⭐ Premium',
+      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+),
+```
 
 ```dart
 // Ouverture de la bottom sheet depuis n'importe quel écran
@@ -2159,7 +2194,7 @@ flutter build apk --release
 | Taille | 54.2 MB |
 | Keystore | RSA 2048 bits, 10 000 jours de validité |
 | Tree-shaking | MaterialIcons : −99 % (1,6 MB → 16 Ko) |
-| Lien de téléchargement | https://drive.google.com/file/d/1FapzU1NMRoacyW1jnRUHSvklJ6cJdHAj/view?usp=sharing |
+| Lien de téléchargement | https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing |
 
 > **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (54.2MB)`**
 > *(Insérer ici la capture d'écran)*
@@ -2190,7 +2225,7 @@ flutter build apk --release
 | **Dashboard Investisseur** | SliverAppBar + accès Pitchs + Matching | ✅ (bonus) |
 | **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
 | **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
-| **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` (3 plans Premium) | ✅ (bonus) |
+| **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
 | **Déploiement APK signé** | `flutter build apk --release` — APK 54.2 MB disponible en téléchargement | ✅ (bonus) |
 
 ---

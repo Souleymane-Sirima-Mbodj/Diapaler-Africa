@@ -142,6 +142,10 @@ class UserProfile {
   final int    yearsExperience;  // Années d'expérience (Mentor)
   final String investmentRange;  // Ticket investissement ex: "500k–5M FCFA" (Investisseur)
 
+  // ── Statut Premium (abonnement Wave)
+  final bool   isPremium;        // true si abonnement Premium actif
+  final String premiumPlan;      // 'entrepreneur' | 'mentor' | 'investisseur' | ''
+
   const UserProfile({
     required this.firstName,
     required this.lastName,
@@ -165,6 +169,8 @@ class UserProfile {
     this.score = 0.0,
     this.yearsExperience = 0,
     this.investmentRange = '',
+    this.isPremium = false,
+    this.premiumPlan = '',
   });
 
   // ── Getters calculés
