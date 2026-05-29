@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import 'page_agenda.dart';
 import 'page_matching.dart';
-import 'page_messages.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 
@@ -309,10 +308,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const MessagesPage()),
-                          ),
+                          onPressed: () => appTabIndex.value = 2,
                           icon: const Icon(Icons.message_rounded, size: 18),
                           label: const Text('Messages'),
                           style: OutlinedButton.styleFrom(
@@ -328,10 +324,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const AgendaPage()),
-                      ),
+                      onPressed: () => appTabIndex.value = 3,
                       icon: const Icon(Icons.event_rounded, size: 18),
                       label: const Text(
                         'Mon Agenda',

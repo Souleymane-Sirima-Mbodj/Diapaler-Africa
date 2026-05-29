@@ -21,6 +21,7 @@ class _PitchPageState extends State<PitchPage> {
   final _title = TextEditingController();
   String? _sector;
   final _description = TextEditingController();
+  final _detailDescription = TextEditingController();
   final _amount = TextEditingController();
 
   static const _steps = [
@@ -33,6 +34,7 @@ class _PitchPageState extends State<PitchPage> {
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _detailDescription.dispose();
     _amount.dispose();
     super.dispose();
   }
@@ -49,7 +51,10 @@ class _PitchPageState extends State<PitchPage> {
       final uid = AuthService.currentUid;
       final title =
           _title.text.trim().isEmpty ? 'Mon Pitch' : _title.text.trim();
-      final description = _description.text.trim();
+      final detail = _detailDescription.text.trim();
+      final description = [_description.text.trim(), detail]
+          .where((s) => s.isNotEmpty)
+          .join('\n\n');
       final sector = _sector ?? profile.sector;
 
       // 1. Ajoute au profil de l'entrepreneur comme projet
@@ -238,9 +243,10 @@ class _PitchPageState extends State<PitchPage> {
         const SizedBox(height: 16),
         const _Label('Description détaillée'),
         const SizedBox(height: 6),
-        const TextField(
+        TextField(
+          controller: _detailDescription,
           maxLines: 6,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Marché, équipe, traction, vision…',
           ),
         ),

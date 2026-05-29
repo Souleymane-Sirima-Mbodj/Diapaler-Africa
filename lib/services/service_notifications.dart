@@ -135,4 +135,10 @@ class NotificationService {
 
   static int get unreadCount =>
       notifications.value.where((n) => !n.isRead).length;
+
+  /// Réinitialise le service après déconnexion (évite la fuite de données entre sessions).
+  static void reset() {
+    _userId = null;
+    notifications.value = [];
+  }
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
+import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_chat.dart';
 
 /// Liste temps réel de tous les pitchs publiés par les entrepreneurs.
 /// Accessible depuis les dashboards Mentor et Investisseur.
@@ -265,13 +268,26 @@ class _PitchCard extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Contacter $userName via la messagerie.'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.navy,
+                  final currentUid = AuthService.currentUid;
+                  final otherUid = pitch['userId']?.toString() ?? '';
+                  if (currentUid == null || otherUid.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Impossible de contacter cet entrepreneur.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+                  final convId = InteractionsService.generateConversationId(
+                      currentUid, otherUid);
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ChatPage(
+                      conversationId: convId,
+                      otherUserName: userName,
+                      otherUserId: otherUid,
                     ),
-                  );
+                  ));
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.navy,

@@ -114,6 +114,15 @@ class _NotificationTile extends StatelessWidget {
     switch (notification.type) {
       case 'mentor_request':
         return AppColors.roleMentor;
+      case 'mentor_request_accepted':
+        return AppColors.green;
+      case 'mentor_request_rejected':
+        return AppColors.red;
+      case 'session_booked':
+      case 'rdv_booked':
+        return AppColors.blue;
+      case 'session_cancelled':
+        return AppColors.red;
       case 'investment_offer':
         return AppColors.roleInvestor;
       case 'message':
@@ -129,6 +138,15 @@ class _NotificationTile extends StatelessWidget {
     switch (notification.type) {
       case 'mentor_request':
         return Icons.school_rounded;
+      case 'mentor_request_accepted':
+        return Icons.check_circle_rounded;
+      case 'mentor_request_rejected':
+        return Icons.cancel_rounded;
+      case 'session_booked':
+      case 'rdv_booked':
+        return Icons.event_available_rounded;
+      case 'session_cancelled':
+        return Icons.event_busy_rounded;
       case 'investment_offer':
         return Icons.trending_up_rounded;
       case 'message':

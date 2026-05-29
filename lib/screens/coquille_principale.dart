@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
@@ -103,6 +104,18 @@ class _RootShellState extends State<RootShell> {
       AgendaController.load(uid);
       NotificationService.init(uid);
     }
+    // Écoute le notifier global pour changer d'onglet depuis les dashboards.
+    appTabIndex.addListener(_onTabIndexChanged);
+  }
+
+  void _onTabIndexChanged() {
+    if (mounted) setState(() => _index = appTabIndex.value);
+  }
+
+  @override
+  void dispose() {
+    appTabIndex.removeListener(_onTabIndexChanged);
+    super.dispose();
   }
 
   // Un écran par onglet : Accueil, Matching, Messages, Agenda, Profil.

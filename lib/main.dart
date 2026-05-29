@@ -41,6 +41,7 @@ class DiapalerApp extends StatelessWidget {
             TargetPlatform.windows: _FadeThroughBuilder(),
             TargetPlatform.macOS: _FadeThroughBuilder(),
             TargetPlatform.linux: _FadeThroughBuilder(),
+            TargetPlatform.fuchsia: _FadeThroughBuilder(),
           },
         ),
       ),
