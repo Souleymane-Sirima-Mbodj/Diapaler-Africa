@@ -115,6 +115,12 @@ class UserProfile {
   /// (ex. "500 000 – 5 000 000 FCFA"). Chaîne libre, vide si non renseigné.
   final String investmentRange;
 
+  /// Statut Premium Wave (abonnement payant).
+  final bool isPremium;
+
+  /// Plan Premium souscrit : 'entrepreneur' | 'mentor' | 'investisseur' | ''.
+  final String premiumPlan;
+
   const UserProfile({
     required this.firstName,
     required this.lastName,
@@ -138,6 +144,8 @@ class UserProfile {
     this.score = 0.0,
     this.yearsExperience = 0,
     this.investmentRange = '',
+    this.isPremium = false,
+    this.premiumPlan = '',
   });
 
   String get fullName => '$firstName $lastName';
@@ -201,6 +209,8 @@ class UserProfile {
     double? score,
     int? yearsExperience,
     String? investmentRange,
+    bool? isPremium,
+    String? premiumPlan,
   }) {
     return UserProfile(
       firstName: firstName ?? this.firstName,
@@ -225,6 +235,8 @@ class UserProfile {
       score: score ?? this.score,
       yearsExperience: yearsExperience ?? this.yearsExperience,
       investmentRange: investmentRange ?? this.investmentRange,
+      isPremium: isPremium ?? this.isPremium,
+      premiumPlan: premiumPlan ?? this.premiumPlan,
     );
   }
 }

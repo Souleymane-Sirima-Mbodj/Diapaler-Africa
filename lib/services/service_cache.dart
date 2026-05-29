@@ -78,6 +78,8 @@ class CacheService {
         'score': p.score,
         'yearsExperience': p.yearsExperience,
         'investmentRange': p.investmentRange,
+        'isPremium': p.isPremium,
+        'premiumPlan': p.premiumPlan,
       };
 
   static UserProfile _fromJson(Map<String, dynamic> m) {
@@ -136,6 +138,8 @@ class CacheService {
       score: (m['score'] as num?)?.toDouble() ?? 0.0,
       yearsExperience: (m['yearsExperience'] as num?)?.toInt() ?? 0,
       investmentRange: m['investmentRange']?.toString() ?? '',
+      isPremium: (m['isPremium'] as bool?) ?? false,
+      premiumPlan: m['premiumPlan']?.toString() ?? '',
     );
   }
 }

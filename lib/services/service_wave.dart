@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/service_base_de_donnees.dart';
 import '../services/service_authentification.dart';
+import '../data/profil_utilisateur.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ServiceWave — Paiement Premium via lien marchand Wave.
@@ -90,11 +91,18 @@ class WaveService {
     }
   }
 
-  /// Marque l'utilisateur comme Premium dans Firebase.
+  /// Marque l'utilisateur Premium dans Firebase ET met à jour le profil en mémoire.
   static Future<void> activatePremium(PremiumPlan plan) async {
     final uid = AuthService.currentUid;
     if (uid == null) return;
+    // 1. Persistance Firebase
     await DatabaseService.setPremium(uid: uid, plan: plan.name);
+    // 2. Mise à jour immédiate en mémoire → badge visible instantanément
+    final updated = UserProfileController.profile.value.copyWith(
+      isPremium: true,
+      premiumPlan: plan.name,
+    );
+    UserProfileController.update(updated);
   }
 }
 
