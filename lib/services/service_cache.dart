@@ -76,6 +76,8 @@ class CacheService {
         'sessionsCount': p.sessionsCount,
         'favoritesCount': p.favoritesCount,
         'score': p.score,
+        'yearsExperience': p.yearsExperience,
+        'investmentRange': p.investmentRange,
       };
 
   static UserProfile _fromJson(Map<String, dynamic> m) {
@@ -132,6 +134,8 @@ class CacheService {
       sessionsCount: (m['sessionsCount'] as num?)?.toInt() ?? 0,
       favoritesCount: (m['favoritesCount'] as num?)?.toInt() ?? 0,
       score: (m['score'] as num?)?.toDouble() ?? 0.0,
+      yearsExperience: (m['yearsExperience'] as num?)?.toInt() ?? 0,
+      investmentRange: m['investmentRange']?.toString() ?? '',
     );
   }
 }

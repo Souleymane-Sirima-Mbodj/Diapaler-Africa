@@ -3,6 +3,9 @@ import '../data/profil_utilisateur.dart';
 import '../screens/page_profil.dart';
 import '../screens/page_choix_role.dart';
 import '../services/service_authentification.dart';
+import '../services/service_cache.dart';
+import '../services/service_navigation.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import 'avatar.dart';
 
@@ -146,6 +149,11 @@ class _ProfileSheet extends StatelessWidget {
             _LogoutTile(
               onLogout: () async {
                 Navigator.of(context).pop();
+                // Nettoyage complet avant déconnexion (même séquence que ProfilePage)
+                await CacheService.clear();
+                NotificationService.reset();
+                UserProfileController.reset();
+                appTabIndex.value = 0;
                 await AuthService.signOut();
                 if (!context.mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
