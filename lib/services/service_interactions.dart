@@ -91,7 +91,12 @@ class InteractionsService {
     await _db.child('messages/$conversationId/$msgId').set(message.toJson());
 
     // Sync conversation list so both users see the thread.
+    // On lit d'abord le compteur courant pour ne pas l'écraser à 1 à chaque envoi.
     final ids = [senderId, recipientId]..sort();
+    final countSnap =
+        await _db.child('conversations/$conversationId/unreadCount').get();
+    final prevUnread =
+        countSnap.value is int ? (countSnap.value as int) : 0;
     await createOrUpdateConversation(Conversation(
       id: conversationId,
       user1Id: ids[0],
@@ -100,7 +105,7 @@ class InteractionsService {
       user2Name: ids[0] == senderId ? recipientName : senderName,
       lastMessage: text,
       lastMessageTime: now,
-      unreadCount: 1,
+      unreadCount: prevUnread + 1,
     ));
   }
 

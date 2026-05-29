@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 
@@ -49,31 +50,40 @@ class DiapalerBottomNav extends StatelessWidget {
         valueListenable: NotificationService.notifications,
         builder: (context, notifs, _) {
           final unreadCount = notifs.where((n) => !n.isRead).length;
-          return Material(
-            color: Colors.white,
-            elevation: 8,
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: 64,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(_items.length, (i) {
-                    return Expanded(
-                      child: _NavButton(
-                        item: _items[i],
-                        selected: currentIndex == i,
-                        badge: i == 0 ? unreadCount : 0,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          onTap(i);
-                        },
-                      ),
-                    );
-                  }),
+          return ValueListenableBuilder<int>(
+            valueListenable: unreadMessagesCount,
+            builder: (context, msgCount, _) {
+              return Material(
+                color: Colors.white,
+                elevation: 8,
+                child: SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    height: 64,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(_items.length, (i) {
+                        return Expanded(
+                          child: _NavButton(
+                            item: _items[i],
+                            selected: currentIndex == i,
+                            badge: i == 0
+                                ? unreadCount
+                                : i == 2
+                                    ? msgCount
+                                    : 0,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              onTap(i);
+                            },
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/interactions.dart';
 import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
+import '../services/service_navigation.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -26,7 +27,12 @@ class _MessagesPageState extends State<MessagesPage> {
   void initState() {
     super.initState();
     final uid = AuthService.currentUid ?? '';
-    _stream = InteractionsService.getConversations(uid);
+    _stream = InteractionsService.getConversations(uid).map((convs) {
+      // Met à jour le badge de la barre de navigation dès que le stream émet.
+      unreadMessagesCount.value =
+          convs.fold<int>(0, (sum, c) => sum + c.unreadCount);
+      return convs;
+    });
   }
 
   static const _colors = <Color>[
