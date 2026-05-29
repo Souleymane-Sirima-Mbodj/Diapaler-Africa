@@ -70,8 +70,9 @@
   - [1.6 UPDATE — Modifier un profil](#16-update--modifier-un-profil)
   - [1.7 CREATE — Publier un pitch dans le nœud global](#17-create--publier-un-pitch-dans-le-nœud-global)
   - [1.8 UPDATE — Activer le statut Premium (Wave)](#18-update--activer-le-statut-premium-wave)
-  - [1.9 DELETE — Déconnexion et nettoyage](#19-delete--déconnexion-et-nettoyage)
-  - [1.10 Sérialisation JSON ↔ Dart](#110-sérialisation-json--dart)
+  - [1.9 DELETE — Suppression d'une session réservée](#19-delete--suppression-dune-session-réservée-firebase-remove)
+  - [1.10 DELETE — Déconnexion et nettoyage](#110-delete--déconnexion-et-nettoyage-du-cache-local)
+  - [1.11 Sérialisation JSON ↔ Dart](#111-sérialisation-json--dart)
 - [2. Service d'interactions (`service_interactions.dart`)](#2-service-dinteractions-service_interactionsdart)
   - [2.1 Demandes de mentorat (mentorRequests)](#21-demandes-de-mentorat-mentorrequests)
   - [2.2 Messagerie temps réel (messages + conversations)](#22-messagerie-temps-réel-messages--conversations)
@@ -569,12 +570,13 @@ bookedSessions/
 ### 1.10 DELETE — Déconnexion et nettoyage du cache local
 
 ```dart
-// feuille_profil.dart — Déconnexion complète (3 étapes)
-await CacheService.clear();                // Vide le cache SharedPreferences
-NotificationService.reset();              // Vide les notifications en mémoire
-UserProfileController.reset();            // Réinitialise le profil en mémoire
-appTabIndex.value = 0;                    // Retour à l'onglet Accueil
-await AuthService.signOut();             // Révoque la session Firebase Auth
+// feuille_profil.dart — Déconnexion complète (6 étapes)
+await CacheService.clear();              // 1. Vide le cache SharedPreferences
+NotificationService.reset();            // 2. Vide les notifications en mémoire
+await AgendaController.reset();         // 3. Vide les sessions agenda en mémoire
+UserProfileController.reset();          // 4. Réinitialise le profil en mémoire
+appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
+await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
 // Redirection vers l'écran de sélection de rôle
 if (!mounted) return;
@@ -589,7 +591,7 @@ Navigator.of(context).pushAndRemoveUntil(
 
 ---
 
-### 1.9 Sérialisation JSON ↔ Dart
+### 1.11 Sérialisation JSON ↔ Dart
 
 ```dart
 // Dart → JSON (envoi à Firebase)
