@@ -166,6 +166,7 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Géolocalisation | GPS + bouton "Près de moi" + distances km | Tous |
 | Cache offline | Profil disponible sans internet (SharedPreferences) | Tous |
 | Partage social | Partage de pitchs et profils sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
+| Paiement Premium | Abonnement Wave (3 plans) + badge ⭐ + activation Firebase immédiate | Tous |
 
 ---
 
@@ -784,7 +785,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Fichiers Dart | 62 fichiers |
 | Écrans | 26 écrans |
 | Widgets réutilisables | 13+ widgets |
-| Services | 10 services |
+| Services | 12 services |
 | Modèles de données | 6 classes de données |
 | Packages Flutter | 10 packages |
 | Commits git documentés | 12+ commits |
@@ -799,17 +800,17 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 
 ### 7.3 Déploiement
 
-L'application a été compilée en APK release signé (54.2 MB) et est disponible au téléchargement :
+L'application a été compilée en APK release signé (57.9 MB) et est disponible au téléchargement :
 
 > **📦 Télécharger DIAPALER AFRICA :**  
-> **https://drive.google.com/file/d/1FapzU1NMRoacyW1jnRUHSvklJ6cJdHAj/view?usp=sharing**
+> **https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing**
 
 **Détails du build :**
 
 | Paramètre | Valeur |
 |---|---|
 | Type de build | Release signé |
-| Taille APK | 54.2 MB |
+| Taille APK | 57.9 MB |
 | Plateforme | Android |
 | Compilateur | Flutter `assembleRelease` |
 | Keystore | RSA 2048 bits, validité 10 000 jours |
@@ -830,13 +831,12 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 | 1 | Notifications push (hors-app) | Firebase Cloud Messaging (FCM) |
 | 2 | Publication Play Store | Google Play Console (compte développeur) |
 | 3 | Appels vidéo (sessions mentorat) | Agora.io ou WebRTC |
-| 4 | Paiement mobile (abonnement Premium) | Wave Checkout API, Orange Money |
-| 5 | Mode hors-ligne complet | Firebase offline persistence |
-| 6 | Analytiques | Firebase Analytics + tableau de bord |
-| 7 | Recherche avancée | Algolia ou Firebase Extensions |
-| 8 | Multi-langues | Intl package — français + wolof + anglais |
-| 9 | Web app publique | Flutter Web — vitrine et landing page |
-| 10 | Badges Premium | Mise en avant des profils abonnés |
+| 4 | Mode hors-ligne complet | Firebase offline persistence |
+| 5 | Analytiques | Firebase Analytics + tableau de bord |
+| 6 | Recherche avancée | Algolia ou Firebase Extensions |
+| 7 | Multi-langues | Intl package — français + wolof + anglais |
+| 8 | Web app publique | Flutter Web — vitrine et landing page |
+| 9 | Appels vidéo (sessions mentorat) | Agora.io ou WebRTC |
 
 ---
 
@@ -850,7 +850,7 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 | L2 | Firebase CRUD (4 ops) | 20 opérations CRUD, `InteractionsService`, `UsersService`, cache offline |
 | L3 | Connexion + Inscription | 4 étapes, jauge MDP, cache session, `_bootstrap()` offline-first |
 | L4 | Profil + Photo | Projets CRUD, `UserProfileController` réactif, membres DIAPALER réels |
-| L5 | Notifs + Recherche + GPS | Filtres multicritères, badge Messages, DIALI IA, planning, demandes, **partage social** |
+| L5 | Notifs + Recherche + GPS | Filtres multicritères, badge Messages, DIALI IA, planning, demandes, **partage social**, **Wave Premium**, **badge ⭐** |
 | L6 | Rapport | 9 bugs documentés, métriques complètes, qualité du code, **APK signé déployé** |
 
 Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur ajoutée** à l'écosystème entrepreneurial sénégalais, en connectant entrepreneurs, mentors et investisseurs dans une plateforme unifiée, moderne et accessible, avec :

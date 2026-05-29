@@ -497,8 +497,18 @@ static Future<void> setPremium({
 **Depuis `service_wave.dart` :**
 ```dart
 // Après que l'utilisateur confirme son paiement Wave
-await WaveService.activatePremium(plan);
-// → Firebase : users/{uid}/isPremium = true
+static Future<void> activatePremium(PremiumPlan plan) async {
+  final uid = AuthService.currentUid;
+  if (uid == null) return;
+  // 1. Écriture Firebase
+  await DatabaseService.setPremium(uid: uid, plan: plan.name);
+  // 2. Mise à jour en mémoire → badge ⭐ visible instantanément
+  final updated = UserProfileController.profile.value.copyWith(
+    isPremium: true,
+    premiumPlan: plan.name,
+  );
+  UserProfileController.update(updated); // → cache local + Firebase
+}
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Firebase Console : nœud users/{uid} avec isPremium = true**
