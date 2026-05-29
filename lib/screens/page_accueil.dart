@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/compteur_anime.dart';
@@ -11,7 +12,6 @@ import '../widgets/feuille_profil.dart';
 import '../widgets/entete_section.dart';
 import '../widgets/squelette.dart';
 import 'page_nouveau_projet.dart';
-import 'page_matching.dart';
 import 'page_notifications.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
@@ -258,13 +258,9 @@ class _NavyHero extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // Barre de recherche
+                  // Barre de recherche → bascule sur l'onglet Matching
                   GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const MatchingPage(),
-                      ),
-                    ),
+                    onTap: () => appTabIndex.value = 1,
                     child: Container(
                       height: 44,
                       padding:
@@ -703,9 +699,7 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.roleMentor,
           title: 'Trouver',
           subtitle: 'un mentor',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MatchingPage()),
-          ),
+          onTap: () => appTabIndex.value = 1,
         ),
         _QuickAction(
           icon: Icons.upload_file_rounded,
@@ -731,9 +725,7 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.green,
           title: 'CIS',
           subtitle: 'Investisseurs',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MatchingPage()),
-          ),
+          onTap: () => appTabIndex.value = 1,
         ),
       ],
     );
