@@ -618,6 +618,8 @@ static Map<String, dynamic> _toMap(UserProfile p) => {
   'score':          p.score,
   'yearsExperience': p.yearsExperience,
   'investmentRange': p.investmentRange,
+  'isPremium':      p.isPremium,
+  'premiumPlan':    p.premiumPlan,
   'updatedAt':      ServerValue.timestamp,
 };
 
