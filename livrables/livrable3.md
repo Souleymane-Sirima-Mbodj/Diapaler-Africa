@@ -1025,12 +1025,13 @@ Future<void> _signOut(BuildContext context) async {
 
   if (confirm != true) return; // Annulé par l'utilisateur
 
-  // ── Nettoyage complet en 5 étapes
+  // ── Nettoyage complet en 6 étapes
   await CacheService.clear();              // 1. Vide le cache SharedPreferences
   NotificationService.reset();            // 2. Vide les notifications en mémoire
-  UserProfileController.reset();          // 3. Réinitialise le profil en mémoire
-  appTabIndex.value = 0;                  // 4. Retour à l'onglet Accueil
-  await AuthService.signOut();           // 5. Révoque la session Firebase Auth
+  await AgendaController.reset();         // 3. Vide les sessions agenda en mémoire
+  UserProfileController.reset();          // 4. Réinitialise le profil en mémoire
+  appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
+  await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
   // ── Redirection vers le choix du rôle (pile vidée)
   if (!mounted) return;
