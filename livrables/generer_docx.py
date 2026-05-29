@@ -311,6 +311,50 @@ def set_font(para, size=Pt(11), name='Times New Roman', bold=False, italic=False
             r.font.color.rgb = color
 
 
+def add_screenshot_placeholder(doc, label: str):
+    """Cadre gris vide comme emplacement pour une capture d'écran."""
+
+    # Ligne de label (italique gris)
+    p_lbl = doc.add_paragraph()
+    p_lbl.paragraph_format.space_before = Pt(6)
+    p_lbl.paragraph_format.space_after  = Pt(2)
+    r = p_lbl.add_run(f'📸  {label}')
+    r.font.name      = 'Times New Roman'
+    r.font.size      = Pt(9)
+    r.font.color.rgb = GRIS
+    r.italic         = True
+
+    # Cadre placeholder : table 1×1, hauteur fixe ~7 cm, fond gris clair
+    tbl = doc.add_table(rows=1, cols=1)
+    tbl.style     = 'Table Grid'
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    cell = tbl.rows[0].cells[0]
+    set_cell_shading(cell, 'F0F0F0')
+
+    # Hauteur fixe 7 cm (1 cm ≈ 567 twips)
+    tr   = tbl.rows[0]._tr
+    trPr = tr.get_or_add_trPr()
+    trH  = OxmlElement('w:trHeight')
+    trH.set(qn('w:val'), '3969')   # 7 cm
+    trH.set(qn('w:hRule'), 'exact')
+    trPr.append(trH)
+
+    # Texte d'indication centré
+    pc = cell.paragraphs[0]
+    pc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pc.paragraph_format.space_before = Pt(54)  # décalage vertical approximatif
+    rc = pc.add_run('[ Insérer la capture d\'écran ici ]')
+    rc.font.name      = 'Times New Roman'
+    rc.font.size      = Pt(10)
+    rc.font.color.rgb = RGBColor(0xB0, 0xB0, 0xB0)
+    rc.italic         = True
+
+    # Espace après le cadre
+    sp = doc.add_paragraph()
+    sp.paragraph_format.space_after = Pt(8)
+
+
 # ─────────────────────────────────────────────
 # PARSEUR MARKDOWN -> DOCX
 # ─────────────────────────────────────────────
@@ -442,8 +486,26 @@ def parse_md(doc, lines: list):
 
         # ── Citations (>) ─────────────────────
         if stripped.startswith('> '):
+            content = stripped[2:]
+
+            # Placeholder capture d'écran : ligne contenant 📸
+            if '📸' in content:
+                # Extraire le label : supprimer les marqueurs ** et le préfixe "📸 CAPTURE D'ÉCRAN — "
+                clean = re.sub(r'\*+', '', content)
+                clean = re.sub(r'`[^`]*`', lambda m: m.group(0)[1:-1], clean)  # garder texte des backticks
+                m_lbl = re.search(r'📸[^—–]*[—–]+\s*(.*)', clean)
+                label = m_lbl.group(1).strip() if m_lbl else re.sub(r'📸\s*', '', clean).strip()
+                label = label.strip('* ').strip()
+                add_screenshot_placeholder(doc, label or 'Capture d\'écran')
+                i += 1
+                # Sauter la ligne "*(Insérer ici la capture d'écran)*" qui suit
+                if i < len(lines) and 'Insérer' in lines[i]:
+                    i += 1
+                continue
+
+            # Citation normale
             p = doc.add_paragraph(style='Quote') if 'Quote' in [s.name for s in doc.styles] else doc.add_paragraph()
-            apply_inline(p, stripped[2:])
+            apply_inline(p, content)
             p.paragraph_format.left_indent = Cm(1)
             set_font(p, size=Pt(10), italic=True, color=GRIS)
             i += 1; continue
