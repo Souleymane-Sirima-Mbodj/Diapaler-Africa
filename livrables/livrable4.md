@@ -635,8 +635,8 @@ class _ProfileSheet extends StatelessWidget {
 | Section | Champs modifiables |
 |---|---|
 | Photo de profil | Galerie ou caméra → redimensionnée 512×512 → base64 |
-| Identité | Prénom, Nom |
-| Coordonnées | Téléphone, Adresse |
+| Identité | **Prénom**, **Nom** |
+| Coordonnées | **Email**, **Téléphone**, Adresse |
 | Localisation | Pays (dropdown), Ville (dropdown filtrée) |
 | Profil pro | Secteur d'activité (dropdown), Biographie (240 chars), LinkedIn |
 | Données perso | Sexe (pills), Date de naissance (DatePicker) |
