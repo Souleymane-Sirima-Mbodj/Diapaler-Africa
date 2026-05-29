@@ -829,14 +829,12 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 | Priorité | Fonctionnalité | Technologie |
 |---|---|---|
 | 1 | Notifications push (hors-app) | Firebase Cloud Messaging (FCM) |
-| 2 | Publication Play Store | Google Play Console (compte développeur) |
-| 3 | Appels vidéo (sessions mentorat) | Agora.io ou WebRTC |
-| 4 | Mode hors-ligne complet | Firebase offline persistence |
-| 5 | Analytiques | Firebase Analytics + tableau de bord |
-| 6 | Recherche avancée | Algolia ou Firebase Extensions |
-| 7 | Multi-langues | Intl package — français + wolof + anglais |
-| 8 | Web app publique | Flutter Web — vitrine et landing page |
-| 9 | Appels vidéo (sessions mentorat) | Agora.io ou WebRTC |
+| 2 | Appels vidéo (sessions mentorat) | Agora.io ou WebRTC |
+| 3 | Mode hors-ligne complet | Firebase offline persistence |
+| 4 | Analytiques | Firebase Analytics + tableau de bord |
+| 5 | Recherche avancée | Algolia ou Firebase Extensions |
+| 6 | Multi-langues | Intl package — français + wolof + anglais |
+| 7 | Web app publique | Flutter Web — vitrine et landing page |
 
 ---
 
