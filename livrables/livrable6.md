@@ -826,6 +826,20 @@ L'application a été compilée en APK release signé (57.9 MB) et est disponibl
 
 ---
 
+#### Pourquoi Google Drive plutôt que le Play Store ?
+
+La publication sur le **Google Play Store** nécessite le paiement d'un **frais d'inscription unique de 25 USD** (~15 000 FCFA) pour créer un compte développeur. Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense n'est pas justifiée.
+
+L'APK distribué via Google Drive est identique à ce qui serait publié sur le Play Store : il s'agit d'un **build release signé** avec un keystore RSA 2048 bits, exactement selon les exigences de Google Play. Si le projet évoluait vers une publication commerciale, l'APK existant pourrait être soumis sans recompilation.
+
+| Canal de distribution | Coût | Adapté pour |
+|---|---|---|
+| **Google Drive ← choix actuel** | Gratuit | Projet académique / démonstration |
+| Google Play Store | 25 USD (unique) | Publication commerciale |
+| APK direct (lien ou QR code) | Gratuit | Tests internes / beta |
+
+---
+
 ### 7.4 Perspectives d'évolution
 
 Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités seraient :
