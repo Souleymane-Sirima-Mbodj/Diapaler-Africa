@@ -109,7 +109,7 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 
 | Fonctionnalité avancée (sujet) | Implémentation DIAPALER AFRICA | Statut |
 |---|---|---|
-| Notifications | `NotificationService` + badge dynamique + centre + swipe delete | ✅ |
+| Notifications | `NotificationService` (Firebase) + badge dynamique + centre + "Effacer tout" | ✅ |
 | Recherche | Barre textuelle en temps réel (nom, secteur, ville) | ✅ |
 | Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
 | Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km | ✅ |
@@ -132,39 +132,46 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 
 ```dart
 // lib/services/service_notifications.dart
+// Le type de notification est une chaîne de caractères libre
+// (ex: 'message', 'request', 'session_booked', 'session_cancelled'…).
+// Pas d'enum — permet d'ajouter de nouveaux types sans modifier le modèle.
 
-// Types de notifications
-enum NotificationType {
-  message,   // Nouveau message reçu dans la messagerie
-  request,   // Nouvelle demande de mentorat reçue
-  pitch,     // Commentaire ou approbation d'un pitch
-  agenda,    // Rappel d'un événement agenda
-  system,    // Notification système (bienvenue, mise à jour...)
-}
-
-// Modèle d'une notification
 class NotificationItem {
-  final String           id;
-  final String           title;
-  final String           body;
-  final NotificationType type;
-  final DateTime         createdAt;
-  bool                   isRead;
+  final String   id;
+  final String   title;
+  final String   message;    // contenu de la notification
+  final DateTime timestamp;  // horodatage de création
+  final String   type;       // ex: 'message', 'request', 'session_booked'…
+  bool           isRead;
 
   NotificationItem({
-    required this.id, required this.title, required this.body,
-    required this.type, required this.createdAt, this.isRead = false,
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.timestamp,
+    required this.type,
+    this.isRead = false,
   });
 
-  // Horodatage relatif (ex: "il y a 5 min")
-  String get timeAgo {
-    final diff = DateTime.now().difference(createdAt);
-    if (diff.inMinutes < 1)  return 'À l\'instant';
-    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
-    if (diff.inHours < 24)   return 'Il y a ${diff.inHours} h';
-    if (diff.inDays < 7)     return 'Il y a ${diff.inDays} j';
-    return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
-  }
+  Map<String, dynamic> toJson() => {
+    'id':        id,
+    'title':     title,
+    'message':   message,
+    'timestamp': timestamp.toIso8601String(),
+    'type':      type,
+    'isRead':    isRead,
+  };
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) =>
+      NotificationItem(
+        id:        json['id']?.toString() ?? '',
+        title:     json['title']?.toString() ?? '',
+        message:   json['message']?.toString() ?? '',
+        timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '')
+                   ?? DateTime.now(),
+        type:      json['type']?.toString() ?? 'info',
+        isRead:    json['isRead'] as bool? ?? false,
+      );
 }
 ```
 
@@ -174,57 +181,96 @@ class NotificationItem {
 
 ```dart
 class NotificationService {
-  // Notifier global — tous les widgets abonnés se reconstruisent automatiquement
+  static final _db = FirebaseDatabase.instance.ref();
+  static String? _userId;
+  static StreamSubscription? _subscription;
+
+  // Notifier global — ValueListenableBuilder dans les dashboards et NotificationsPage
   static final ValueNotifier<List<NotificationItem>> notifications =
       ValueNotifier<List<NotificationItem>>([]);
 
-  /// Ajoute une notification (en tête de liste)
-  static void add(NotificationItem item) {
-    notifications.value = [item, ...notifications.value];
+  /// Initialise l'écoute temps réel du nœud Firebase `notifications/$userId`.
+  /// Annule l'ancien listener avant d'en créer un nouveau (évite les doublons entre sessions).
+  static void init(String userId) {
+    _subscription?.cancel();
+    _userId = userId;
+    _subscription = _db.child('notifications/$userId').onValue.listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) { notifications.value = []; return; }
+      try {
+        final list = data.values
+            .map<NotificationItem>(
+                (v) => NotificationItem.fromJson(Map<String, dynamic>.from(v as Map)))
+            .toList()
+          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        notifications.value = list;
+      } catch (_) { notifications.value = []; }
+    }, onError: (_) => notifications.value = []);
   }
 
-  /// Raccourci pour ajouter rapidement une notification
-  static void notify({
+  /// Écrit une notification dans Firebase pour l'utilisateur courant.
+  /// Le ValueNotifier est mis à jour automatiquement par le listener Firebase.
+  static Future<void> addNotification({
     required String title,
-    required String body,
-    required NotificationType type,
-  }) {
-    add(NotificationItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title, body: body, type: type, createdAt: DateTime.now(),
-    ));
+    required String message,
+    required String type,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final item = NotificationItem(
+      id: id, title: title, message: message,
+      timestamp: DateTime.now(), type: type,
+    );
+    if (_userId != null) {
+      await _db.child('notifications/$_userId/$id').set(item.toJson());
+      // Le ValueNotifier est mis à jour par le listener Firebase en temps réel.
+    } else {
+      notifications.value = [item, ...notifications.value]; // fallback mémoire
+    }
   }
 
-  /// Marque une notification comme lue
-  static void markRead(String id) {
-    notifications.value = notifications.value.map((n) =>
-      n.id == id
-          ? NotificationItem(id: n.id, title: n.title, body: n.body,
-              type: n.type, createdAt: n.createdAt, isRead: true)
-          : n,
-    ).toList();
+  /// Pousse une notification dans la boîte d'un AUTRE utilisateur.
+  /// Utilisé pour les notifs croisées (ex: acceptation de demande de mentorat).
+  static Future<void> notifyUser({
+    required String uid,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    if (uid.isEmpty) return;
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final item = NotificationItem(
+      id: id, title: title, message: message,
+      timestamp: DateTime.now(), type: type,
+    );
+    try {
+      await _db.child('notifications/$uid/$id').set(item.toJson());
+    } catch (_) {} // Échec silencieux
   }
 
-  /// Marque TOUTES les notifications comme lues
-  static void markAllRead() {
-    notifications.value = notifications.value.map((n) =>
-        NotificationItem(id: n.id, title: n.title, body: n.body,
-            type: n.type, createdAt: n.createdAt, isRead: true),
-    ).toList();
+  /// Marque une notification comme lue (mise à jour Firebase).
+  static Future<void> markAsRead(String id) async {
+    if (_userId != null) {
+      await _db.child('notifications/$_userId/$id').update({'isRead': true});
+    }
   }
 
-  /// Supprime une notification
-  static void remove(String id) {
-    notifications.value =
-        notifications.value.where((n) => n.id != id).toList();
+  /// Supprime toutes les notifications de l'utilisateur courant.
+  static Future<void> clearAll() async {
+    if (_userId != null) {
+      await _db.child('notifications/$_userId').remove();
+    }
+    notifications.value = [];
   }
 
-  /// Nombre de notifications non lues
+  /// Nombre de notifications non lues.
   static int get unreadCount =>
       notifications.value.where((n) => !n.isRead).length;
 
-  /// Réinitialise toutes les notifications (à la déconnexion)
+  /// Réinitialise le service à la déconnexion (évite la fuite de données entre sessions).
   static void reset() {
+    _subscription?.cancel();
+    _subscription = null;
+    _userId = null;
     notifications.value = [];
   }
 }
@@ -284,14 +330,13 @@ ValueListenableBuilder<List<NotificationItem>>(
 ### 1.4 Centre de notifications (`page_notifications.dart`)
 
 **Fonctionnalités complètes :**
-- Liste toutes les notifications (non lues en premier)
-- Icône et couleur distinctes selon le type (💬 bleu / 📋 vert / 🚀 amber / 📅 violet / ⚙️ gris)
-- Horodatage relatif ("il y a 5 min", "il y a 2 h"...)
+- Liste toutes les notifications triées par date décroissante (Firebase)
+- Icône et couleur distinctes selon le type (string) : `mentor_request` vert, `session_booked` bleu, `session_cancelled` rouge, `message` bleu, etc.
+- Horodatage relatif ("Il y a 5m", "Il y a 2h"…) via `_formatTime()`
 - Fond légèrement coloré pour les notifications non lues
-- Point bleu sur les non lues
-- Tap → marque comme lue
-- Bouton "Tout marquer comme lu"
-- **Swipe to delete** (Dismissible) avec fond rouge
+- Point coloré (couleur du type) sur les non lues
+- Tap → `NotificationService.markAsRead(id)` — met à jour Firebase
+- Bouton **"Effacer tout"** → `NotificationService.clearAll()` — supprime le nœud Firebase
 - État vide illustré si aucune notification
 
 ```dart
@@ -302,70 +347,51 @@ class _NotificationsPageState extends State<NotificationsPage> {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          TextButton(
-            onPressed: () => NotificationService.markAllRead(),
-            child: const Text('Tout lu',
-                style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
+          // Bouton "Effacer tout" — visible seulement si des notifs existent
+          ValueListenableBuilder<List<NotificationItem>>(
+            valueListenable: NotificationService.notifications,
+            builder: (context, notifs, _) {
+              if (notifs.isEmpty) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () => NotificationService.clearAll(),
+                child: const Text('Effacer tout',
+                    style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
+              );
+            },
           ),
         ],
       ),
       body: ValueListenableBuilder<List<NotificationItem>>(
         valueListenable: NotificationService.notifications,
-        builder: (_, notifs, __) {
-          if (notifs.isEmpty) {
+        builder: (context, notifications, _) {
+          if (notifications.isEmpty) {
             return const Center(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_off_outlined, size: 72, color: AppColors.border),
+                  Icon(Icons.notifications_none_rounded, size: 60, color: AppColors.muted),
                   SizedBox(height: 16),
-                  Text('Aucune notification',
-                      style: TextStyle(color: AppColors.muted, fontSize: 16)),
+                  Text('Pas de notification',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep)),
+                  SizedBox(height: 6),
+                  Text('Tu recevras des notifications quand\ndes mises à jour importantes arrivent.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.5)),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: notifs.length,
-            itemBuilder: (_, i) {
-              final n = notifs[i];
-              return Dismissible(
-                key: Key(n.id),
-                direction: DismissDirection.endToStart,
-                onDismissed: (_) => NotificationService.remove(n.id),
-                background: Container(
-                  color: AppColors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete_rounded, color: Colors.white),
-                ),
-                child: ListTile(
-                  leading: _NotifIcon(type: n.type),
-                  title: Text(n.title,
-                    style: TextStyle(
-                      fontWeight: n.isRead ? FontWeight.normal : FontWeight.w700,
-                    )),
-                  subtitle: Text(n.body,
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(n.timeAgo,
-                          style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-                      if (!n.isRead)
-                        Container(
-                          width: 8, height: 8, margin: const EdgeInsets.only(top: 4),
-                          decoration: const BoxDecoration(
-                              color: AppColors.blue, shape: BoxShape.circle),
-                        ),
-                    ],
-                  ),
-                  tileColor: n.isRead ? null : AppColors.blue.withValues(alpha: 0.05),
-                  onTap: () => NotificationService.markRead(n.id),
-                ),
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+            itemCount: notifications.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final notif = notifications[index];
+              return _NotificationTile(
+                notification: notif,
+                onTap: () => NotificationService.markAsRead(notif.id),
               );
             },
           );
@@ -373,6 +399,94 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ),
     );
   }
+}
+
+// Widget tuile de notification — couleur et icône déduites du type (String)
+class _NotificationTile extends StatelessWidget {
+  final NotificationItem notification;
+  final VoidCallback onTap;
+
+  Color _getTypeColor() {
+    switch (notification.type) {
+      case 'mentor_request':           return AppColors.roleMentor;
+      case 'mentor_request_accepted':  return AppColors.green;
+      case 'mentor_request_rejected':  return AppColors.red;
+      case 'session_booked':
+      case 'rdv_booked':               return AppColors.blue;
+      case 'session_cancelled':        return AppColors.red;
+      case 'message':                  return AppColors.blue;
+      default:                         return AppColors.amber;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getTypeColor();
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: notification.isRead ? AppColors.surface : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: notification.isRead ? AppColors.border : color.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icône type
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(_getTypeIcon(), color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(notification.title,
+                          style: const TextStyle(fontSize: 13,
+                              fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+                    ),
+                    if (!notification.isRead)
+                      Container(width: 8, height: 8,
+                          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(notification.message,       // <-- champ 'message'
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Text(_formatTime(notification.timestamp),   // <-- champ 'timestamp'
+                      style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1)  return 'À l\'instant';
+    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes}m';
+    if (diff.inHours < 24)   return 'Il y a ${diff.inHours}h';
+    if (diff.inDays < 7)     return 'Il y a ${diff.inDays}j';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  IconData _getTypeIcon() { /* … icône selon notification.type (String) … */ }
 }
 ```
 
@@ -1417,10 +1531,10 @@ Future<void> _sendRequest() async {
     toName: mentor.name,
     message: _message.text.trim(),
   );
-  NotificationService.notify(
+  await NotificationService.addNotification(
     title: 'Demande envoyée',
-    body: 'Ta demande a été envoyée à ${mentor.name}.',
-    type: NotificationType.request,
+    message: 'Ta demande a été envoyée à ${mentor.name}.',
+    type: 'request',
   );
 }
 
@@ -1605,15 +1719,20 @@ class _PitchCard extends StatelessWidget {
         trailing: pitch['amount']?.toString().isNotEmpty == true
             ? Chip(label: Text(pitch['amount']))
             : null,
-        onTap: () => InteractionsService.generateConversationId(
-          AuthService.currentUid ?? '',
-          pitch['userId'] ?? '',
-        ).then((convId) => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => ChatPage(
-            conversationId: convId,
-            otherUserId: pitch['userId'],
-            otherUserName: pitch['userName'],
-          )))),
+        onTap: () {
+          // generateConversationId est SYNCHRONE (retourne String, pas Future)
+          final convId = InteractionsService.generateConversationId(
+            AuthService.currentUid ?? '',
+            pitch['userId'] ?? '',
+          );
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => ChatPage(
+              conversationId: convId,
+              otherUserId:    pitch['userId'] ?? '',
+              otherUserName:  pitch['userName'] ?? '',
+            ),
+          ));
+        },
       ),
     );
   }
@@ -2210,7 +2329,7 @@ flutter build apk --release
 
 | Fonctionnalité (sujet) | Implémentation | Statut |
 |---|---|---|
-| Notifications | `NotificationService` + badge dynamique + centre + swipe delete | ✅ |
+| Notifications | `NotificationService` (Firebase) + badge dynamique + centre + "Effacer tout" | ✅ |
 | Recherche | Filtre textuel temps réel (nom, secteur, ville) | ✅ |
 | Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
 | Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km | ✅ |
