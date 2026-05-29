@@ -680,6 +680,8 @@ static UserProfile _fromMap(Map<String, dynamic> m) {
     score:          (m['score'] as num?)?.toDouble()         ?? 0.0,
     yearsExperience:(m['yearsExperience'] as num?)?.toInt()  ?? 0,
     investmentRange: m['investmentRange']?.toString()        ?? '',
+    isPremium:       m['isPremium'] as bool?                 ?? false,
+    premiumPlan:     m['premiumPlan']?.toString()            ?? '',
   );
 }
 ```

@@ -211,6 +211,7 @@ class UserProfile {
     List<String>? interests, List<Project>? projects,
     int? mentorsActive, int? sessionsCount, int? favoritesCount,
     double? score, int? yearsExperience, String? investmentRange,
+    bool? isPremium, String? premiumPlan,
   }) {
     return UserProfile(
       firstName:      firstName      ?? this.firstName,
@@ -235,6 +236,8 @@ class UserProfile {
       score:          score          ?? this.score,
       yearsExperience: yearsExperience ?? this.yearsExperience,
       investmentRange: investmentRange ?? this.investmentRange,
+      isPremium:       isPremium       ?? this.isPremium,
+      premiumPlan:     premiumPlan     ?? this.premiumPlan,
     );
   }
 }
