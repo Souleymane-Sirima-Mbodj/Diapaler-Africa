@@ -20,6 +20,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final UserProfile _initial;
   late final TextEditingController _firstName;
   late final TextEditingController _lastName;
+  late final TextEditingController _email;
   late final TextEditingController _phone;
   late final TextEditingController _address;
   late final TextEditingController _linkedin;
@@ -43,6 +44,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _initial = UserProfileController.profile.value;
     _firstName = TextEditingController(text: _initial.firstName);
     _lastName = TextEditingController(text: _initial.lastName);
+    _email = TextEditingController(text: _initial.email);
     _phone = TextEditingController(text: _initial.phone);
     _address = TextEditingController(text: _initial.address);
     _linkedin = TextEditingController(text: _initial.linkedin);
@@ -124,6 +126,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final next = _initial.copyWith(
       firstName: _firstName.text.trim(),
       lastName: _lastName.text.trim(),
+      email: _email.text.trim(),
       phone: _phone.text.trim(),
       gender: _gender,
       birthDate: _birthDate,
@@ -250,10 +253,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           _Field(
             label: 'Email',
             icon: Icons.mail_outline_rounded,
-            controller: TextEditingController(text: _initial.email),
-            readOnly: true,
-            trailing: const Icon(Icons.lock_outline_rounded,
-                size: 16, color: AppColors.subtle),
+            controller: _email,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 10),
           _PhoneField(controller: _phone),
@@ -419,8 +420,6 @@ class _Field extends StatelessWidget {
   final String label;
   final IconData icon;
   final TextEditingController controller;
-  final bool readOnly;
-  final Widget? trailing;
   final ValueChanged<String>? onChanged;
   final String? hint;
 
@@ -428,8 +427,6 @@ class _Field extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.controller,
-    this.readOnly = false,
-    this.trailing,
     this.onChanged,
     this.hint,
   });
@@ -443,19 +440,10 @@ class _Field extends StatelessWidget {
         const SizedBox(height: 4),
         TextField(
           controller: controller,
-          readOnly: readOnly,
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: AppColors.subtle, size: 19),
-            suffixIcon: trailing == null
-                ? null
-                : Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: trailing,
-                  ),
-            suffixIconConstraints:
-                const BoxConstraints(minWidth: 30, minHeight: 30),
           ),
         ),
       ],

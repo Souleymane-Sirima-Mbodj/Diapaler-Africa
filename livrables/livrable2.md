@@ -506,7 +506,48 @@ await WaveService.activatePremium(plan);
 
 ---
 
-### 1.9 DELETE — Déconnexion et nettoyage
+### 1.9 DELETE — Suppression d'une session réservée (Firebase `.remove()`)
+
+L'annulation d'un rendez-vous bilatéral supprime physiquement le nœud Firebase via `.remove()` :
+
+```dart
+// lib/services/service_agenda.dart — AgendaController.cancel()
+static Future<void> cancel({
+  required String userId,
+  required String userName,
+  required BookedSession session,
+  required String reason,
+}) async {
+  // DELETE côté annulant
+  await _db.child('bookedSessions/$userId/${session.id}').remove();
+
+  // DELETE côté autre partie (si compte Firebase connu)
+  if (session.otherUid.isNotEmpty) {
+    await _db.child('bookedSessions/${session.otherUid}/${session.id}').remove();
+  }
+
+  // Notifications croisées de l'annulation
+  await NotificationService.addNotification(
+    title: 'Rendez-vous annulé',
+    message: 'Session avec ${session.mentorName} annulée — motif : $reason',
+    type: 'session_cancelled',
+  );
+}
+```
+
+**Nœud supprimé dans Firebase :**
+```
+bookedSessions/
+└── {userId}/
+    └── {sessionId}  ← .remove() → nœud entièrement effacé
+```
+
+> **📸 CAPTURE D'ÉCRAN — Console Firebase : nœud bookedSessions après annulation (nœud disparu)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 1.10 DELETE — Déconnexion et nettoyage du cache local
 
 ```dart
 // feuille_profil.dart — Déconnexion complète (3 étapes)
