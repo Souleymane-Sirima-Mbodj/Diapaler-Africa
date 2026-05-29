@@ -1840,6 +1840,332 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
 ---
 
+## 10. Partage sur Réseaux Sociaux
+
+### 10.1 Service de partage — `ServicePartage`
+
+Le partage natif utilise le package `share_plus` qui ouvre la **feuille de partage système** du téléphone (WhatsApp, Facebook, Telegram, X, LinkedIn, email, SMS…) sans configuration spécifique par réseau social.
+
+**Fichier :** `lib/services/service_partage.dart`
+
+```dart
+import 'package:share_plus/share_plus.dart';
+
+class ShareService {
+  ShareService._();
+
+  /// Partage un pitch entrepreneur sur les réseaux sociaux.
+  static Future<void> sharePitch({
+    required String title,
+    required String sector,
+    required String description,
+    required String authorName,
+    String? amount,
+  }) async {
+    final amountLine = (amount != null && amount.isNotEmpty)
+        ? '\n💰 Besoin de financement : $amount FCFA'
+        : '';
+
+    final preview = description.length > 200
+        ? '${description.substring(0, 200)}…'
+        : description;
+
+    final text = '🚀 *$title* — Pitch sur DIAPALER AFRICA\n\n'
+        '👤 $authorName · 🏢 $sector$amountLine\n\n'
+        '📝 $preview\n\n'
+        '🇸🇳 Retrouve ce projet sur DIAPALER AFRICA — la plateforme qui '
+        'connecte entrepreneurs, mentors et investisseurs au Sénégal.\n\n'
+        '👉 Télécharge : https://diapalerafrica.app';
+
+    await Share.share(text, subject: 'Pitch : $title — DIAPALER AFRICA');
+  }
+
+  /// Partage le profil d'un mentor ou investisseur.
+  static Future<void> shareMentorProfile({
+    required String name,
+    required String role,
+    required String sector,
+    required String city,
+    String? bio,
+  }) async {
+    final bioLine = (bio != null && bio.isNotEmpty)
+        ? '\n\n"${bio.length > 150 ? bio.substring(0, 150) + '…' : bio}"'
+        : '';
+
+    final text = '👤 *$name* — $role sur DIAPALER AFRICA\n\n'
+        '🏢 Secteur : $sector\n'
+        '📍 $city$bioLine\n\n'
+        '🤝 Tu cherches un mentor ou un investisseur ?\n'
+        'Retrouve $name sur DIAPALER AFRICA.\n\n'
+        '🇸🇳 Plateforme de mentorat entrepreneurial — Sénégal\n'
+        '👉 https://diapalerafrica.app';
+
+    await Share.share(text, subject: '$name — $role DIAPALER AFRICA');
+  }
+
+  /// Partage son propre profil entrepreneur.
+  static Future<void> shareMyProfile({
+    required String name,
+    required String role,
+    required String sector,
+    required String city,
+    String? projectName,
+  }) async {
+    final projectLine = (projectName != null && projectName.isNotEmpty)
+        ? '\n🚀 Projet : $projectName'
+        : '';
+
+    final text = '👋 Je suis *$name*, $role sur DIAPALER AFRICA !\n\n'
+        '🏢 Secteur : $sector\n'
+        '📍 $city$projectLine\n\n'
+        'Je recherche des mentors et investisseurs pour mon projet.\n'
+        'Connectons-nous sur DIAPALER AFRICA !\n\n'
+        '🇸🇳 https://diapalerafrica.app';
+
+    await Share.share(text, subject: 'Mon profil DIAPALER AFRICA — $name');
+  }
+
+  /// Partage un conseil donné par DIALI IA.
+  static Future<void> shareDialiAdvice({
+    required String advice,
+    required String userName,
+  }) async {
+    final preview = advice.length > 280
+        ? '${advice.substring(0, 280)}…'
+        : advice;
+
+    final text = '💡 Conseil de *DIALI IA* pour $userName\n\n'
+        '$preview\n\n'
+        '🤖 DIALI est l\'assistant IA de DIAPALER AFRICA — spécialisé dans '
+        'l\'écosystème sénégalais (DER/FJ, PAVIE 2, Be Yes, BNDE…).\n\n'
+        '🇸🇳 https://diapalerafrica.app';
+
+    await Share.share(text, subject: 'Conseil DIALI IA — DIAPALER AFRICA');
+  }
+}
+```
+
+### 10.2 Intégration dans les écrans
+
+Le bouton de partage `IconButton(icon: Icon(Icons.share_rounded))` a été intégré dans trois écrans :
+
+| Écran | Emplacement | Méthode appelée |
+|---|---|---|
+| `PagePitchsPublics` | Icône dans chaque carte pitch | `ShareService.sharePitch(...)` |
+| `PageProfil` | AppBar actions (avant le bouton modifier) | `ShareService.shareMyProfile(...)` |
+| `PageDetailMentor` | SliverAppBar actions (avant le favori) | `ShareService.shareMentorProfile(...)` |
+
+**Exemple — bouton partage dans la liste des pitchs :**
+
+```dart
+// lib/screens/page_pitches_publics.dart
+import '../services/service_partage.dart';
+
+// Dans la carte de chaque pitch :
+IconButton(
+  onPressed: () => ShareService.sharePitch(
+    title: title,
+    sector: sector,
+    description: description,
+    authorName: userName,
+    amount: amount.isNotEmpty ? amount : null,
+  ),
+  icon: const Icon(Icons.share_rounded, size: 18),
+  color: AppColors.muted,
+),
+```
+
+**Exemple — bouton partage dans le profil personnel :**
+
+```dart
+// lib/screens/page_profil.dart
+import '../services/service_partage.dart';
+
+// Dans AppBar.actions :
+IconButton(
+  tooltip: 'Partager mon profil',
+  onPressed: () => ShareService.shareMyProfile(
+    name: p.fullName,
+    role: p.role,
+    sector: p.sector,
+    city: p.city,
+    projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
+  ),
+  icon: const Icon(Icons.share_rounded),
+),
+```
+
+### 10.3 Résultat du partage
+
+Quand l'utilisateur appuie sur le bouton partage, la **feuille native du système** s'ouvre avec un texte pré-formaté :
+
+```
+🚀 *AgriTech Dakar* — Pitch sur DIAPALER AFRICA
+
+👤 Moussa Diallo · 🏢 Agriculture
+💰 Besoin de financement : 5000000 FCFA
+
+📝 Solution numérique de mise en relation entre agriculteurs
+sénégalais et acheteurs locaux / export...
+
+🇸🇳 Retrouve ce projet sur DIAPALER AFRICA — la plateforme qui
+connecte entrepreneurs, mentors et investisseurs au Sénégal.
+
+👉 Télécharge : https://diapalerafrica.app
+```
+
+> **📸 CAPTURE D'ÉCRAN — Feuille de partage native (WhatsApp, Facebook, Telegram…)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Bouton partage (icône) dans la liste des pitchs**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 12. Paiement Mobile — Wave Premium
+
+### 12.1 Architecture simplifiée (lien marchand)
+
+DIAPALER AFRICA intègre le paiement via **Wave**, le portefeuille mobile le plus utilisé au Sénégal. L'approche choisie utilise le **lien marchand Wave** avec paramètre de montant dynamique — aucun backend supplémentaire nécessaire.
+
+```
+Utilisateur → appuie "Payer avec Wave"
+    ↓
+url_launcher → ouvre https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/?amount=7500
+    ↓
+App Wave (ou navigateur) → utilisateur confirme le paiement
+    ↓
+Revient dans DIAPALER AFRICA → clique "J'ai payé"
+    ↓
+Firebase → users/{uid}/isPremium = true
+```
+
+**Avantages :**
+- Pas de clé API côté client (sécurité maximale)
+- Pas de backend/webhook requis pour la démo
+- Fonctionne avec l'app Wave installée ou le navigateur
+- Montant pré-rempli automatiquement selon le plan choisi
+
+### 12.2 Plans d'abonnement
+
+| Plan | Tarif / mois | Avantages |
+|---|---|---|
+| **Entrepreneur Premium** | 7 500 FCFA | Pitch épinglé, badge ⭐, demandes illimitées, stats de vues |
+| **Mentor Certifié** | 5 000 FCFA | Filtres avancés pitchs, badge ✅, suivi mentorés |
+| **Investisseur Vérifié** | 15 000 FCFA | Pitchs complets, alertes secteur, badge 💎 |
+
+### 12.3 Implémentation — `ServiceWave`
+
+**Fichier :** `lib/services/service_wave.dart`
+
+```dart
+const _waveBaseUrl = 'https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/';
+
+enum PremiumPlan {
+  entrepreneur, mentor, investisseur;
+
+  int get amountXof => switch (this) {
+    PremiumPlan.entrepreneur => 7500,
+    PremiumPlan.mentor       => 5000,
+    PremiumPlan.investisseur => 15000,
+  };
+
+  /// URL Wave avec montant pré-rempli
+  String get waveUrl =>
+      '$_waveBaseUrl?amount=$amountXof'
+      '&label=Abonnement+Premium+DIAPALER+AFRICA';
+}
+
+class WaveService {
+  /// Ouvre l'app Wave avec le montant pré-rempli.
+  static Future<void> openPayment(PremiumPlan plan) async {
+    final uri = Uri.parse(plan.waveUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw Exception('Impossible d\'ouvrir Wave.');
+    }
+  }
+
+  /// Marque l'utilisateur Premium dans Firebase après confirmation.
+  static Future<void> activatePremium(PremiumPlan plan) async {
+    final uid = AuthService.currentUid;
+    if (uid == null) return;
+    await DatabaseService.setPremium(uid: uid, plan: plan.name);
+  }
+}
+```
+
+**Nœud Firebase activé lors du paiement :**
+```dart
+// lib/services/service_base_de_donnees.dart
+static Future<void> setPremium({
+  required String uid,
+  required String plan,
+}) async {
+  await _userRef(uid).update({
+    'isPremium': true,
+    'premiumPlan': plan,            // 'entrepreneur' | 'mentor' | 'investisseur'
+    'premiumSince': ServerValue.timestamp,
+  });
+}
+```
+
+### 12.4 Interface — `WavePremiumSheet`
+
+La bottom sheet s'affiche quand l'utilisateur souhaite passer en Premium. Elle a **deux états** :
+
+**État 1 — Avant paiement :** affiche les avantages du plan + bouton "Payer avec Wave" (bleu Wave `#1BA9FF`)
+
+**État 2 — Après retour de Wave :** affiche un bandeau vert + bouton "Oui, j'ai payé — Activer Premium"
+
+```dart
+// Ouverture de la bottom sheet depuis n'importe quel écran
+await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
+
+// Le retour est true si Premium activé, null/false sinon
+```
+
+**Flux utilisateur complet :**
+1. Clique "Passer Premium" → bottom sheet s'ouvre
+2. Voit les avantages + prix → clique "Payer avec Wave — 7 500 FCFA / mois"
+3. L'app Wave s'ouvre avec le montant pré-rempli
+4. Confirme le paiement dans Wave → revient dans DIAPALER AFRICA
+5. Clique "Oui, j'ai payé — Activer Premium" → Firebase mis à jour → SnackBar vert
+
+> **📸 CAPTURE D'ÉCRAN — Bottom sheet Premium (avantages + bouton Wave bleu)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — App Wave ouverte avec montant pré-rempli (7 500 FCFA)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Confirmation "Compte Premium activé !" (SnackBar vert)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 11. Déploiement
+
+L'application a été compilée en **APK release signé** prêt à l'installation :
+
+```
+flutter build apk --release
+✓ Built build\app\outputs\flutter-apk\app-release.apk (54.2MB)
+```
+
+| Paramètre | Valeur |
+|---|---|
+| Type | APK release signé |
+| Taille | 54.2 MB |
+| Keystore | RSA 2048 bits, 10 000 jours de validité |
+| Tree-shaking | MaterialIcons : −99 % (1,6 MB → 16 Ko) |
+| Lien de téléchargement | https://drive.google.com/file/d/1FapzU1NMRoacyW1jnRUHSvklJ6cJdHAj/view?usp=sharing |
+
+> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (54.2MB)`**
+> *(Insérer ici la capture d'écran)*
+
+---
+
 ## Conclusion du Livrable 5
 
 ### Bilan des fonctionnalités implémentées
@@ -1863,17 +2189,18 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 | **Dashboard Mentor** | SliverAppBar + stats + raccourcis Pitchs/Planning/Demandes | ✅ (bonus) |
 | **Dashboard Investisseur** | SliverAppBar + accès Pitchs + Matching | ✅ (bonus) |
 | **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
+| **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
+| **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` (3 plans Premium) | ✅ (bonus) |
+| **Déploiement APK signé** | `flutter build apk --release` — APK 54.2 MB disponible en téléchargement | ✅ (bonus) |
 
 ---
 
 ### Perspectives de développement
 
-Trois fonctionnalités avancées mentionnées dans le sujet ont été identifiées comme évolutions naturelles de l'application mais n'ont pas été intégrées dans cette version, par choix de priorisation :
+Les trois fonctionnalités avancées mentionnées dans le sujet sont toutes implémentées :
 
-| Fonctionnalité | Justification du report | Technologie envisagée |
-|---|---|---|
-| **Partage sur réseaux sociaux** | Fonctionnalité de visibilité — intéressante une fois que la base d'utilisateurs est établie | Package Flutter `share_plus` · partage de pitchs et profils via lien deep link |
-| **Paiement mobile** | Nécessite un compte marchand (Wave, Orange Money) et une certification — hors périmètre académique | Package `flutter_wave` ou API Orange Money + webhooks |
-| **Déploiement Play Store** | Requiert un compte développeur Google Play (25 $) + révision humaine (7 jours) — processus en cours | `flutter build appbundle --release` + signature keystore + console Google Play |
-
-Ces trois fonctionnalités sont architecturalement prévues : les pitchs ont un identifiant unique (`id` timestamp) qui permettrait un deep link, et l'écran de pitch comporte déjà un champ "Besoin de financement" (`_amount`) qui préfigure l'intégration d'un module de paiement.
+| Fonctionnalité | Statut |
+|---|---|
+| Partage sur réseaux sociaux | ✅ Implémenté — voir section 10 |
+| Paiement mobile (Wave) | ✅ Implémenté — voir section 12 |
+| Déploiement | ✅ Implémenté — voir section 11 |

@@ -56,6 +56,20 @@ class DatabaseService {
     });
   }
 
+  // ────────────────────────────── Premium ──────────────────────────────────
+
+  /// Active le statut Premium de l'utilisateur dans Firebase.
+  static Future<void> setPremium({
+    required String uid,
+    required String plan, // 'entrepreneur' | 'mentor' | 'investisseur'
+  }) async {
+    await _userRef(uid).update({
+      'isPremium': true,
+      'premiumPlan': plan,
+      'premiumSince': ServerValue.timestamp,
+    });
+  }
+
   static Future<UserProfile?> readUserProfile(String uid) async {
     final snap = await _userRef(uid).get();
     if (!snap.exists || snap.value == null) return null;
