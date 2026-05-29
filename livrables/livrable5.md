@@ -493,7 +493,7 @@ class _NotificationTile extends StatelessWidget {
 > **📸 CAPTURE D'ÉCRAN — Centre de notifications (plusieurs types de notifications)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Swipe gauche pour supprimer une notification**
+> **📸 CAPTURE D'ÉCRAN — Notification non lue (fond coloré + point coloré + bouton "Effacer tout")**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -1069,7 +1069,8 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
 ```dart
 class _ChatbotPageState extends State<ChatbotPage> {
-  final List<Map<String, String>> _messages = [];
+  // Liste typée ChatbotMessage (pas des Map brutes)
+  final _messages = <ChatbotMessage>[];
   final _ctrl       = TextEditingController();
   final _scrollCtrl = ScrollController();
   bool _loading = false;
@@ -1091,28 +1092,36 @@ class _ChatbotPageState extends State<ChatbotPage> {
         'entrepreneurial. Je t\'aide avec ton business plan, le financement, '
         'ou l\'écosystème sénégalais (DER/FJ, BNDE, FONGIP…).',
     };
-    _messages.add({'role': 'assistant', 'content': greeting});
+    _messages.add(ChatbotMessage(role: 'assistant', content: greeting));
   }
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
     if (text.isEmpty || _loading) return;
+    final profile = UserProfileController.profile.value;
     _ctrl.clear();
 
     setState(() {
-      _messages.add({'role': 'user', 'content': text});
+      _messages.add(ChatbotMessage(role: 'user', content: text));
       _loading = true;
     });
     _scrollToBottom();
 
     try {
-      final reply = await ChatbotService.sendMessage(_messages);
-      setState(() => _messages.add({'role': 'assistant', 'content': reply}));
+      // sendMessage attend des ChatbotMessage typés + infos profil pour le prompt système
+      final reply = await ChatbotService.sendMessage(
+        messages:   _messages,
+        userName:   profile.firstName,
+        userRole:   profile.role,
+        userSector: profile.sector,
+        userCity:   profile.city,
+      );
+      setState(() => _messages.add(ChatbotMessage(role: 'assistant', content: reply)));
     } catch (e) {
-      setState(() => _messages.add({
-        'role': 'assistant',
-        'content': 'Désolé, je rencontre une difficulté technique. Réessaie.',
-      }));
+      setState(() => _messages.add(ChatbotMessage(
+        role: 'assistant',
+        content: 'Désolé, je rencontre une difficulté technique. Réessaie.',
+      )));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -1169,8 +1178,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   return const _TypingIndicator(); // Indicateur "..."
                 }
                 final msg    = _messages[i];
-                final isUser = msg['role'] == 'user';
-                return _ChatBubble(text: msg['content']!, isUser: isUser);
+                final isUser = msg.role == 'user';
+                return _ChatBubble(text: msg.content, isUser: isUser);
               },
             ),
           ),

@@ -154,7 +154,7 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Dashboards | 3 dashboards personnalisés avec stats dynamiques | Tous |
 | Matching | 100+ profils + membres DIAPALER réels + 4 filtres + GPS | Tous |
 | Messagerie | Chat temps réel Firebase + badge non lus global | Tous |
-| Notifications | Centre + badge dynamique + swipe delete | Tous |
+| Notifications | Centre + badge dynamique + "Effacer tout" | Tous |
 | Profil | Consultation + modification + photo galerie/caméra | Tous |
 | Dépôt de pitch | Stepper 3 étapes + double sauvegarde Firebase | Entrepreneur |
 | Pitchs publiés | StreamBuilder temps réel | Mentor, Investisseur |
@@ -162,7 +162,7 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Agenda | Événements + synchronisation Firebase | Tous |
 | Planning | Gestion des créneaux disponibles | Mentor |
 | Demandes | Envoi et gestion (accepter/refuser) | Tous |
-| Chatbot DIALI | Claude claude-haiku-4-5 + FAB pulsant + historique session | Tous |
+| Chatbot DIALI | Claude claude-haiku-4-5-20251001 + FAB pulsant + historique session | Tous |
 | Géolocalisation | GPS + bouton "Près de moi" + distances km | Tous |
 | Cache offline | Profil disponible sans internet (SharedPreferences) | Tous |
 | Partage social | Partage de pitchs et profils sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
@@ -226,13 +226,13 @@ diapaler-africa-default-rtdb/
 | Paramètre | Valeur |
 |---|---|
 | API | Anthropic Messages API |
-| Modèle | claude-haiku-4-5 |
+| Modèle | claude-haiku-4-5-20251001 |
 | Langue | Français (compréhension du wolof) |
 | Accès | HTTP REST (package `http`) |
 | Contexte | Entrepreneuriat sénégalais (DER/FJ, BNDE, FONGIP, FONSIS) |
 | Historique | Conversation complète transmise à chaque appel |
 
-**Justification :** Claude claude-haiku-4-5 est rapide (< 1s de latence), économique, et produit des réponses contextualisées de haute qualité. Son support d'instructions système longues permet de configurer DIALI avec une personnalité précise ancrée dans l'écosystème sénégalais.
+**Justification :** Claude claude-haiku-4-5-20251001 est rapide (< 1s de latence), économique, et produit des réponses contextualisées de haute qualité. Son support d'instructions système longues permet de configurer DIALI avec une personnalité précise ancrée dans l'écosystème sénégalais.
 
 ---
 
@@ -446,7 +446,7 @@ lib/
 > **📸 CAPTURE D'ÉCRAN — Chat individuel (bulles + horodatage + temps réel)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Centre de Notifications (types + swipe delete)**
+> **📸 CAPTURE D'ÉCRAN — Centre de Notifications (types colorés + badge + Effacer tout)**
 > *(Insérer ici la capture d'écran)*
 
 > **📸 CAPTURE D'ÉCRAN — Badge rouge sur l'onglet Messages (NavBar)**
