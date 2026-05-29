@@ -310,8 +310,9 @@ lib/
     ├── carte_lumineuse.dart           ← HoverGlowCard (carte réutilisable)
     ├── avatar.dart                    ← Avatar (photo ou initiales)
     ├── feuille_profil.dart            ← Bottom sheet profil
-    ├── badges_diapaler.dart           ← SenegalFlagStrip, DiapalerWordmark
-    └── ...                            ← 8+ autres widgets réutilisables
+    ├── bande_drapeau.dart             ← SenegalFlagStrip (bandeau drapeau sénégalais)
+    ├── logo_diapaler.dart             ← DiapalerLogoTile + DiapalerWordmark
+    └── ...                            ← 7+ autres widgets réutilisables
 ```
 
 **Pattern architectural : Services + ValueNotifier**
