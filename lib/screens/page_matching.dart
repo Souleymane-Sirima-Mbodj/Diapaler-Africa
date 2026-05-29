@@ -368,7 +368,7 @@ class _MatchingPageState extends State<MatchingPage> {
             child: filtered.isEmpty
                 ? const _EmptyState()
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 90),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 76, 90),
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 10),

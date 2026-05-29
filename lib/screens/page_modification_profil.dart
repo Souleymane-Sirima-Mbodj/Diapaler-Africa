@@ -86,7 +86,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       initialDate: _birthDate ?? DateTime(now.year - 25),
       firstDate: DateTime(1940),
       lastDate: now,
-      helpText: 'Ta date de naissance',
+      helpText: 'Date de naissance',
     );
     if (picked != null) {
       setState(() => _birthDate = picked);
