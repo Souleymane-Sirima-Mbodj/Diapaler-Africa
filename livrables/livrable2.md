@@ -1154,7 +1154,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **UPDATE** statut demande | `InteractionsService` | `mentorRequests/{id}.update()` | Accepter/Refuser |
 | **UPDATE** disponibilités | `InteractionsService` | `availability/{uid}.set()` | Planning mentor |
 | **UPDATE** conversation (nb non lus) | `InteractionsService` | `conversations/{id}.update()` | Lecture message |
-| **DELETE** session | `AuthService` | `signOut()` | Déconnexion |
+| **DELETE** session réservée | `AgendaController` | `bookedSessions/{uid}/{id}.remove()` | Annulation rendez-vous |
+| **DELETE** déconnexion | `AuthService` | `signOut()` | Déconnexion |
 | **DELETE** cache local | `CacheService` | `prefs.remove(key)` | Déconnexion |
 | **POST** message IA | `ChatbotService` | `/v1/messages` (HTTP POST) | Chat DIALI |
 
@@ -1173,7 +1174,7 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 | Récupérer des données | `readUserProfile()`, `getPitches()`, `getMessages()`, `getConversations()` | ✅ |
 | Ajouter des données | `createUserProfile()`, `publishPitch()`, `sendMessage()`, `sendMentorRequest()` | ✅ |
 | Modifier des données | `updateUserProfile()`, `acceptRequest()`, `updateAvailability()` | ✅ |
-| Supprimer des données | `signOut()` + `CacheService.clear()` (déconnexion) | ✅ |
+| Supprimer des données | `AgendaController.cancel()` → `bookedSessions/{uid}/{id}.remove()` (Firebase réel) + `signOut()` / cache | ✅ |
 | Backend supporté | Firebase (listé dans les consignes) | ✅ |
 | Sérialisation JSON | `_toMap()` / `_fromMap()` avec cast sécurisé | ✅ |
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
