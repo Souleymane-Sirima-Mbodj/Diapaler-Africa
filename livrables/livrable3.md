@@ -996,7 +996,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
 ## 6. Déconnexion sécurisée
 
-La déconnexion est gérée depuis `feuille_profil.dart` (bottom sheet du profil) avec un **dialog de confirmation** et un **nettoyage complet** en 5 étapes :
+La déconnexion est gérée depuis `feuille_profil.dart` (bottom sheet du profil) avec un **dialog de confirmation** et un **nettoyage complet** en 6 étapes :
 
 ```dart
 // widgets/feuille_profil.dart — Déconnexion depuis le bottom sheet profil
@@ -1076,6 +1076,6 @@ static void reset() {
 | Reset mot de passe | `sendPasswordResetEmail()` + confirmation visuelle | ✅ |
 | Persistance de session | Cache local offline-first + `_bootstrap()` Firebase | ✅ |
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
-| Déconnexion | Dialog + 5 étapes (cache + notifs + profil + tab + Auth) | ✅ |
+| Déconnexion | Dialog + 6 étapes (cache + notifs + agenda + profil + tab + Auth) | ✅ |
 | Jauge de force mot de passe | 5 niveaux animés + indicateurs couleur | ✅ (bonus) |
 | Auto-format téléphone | `_PhoneFormatter` format sénégalais +221 XX XXX XX XX | ✅ (bonus) |
