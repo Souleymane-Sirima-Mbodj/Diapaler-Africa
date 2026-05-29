@@ -20,6 +20,14 @@ class MessagesPage extends StatefulWidget {
 
 class _MessagesPageState extends State<MessagesPage> {
   String _search = '';
+  late final Stream<List<Conversation>> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = AuthService.currentUid ?? '';
+    _stream = InteractionsService.getConversations(uid);
+  }
 
   static const _colors = <Color>[
     AppColors.amber,
@@ -62,7 +70,7 @@ class _MessagesPageState extends State<MessagesPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: StreamBuilder<List<Conversation>>(
-        stream: InteractionsService.getConversations(currentUid),
+        stream: _stream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

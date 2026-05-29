@@ -440,21 +440,12 @@ class _SignUpPageState extends State<SignUpPage> {
           onChanged: (g) => setState(() => _gender = g),
         ),
         const SizedBox(height: 14),
-        if (_role == UserRole.entrepreneur) ...[
-          const _LabelRequired('Date de naissance'),
-          const SizedBox(height: 6),
-          _DatePickerField(
-            value: _birthDate,
-            onTap: _pickBirthDate,
-          ),
-        ] else ...[
-          const _LabelRequired('Date de naissance'),
-          const SizedBox(height: 6),
-          _DatePickerField(
-            value: _birthDate,
-            onTap: _pickBirthDate,
-          ),
-        ],
+        const _LabelRequired('Date de naissance'),
+        const SizedBox(height: 6),
+        _DatePickerField(
+          value: _birthDate,
+          onTap: _pickBirthDate,
+        ),
       ],
     );
   }

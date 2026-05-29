@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
+import '../services/service_navigation.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -1394,6 +1396,10 @@ class _LogoutButton extends StatelessWidget {
     if (confirm != true) return;
     await AuthService.signOut();
     await CacheService.clear();
+    // Réinitialise les états globaux pour éviter la fuite entre sessions.
+    NotificationService.reset();
+    UserProfileController.reset();
+    appTabIndex.value = 0;
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(

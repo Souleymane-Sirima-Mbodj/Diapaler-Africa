@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import 'page_agenda.dart';
-import 'page_messages.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_planning.dart';
@@ -233,10 +232,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const MessagesPage()),
-                          ),
+                          onPressed: () => appTabIndex.value = 2,
                           icon: const Icon(Icons.message_rounded),
                           label: const Text('Messages'),
                           style: ElevatedButton.styleFrom(
@@ -249,10 +245,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const AgendaPage()),
-                          ),
+                          onPressed: () => appTabIndex.value = 3,
                           icon: const Icon(Icons.calendar_today_rounded),
                           label: const Text('Agenda'),
                           style: ElevatedButton.styleFrom(

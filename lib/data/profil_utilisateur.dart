@@ -282,6 +282,23 @@ class UserProfileController {
     ));
   }
 
+  /// Vide le profil en mémoire après déconnexion pour éviter la fuite
+  /// de données entre deux sessions utilisateurs différents.
+  static void reset() {
+    profile.value = const UserProfile(
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      city: '',
+      sector: '',
+      role: '',
+      bio: '',
+      interests: [],
+      projects: [],
+    );
+  }
+
   static final UserProfile _seed = UserProfile(
     firstName: 'Mariéme',
     lastName: 'Tine',

@@ -18,6 +18,8 @@ class MentorDetailPage extends StatefulWidget {
 
 class _MentorDetailPageState extends State<MentorDetailPage> {
   bool _isFavorite = false;
+  // Index du créneau sélectionné dans _SlotsRow (null = aucun sélectionné).
+  int? _selectedSlotIndex;
 
   void _toggleFavorite() {
     final profile = UserProfileController.profile.value;
@@ -39,9 +41,18 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
 
-    // RDV planifié 7 jours plus tard à 14h.
-    final sessionDate = DateTime.now().add(const Duration(days: 7));
-    final scheduledAt = DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14);
+    // Calcule la date du prochain créneau sélectionné (Lundi 14h par défaut).
+    const slotWeekdays = [1, 2, 3, 4, 5]; // Lun–Ven (weekday : 1 = Lundi)
+    const slotHours    = [14, 10, 15, 11, 16];
+    final idx          = _selectedSlotIndex ?? 0;
+    final targetDay    = slotWeekdays[idx];
+    final hour         = slotHours[idx];
+    final now          = DateTime.now();
+    var daysUntil      = targetDay - now.weekday;
+    if (daysUntil <= 0) daysUntil += 7; // prochain créneau dans la semaine
+    final sessionDate  = now.add(Duration(days: daysUntil));
+    final scheduledAt  = DateTime(
+        sessionDate.year, sessionDate.month, sessionDate.day, hour);
 
     // Écriture bilatérale : le mentor (s'il a un compte) voit aussi le RDV.
     AgendaController.bookBilateral(
@@ -285,7 +296,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              const _SlotsRow(),
+              _SlotsRow(onSlotSelected: (i) => setState(() => _selectedSlotIndex = i)),
               const SizedBox(height: 28),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -558,7 +569,8 @@ class _CompaniesList extends StatelessWidget {
 }
 
 class _SlotsRow extends StatefulWidget {
-  const _SlotsRow();
+  final ValueChanged<int?> onSlotSelected;
+  const _SlotsRow({required this.onSlotSelected});
 
   @override
   State<_SlotsRow> createState() => _SlotsRowState();
@@ -590,8 +602,11 @@ class _SlotsRowState extends State<_SlotsRow> {
           return MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () => setState(
-                  () => _selected = isSelected ? null : i),
+              onTap: () {
+                  final next = isSelected ? null : i;
+                  setState(() => _selected = next);
+                  widget.onSlotSelected(next);
+                },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
