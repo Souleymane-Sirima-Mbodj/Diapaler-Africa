@@ -209,7 +209,8 @@ diapaler-africa-default-rtdb/
 ├── conversations/  → index des conversations (compteur non lus)
 ├── mentorRequests/ → demandes de mentorat (statut pending/accepted/rejected)
 ├── availability/   → créneaux disponibles (mentor)
-└── agenda/         → événements par utilisateur
+├── bookedSessions/ → sessions réservées par utilisateur (CRUD bilatéral)
+└── notifications/  → notifications in-app par utilisateur
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : projet DIAPALER AFRICA**
@@ -274,7 +275,9 @@ lib/
 │   ├── service_geolocation.dart       ← GPS + distances villes sénégalaises
 │   ├── service_navigation.dart        ← appTabIndex + unreadMessagesCount
 │   ├── service_notifications.dart     ← Centre de notifications réactif
-│   └── service_agenda.dart            ← CRUD agenda Firebase
+│   ├── service_agenda.dart            ← CRUD agenda Firebase
+│   ├── service_partage.dart           ← Partage natif (share_plus) : pitch, profil, DIALI
+│   └── service_wave.dart              ← Paiement Premium Wave (lien marchand + url_launcher)
 ├── screens/
 │   ├── page_demarrage.dart            ← SplashPage + _bootstrap()
 │   ├── page_choix_role.dart           ← Sélection Entrepreneur/Mentor/Investisseur
@@ -787,10 +790,10 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Widgets réutilisables | 13+ widgets |
 | Services | 12 services |
 | Modèles de données | 6 classes de données |
-| Packages Flutter | 10 packages |
+| Packages Flutter | 11 packages |
 | Commits git documentés | 12+ commits |
 | API externes | 2 (Firebase + Anthropic) |
-| Nœuds Firebase | 7 nœuds (users, pitches, messages, conversations, mentorRequests, availability, agenda) |
+| Nœuds Firebase | 8 nœuds (users, pitches, messages, conversations, mentorRequests, availability, bookedSessions, notifications) |
 | Profils mentors pré-chargés | 100+ profils sénégalais |
 | Villes sénégalaises (GPS) | 40+ villes avec coordonnées |
 | Secteurs d'activité | 10 secteurs porteurs |
