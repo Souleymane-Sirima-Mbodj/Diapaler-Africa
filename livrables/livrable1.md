@@ -861,7 +861,7 @@ AnimatedSwitcher(
 
 | Critère | Détail | Statut |
 |---|---|---|
-| Projet Flutter créé | Nom, version, 9 dépendances, structure complète | ✅ |
+| Projet Flutter créé | Nom, version, 11 dépendances, structure complète | ✅ |
 | Écran d'accueil | Dashboard adaptatif selon le rôle (3 variantes) | ✅ |
 | Liste des éléments principaux | Matching (100+ profils), Pitchs publiés, Messages | ✅ |
 | Détail d'un élément | `page_detail_mentor.dart` — profil complet + actions | ✅ |

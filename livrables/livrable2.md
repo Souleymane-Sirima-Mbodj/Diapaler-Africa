@@ -93,14 +93,14 @@ DIAPALER AFRICA consomme **deux API externes** pour assurer la persistance des d
 | API | Technologie | Utilisation |
 |---|---|---|
 | **Firebase Authentication** | REST (Google) | Connexion, inscription, reset MDP, sessions |
-| **Firebase Realtime Database** | WebSocket + REST (Google) | Profils, pitchs, messages, agenda, demandes mentorat |
+| **Firebase Realtime Database** | WebSocket + REST (Google) | Profils, pitchs, messages, sessions, demandes mentorat, notifications |
 | **Anthropic Claude API** | HTTP REST | Chatbot IA DIALI |
 
 Le code d'appel est isolé dans le dossier `lib/services/` pour respecter la séparation des préoccupations. Chaque service ne connaît que sa responsabilité :
 
 | Fichier | Responsabilité |
 |---|---|
-| `service_base_de_donnees.dart` | Profils utilisateurs, pitchs, agenda |
+| `service_base_de_donnees.dart` | Profils utilisateurs, pitchs, Premium |
 | `service_interactions.dart` | Messagerie, demandes mentorat, disponibilités |
 | `service_utilisateurs.dart` | Découverte des membres DIAPALER |
 | `service_authentification.dart` | Auth Firebase (connexion, inscription, reset) |
@@ -223,15 +223,24 @@ diapaler-africa-default-rtdb/
 │       │   └── {index}/ → {"day": "Lundi", "startTime": "09:00", "endTime": "12:00"}
 │       └── updatedAt    → "2025-05-24T10:00:00.000"
 │
-└── agenda/
+├── bookedSessions/
+│   └── {uid}/
+│       └── {sessionId}/
+│           ├── id              → "1748123456789"
+│           ├── mentorName      → "Ibrahima Sall"
+│           ├── mentorInitials  → "IS"
+│           ├── scheduledAt     → "2025-06-15T10:00:00.000"
+│           └── otherUid        → "uid_mentor" (vide si mentor statique)
+│
+└── notifications/
     └── {uid}/
-        └── {eventId}/
-            ├── id          → "1748123456789"
-            ├── title       → "Session de mentorat"
-            ├── date        → "2025-06-15"
-            ├── time        → "10:00"
-            ├── type        → "mentorat" | "reunion" | "evenement"
-            └── description → "Revue du business plan"
+        └── {notifId}/
+            ├── id        → "1748123456789"
+            ├── title     → "Nouveau rendez-vous"
+            ├── message   → "Ibrahima a réservé une session..."
+            ├── type      → "session_booked" | "session_cancelled" | "info"
+            ├── timestamp → "2025-05-24T10:00:00.000"
+            └── isRead    → false
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : nœud users/ avec un profil**
@@ -1141,7 +1150,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **CREATE** pitch (nœud global) | `DatabaseService` | `pitches/{id}.set()` | Dépôt de pitch |
 | **CREATE** message | `InteractionsService` | `messages/{conv}/{id}.set()` | Envoi chat |
 | **CREATE** conversation | `InteractionsService` | `conversations/{id}.set()` | 1er message |
-| **CREATE** événement agenda | `DatabaseService` | `agenda/{uid}/{id}.set()` | Ajout agenda |
+| **CREATE** session agenda | `AgendaController` | `bookedSessions/{uid}/{id}.set()` | Réservation RDV |
 | **CREATE** demande mentorat | `InteractionsService` | `mentorRequests/{id}.set()` | Envoi demande |
 | **READ** profil (unique) | `DatabaseService` | `users/{uid}.get()` | Connexion / Démarrage |
 | **READ** membres inscrits | `UsersService` | `users.get()` | Chargement Matching |
