@@ -75,8 +75,7 @@
   - [4.3 Étape 2 — Localisation](#43-étape-2--localisation)
   - [4.4 Étape 3 — Profil professionnel](#44-étape-3--profil-professionnel)
   - [4.5 Étape 4 — Sécurité du compte](#45-étape-4--sécurité-du-compte)
-  - [4.6 Barre de progression animée](#46-barre-de-progression-animée)
-  - [4.7 Soumission et création du compte](#47-soumission-et-création-du-compte)
+  - [4.6 Soumission et création du compte](#46-soumission-et-création-du-compte)
 - [5. Page Mot de passe oublié](#5-page-mot-de-passe-oublié-page_mot_de_passe_oubliedart)
 - [6. Déconnexion sécurisée](#6-déconnexion-sécurisée)
 - [Conclusion](#conclusion-du-livrable-3)
@@ -342,16 +341,6 @@ App lancée (main.dart)
                  │
                  └─→ Navigation avec FadeTransition (350ms)
 ```
-
-**Avantages de cette approche vs StreamBuilder :**
-
-| Critère | `StreamBuilder<User?>` | `_bootstrap()` (notre approche) |
-|---|---|---|
-| Profil hors-ligne | ❌ Non | ✅ `CacheService.loadProfile()` |
-| Timeout réseau | ❌ Attente infinie | ✅ `timeout(4s)` |
-| Chargement profil Firebase | ❌ Non | ✅ `readUserProfile()` |
-| Logo + animation | ❌ Complexe | ✅ Natif dans SplashPage |
-| Gestion d'erreurs | ❌ Limitée | ✅ `try/catch` complet |
 
 > **📸 CAPTURE D'ÉCRAN — Splash Screen animé au démarrage**
 > *(Insérer ici la capture d'écran)*
@@ -725,57 +714,19 @@ TextField(
 - Confirmation du mot de passe (indicateur correspondance ✓/✗)
 - Case à cocher CGU (obligatoire pour valider)
 
-```dart
-// Auto-format téléphone sénégalais "77 123 45 67"
-class _PhoneFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(oldValue, newValue) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buf = StringBuffer();
-    for (var i = 0; i < digits.length && i < 9; i++) {
-      if (i == 2 || i == 5 || i == 7) buf.write(' ');
-      buf.write(digits[i]);
-    }
-    final formatted = buf.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
+Le téléphone est auto-formaté via un `TextInputFormatter` custom en format `77 123 45 67`. La force du mot de passe est calculée sur 5 niveaux (longueur, majuscule, chiffre, caractère spécial) et affichée via des segments `AnimatedContainer` colorés.
 
-// Calcul de la force du mot de passe (0 → 4)
+```dart
+// Calcul de la force (0 → 4) : longueur, casse, chiffre, caractère spécial
 int _computeStrength(String pwd) {
   if (pwd.length < 6) return 0;
-  int score = 0;
-  if (pwd.length >= 6)  score++;               // Longueur minimale
-  if (pwd.length >= 10) score++;               // Longueur recommandée
-  if (RegExp(r'[A-Z]').hasMatch(pwd) &&
-      RegExp(r'[a-z]').hasMatch(pwd)) score++; // Majuscule + minuscule
-  if (RegExp(r'\d').hasMatch(pwd)) score++;    // Chiffre
-  if (RegExp(r'[^A-Za-z0-9]').hasMatch(pwd)) score++; // Caractère spécial
-  return score.clamp(0, 4);
+  int s = 1;
+  if (pwd.length >= 10) s++;
+  if (RegExp(r'[A-Z]').hasMatch(pwd) && RegExp(r'[a-z]').hasMatch(pwd)) s++;
+  if (RegExp(r'\d').hasMatch(pwd)) s++;
+  if (RegExp(r'[^A-Za-z0-9]').hasMatch(pwd)) s++;
+  return s.clamp(0, 4);
 }
-
-// Affichage de la jauge de force
-final labels = ['Trop court', 'Faible', 'Moyen', 'Bon', 'Excellent'];
-final colors = [AppColors.red, AppColors.orange, AppColors.amber,
-                AppColors.green, AppColors.green];
-final strength = _computeStrength(_password.text);
-Row(
-  children: List.generate(4, (i) => Expanded(
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      height: 4,
-      margin: const EdgeInsets.only(right: 4),
-      decoration: BoxDecoration(
-        color: i < strength ? colors[strength] : AppColors.border,
-        borderRadius: BorderRadius.circular(99),
-      ),
-    ),
-  )),
-),
-Text(labels[strength], style: TextStyle(color: colors[strength])),
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Inscription Étape 4 (téléphone + jauge mot de passe)**
@@ -786,45 +737,7 @@ Text(labels[strength], style: TextStyle(color: colors[strength])),
 
 ---
 
-### 4.6 Barre de progression animée
-
-```dart
-// 4 segments amber (fait) / gris (à venir) — animés avec AnimatedContainer
-class _StepBar extends StatelessWidget {
-  final int step;  // Étape courante (0-based)
-  final int total; // Nombre total d'étapes
-
-  const _StepBar({required this.step, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(total, (i) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: i < total - 1 ? 6 : 0),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              height: 5,
-              decoration: BoxDecoration(
-                color: i <= step ? AppColors.amber : AppColors.border,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-```
-
-> **📸 CAPTURE D'ÉCRAN — Barre de progression Étape 3 sur 4 (3 segments amber)**
-> *(Insérer ici la capture d'écran)*
-
----
-
-### 4.7 Soumission et création du compte
+### 4.6 Soumission et création du compte
 
 ```dart
 Future<void> _submit() async {

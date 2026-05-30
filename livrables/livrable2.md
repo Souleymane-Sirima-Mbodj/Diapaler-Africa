@@ -593,99 +593,38 @@ Navigator.of(context).pushAndRemoveUntil(
 
 ### 1.11 Sérialisation JSON ↔ Dart
 
+La sérialisation manuelle est nécessaire car Firebase Realtime Database retourne des `Map<Object?, Object?>` que Dart ne peut pas caster directement. Un cast sécurisé est appliqué sur chaque champ via l'opérateur `?.toString()` et les casts numériques `(v as num?)?.toInt()`.
+
 ```dart
 // Dart → JSON (envoi à Firebase)
 static Map<String, dynamic> _toMap(UserProfile p) => {
-  'firstName':      p.firstName,
-  'lastName':       p.lastName,
-  'email':          p.email,
-  'phone':          p.phone,
-  'gender':         p.gender.serialized,     // Enum → String
-  'birthDate':      p.birthDate?.toIso8601String(),
-  'address':        p.address,
-  'city':           p.city,
-  'country':        p.country,
-  'sector':         p.sector,
-  'role':           p.role,
-  'bio':            p.bio,
-  'linkedin':       p.linkedin,
-  'photoBase64':    p.photoBase64,
-  'interests':      p.interests,             // List<String>
-  'projects':       p.projects.map(_projectToMap).toList(),
-  'mentorsActive':  p.mentorsActive,
-  'sessionsCount':  p.sessionsCount,
-  'favoritesCount': p.favoritesCount,
-  'score':          p.score,
-  'yearsExperience': p.yearsExperience,
-  'investmentRange': p.investmentRange,
-  'isPremium':      p.isPremium,
-  'premiumPlan':    p.premiumPlan,
-  'updatedAt':      ServerValue.timestamp,
+  'firstName':   p.firstName,
+  'lastName':    p.lastName,
+  'email':       p.email,
+  'role':        p.role,
+  'city':        p.city,
+  'sector':      p.sector,
+  'bio':         p.bio,
+  'photoBase64': p.photoBase64,
+  'interests':   p.interests,
+  'projects':    p.projects.map(_projectToMap).toList(),
+  'isPremium':   p.isPremium,
+  'updatedAt':   ServerValue.timestamp,
+  // ... autres champs (gender, phone, score, etc.)
 };
 
-// JSON → Dart (lecture depuis Firebase)
-// ⚠️ Casting sécurisé obligatoire : Firebase retourne des Map<Object?, Object?> 
-//    que Dart ne peut pas caster directement en Map<String, dynamic>
-static UserProfile _fromMap(Map<String, dynamic> m) {
-  // Désérialisation sécurisée des listes (Firebase peut retourner List ou Map)
-  final rawInterests = m['interests'];
-  final interests = <String>[];
-  if (rawInterests is List) {
-    for (final v in rawInterests) interests.add(v.toString());
-  }
-
-  // Désérialisation des projets
-  final rawProjects = m['projects'];
-  final projects = <Project>[];
-  if (rawProjects is Map) {
-    for (final v in rawProjects.values) {
-      if (v is Map) {
-        final pm = Map<String, dynamic>.from(v);
-        projects.add(Project(
-          id: pm['id']?.toString() ?? '',
-          name: pm['name']?.toString() ?? '',
-          description: pm['description']?.toString() ?? '',
-          sector: pm['sector']?.toString() ?? '',
-          step: (pm['step'] as num?)?.toInt() ?? 1,
-          totalSteps: (pm['totalSteps'] as num?)?.toInt() ?? 5,
-        ));
-      }
-    }
-  }
-
-  DateTime? birth;
-  final rawBirth = m['birthDate']?.toString();
-  if (rawBirth != null && rawBirth.isNotEmpty) {
-    birth = DateTime.tryParse(rawBirth);
-  }
-
-  return UserProfile(
-    firstName:      m['firstName']?.toString()  ?? '',
-    lastName:       m['lastName']?.toString()   ?? '',
-    email:          m['email']?.toString()       ?? '',
-    phone:          m['phone']?.toString()       ?? '',
-    gender:         Gender.fromString(m['gender']?.toString()),
-    birthDate:      birth,
-    address:        m['address']?.toString()    ?? '',
-    city:           m['city']?.toString()       ?? 'Dakar',
-    country:        m['country']?.toString()    ?? 'Sénégal',
-    sector:         m['sector']?.toString()     ?? 'Autre',
-    role:           m['role']?.toString()       ?? 'Entrepreneur',
-    bio:            m['bio']?.toString()        ?? '',
-    linkedin:       m['linkedin']?.toString()   ?? '',
-    photoBase64:    m['photoBase64']?.toString() ?? '',
-    interests:      interests,
-    projects:       projects,
-    mentorsActive:  (m['mentorsActive'] as num?)?.toInt()    ?? 0,
-    sessionsCount:  (m['sessionsCount'] as num?)?.toInt()    ?? 0,
-    favoritesCount: (m['favoritesCount'] as num?)?.toInt()   ?? 0,
-    score:          (m['score'] as num?)?.toDouble()         ?? 0.0,
-    yearsExperience:(m['yearsExperience'] as num?)?.toInt()  ?? 0,
-    investmentRange: m['investmentRange']?.toString()        ?? '',
-    isPremium:       m['isPremium'] as bool?                 ?? false,
-    premiumPlan:     m['premiumPlan']?.toString()            ?? '',
-  );
-}
+// JSON → Dart (lecture depuis Firebase) — cast sécurisé obligatoire
+static UserProfile _fromMap(Map<String, dynamic> m) => UserProfile(
+  firstName: m['firstName']?.toString() ?? '',
+  lastName:  m['lastName']?.toString()  ?? '',
+  email:     m['email']?.toString()     ?? '',
+  role:      m['role']?.toString()      ?? 'Entrepreneur',
+  city:      m['city']?.toString()      ?? 'Dakar',
+  score:     (m['score'] as num?)?.toDouble() ?? 0.0,
+  interests: _parseList(m['interests']),   // Firebase peut retourner List ou Map
+  projects:  _parseProjects(m['projects']),
+  // ... autres champs
+);
 ```
 
 ---
@@ -765,87 +704,32 @@ class InteractionsService {
 
 ### 2.2 Messagerie temps réel (messages + conversations)
 
-```dart
-// ── CREATE : Envoyer un message + mise à jour de la conversation
-static Future<void> sendMessage({
-  required String conversationId,
-  required String senderId,
-  required String senderName,
-  required String recipientId,
-  required String recipientName,
-  required String text,
-}) async {
-  final msgId = DateTime.now().millisecondsSinceEpoch.toString();
-  final now = DateTime.now();
-  
-  // 1. Écriture dans messages/{conversationId}/{msgId}
-  final message = ChatMessage(
-    id: msgId,
-    senderId: senderId,
-    senderName: senderName,
-    recipientId: recipientId,
-    text: text,
-    timestamp: now,
-    isRead: false,
-  );
-  await _db.child('messages/$conversationId/$msgId').set(message.toJson());
+L'envoi d'un message écrit dans `messages/{conv}/{id}` puis met à jour le compteur de non lus dans `conversations/{conv}`. La lecture utilise le WebSocket Firebase (`.onValue`) pour une synchronisation instantanée.
 
-  // 2. Mise à jour de conversations/ (compteur non lus + dernier message)
-  final ids = [senderId, recipientId]..sort();
-  final countSnap =
-      await _db.child('conversations/$conversationId/unreadCount').get();
-  final prevUnread = countSnap.value is int ? (countSnap.value as int) : 0;
-  
-  await _db.child('conversations/$conversationId').set(Conversation(
-    id: conversationId,
-    user1Id: ids[0],
-    user2Id: ids[1],
-    user1Name: ids[0] == senderId ? senderName : recipientName,
-    user2Name: ids[0] == senderId ? recipientName : senderName,
-    lastMessage: text,
-    lastMessageTime: now,
-    unreadCount: prevUnread + 1,
-  ).toJson());
+```dart
+// ── CREATE : Envoyer un message
+static Future<void> sendMessage({...}) async {
+  final msgId = DateTime.now().millisecondsSinceEpoch.toString();
+  await _db.child('messages/$conversationId/$msgId').set(
+    ChatMessage(id: msgId, senderId: senderId, text: text,
+                timestamp: DateTime.now(), isRead: false).toJson());
+  // Mise à jour de la conversation (dernier message + compteur non lus)
+  await _db.child('conversations/$conversationId').update({
+    'lastMessage': text,
+    'lastMessageTime': DateTime.now().toIso8601String(),
+    'unreadCount': ServerValue.increment(1),
+  });
 }
 
-// ── READ (stream) : Messages d'une conversation (WebSocket)
+// ── READ (stream) : Messages temps réel + conversations d'un utilisateur
 static Stream<List<ChatMessage>> getMessages(String conversationId) {
   return _db.child('messages/$conversationId').onValue.map((event) {
     final data = event.snapshot.value as Map?;
     if (data == null) return [];
     return data.values
-        .map<ChatMessage>((v) =>
-            ChatMessage.fromJson(Map<String, dynamic>.from(v as Map)))
-        .toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        .map<ChatMessage>((v) => ChatMessage.fromJson(Map<String, dynamic>.from(v as Map)))
+        .toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
   });
-}
-
-// ── READ (stream) : Toutes les conversations d'un utilisateur
-static Stream<List<Conversation>> getConversations(String userId) {
-  return _db.child('conversations').onValue.map((event) {
-    final data = event.snapshot.value as Map?;
-    if (data == null) return [];
-    return data.values
-        .where((v) => v is Map &&
-            (v['user1Id'] == userId || v['user2Id'] == userId))
-        .map<Conversation>((v) =>
-            Conversation.fromJson(Map<String, dynamic>.from(v as Map)))
-        .toList()
-      ..sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
-  });
-}
-
-// ── UPDATE : Marquer la conversation comme lue (réinitialise le compteur)
-static Future<void> markConversationAsRead(String conversationId) async {
-  await _db.child('conversations/$conversationId')
-      .update({'unreadCount': 0});
-}
-
-// ── Génère un ID de conversation déterministe entre deux utilisateurs
-static String generateConversationId(String userId1, String userId2) {
-  final ids = [userId1, userId2]..sort(); // Tri alphabétique pour cohérence
-  return '${ids[0]}-${ids[1]}';
 }
 ```
 
@@ -860,21 +744,14 @@ static String generateConversationId(String userId1, String userId2) {
 ### 2.3 Disponibilités mentor (availability)
 
 ```dart
-// ── READ (stream) : Disponibilités d'un mentor
-static Stream<Availability?> getAvailability(String userId) {
-  return _db.child('availability/$userId').onValue.map((event) {
-    final data = event.snapshot.value as Map?;
-    if (data == null) return null;
-    return Availability.fromJson(Map<String, dynamic>.from(data));
-  });
-}
+static Stream<Availability?> getAvailability(String userId) =>
+    _db.child('availability/$userId').onValue.map((e) {
+      final data = e.snapshot.value as Map?;
+      return data == null ? null : Availability.fromJson(Map<String, dynamic>.from(data));
+    });
 
-// ── UPDATE : Mettre à jour les disponibilités
-static Future<void> updateAvailability(Availability availability) async {
-  await _db
-      .child('availability/${availability.userId}')
-      .set(availability.toJson());
-}
+static Future<void> updateAvailability(Availability a) =>
+    _db.child('availability/${a.userId}').set(a.toJson());
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Planning du mentor : gestion des créneaux disponibles**
@@ -884,91 +761,32 @@ static Future<void> updateAvailability(Availability availability) async {
 
 ## 3. Service de découverte des membres (`service_utilisateurs.dart`)
 
-Le `UsersService` lit en temps réel les membres DIAPALER (mentors + investisseurs) inscrits via `SignUpPage` pour les afficher dans la page Matching au-dessus des profils pré-chargés.
+Le `UsersService` lit les membres DIAPALER inscrits (Mentor + Investisseur uniquement) depuis Firebase et les affiche dans la page Matching au-dessus des 100+ profils statiques, avec un badge "Membre DIAPALER" distinctif.
 
 ```dart
-// lib/services/service_utilisateurs.dart
-import 'package:firebase_database/firebase_database.dart';
-import '../data/donnees_mentors.dart';
-import 'service_authentification.dart';
-
 class UsersService {
-  static FirebaseDatabase get _db => FirebaseDatabase.instance;
-
-  /// Récupère les membres inscrits (Mentor + Investisseur uniquement).
-  /// L'utilisateur courant est exclu de la liste.
   static Future<List<Mentor>> listMembers() async {
-    final snap = await _db.ref('users').get();
+    final snap = await FirebaseDatabase.instance.ref('users').get();
     if (!snap.exists || snap.value == null) return [];
-
-    // Cast sécurisé : Firebase retourne Map<Object?, Object?>
     final map = Map<String, dynamic>.from(snap.value as Map);
     final currentUid = AuthService.currentUid;
-
     final members = <Mentor>[];
     for (final entry in map.entries) {
-      final uid = entry.key;
-      if (uid == currentUid) continue;           // Exclure soi-même
-      final raw = entry.value;
-      if (raw is! Map) continue;
-      final m = Map<String, dynamic>.from(raw);
-      
-      // Filtrer : uniquement Mentor et Investisseur
-      final role = (m['role']?.toString() ?? '').trim();
+      if (entry.key == currentUid) continue;        // Exclure soi-même
+      final m = Map<String, dynamic>.from(entry.value as Map);
+      final role = m['role']?.toString() ?? '';
       if (role != 'Mentor' && role != 'Investisseur') continue;
-
-      final firstName = m['firstName']?.toString() ?? '';
-      final lastName  = m['lastName']?.toString()  ?? '';
-      final fullName  = '$firstName $lastName'.trim();
-      if (fullName.isEmpty) continue;
-
-      // Construire le Mentor avec les données réelles Firebase
       members.add(Mentor(
-        uid:        uid,
-        name:       fullName,
-        title:      m['bio']?.toString().split('\n').first ?? role,
-        city:       m['city']?.toString() ?? 'Dakar',
-        sectors:    _parseInterests(m['interests']),
-        role:       role,
+        uid: entry.key,
+        name: '${m['firstName']} ${m['lastName']}'.trim(),
+        city: m['city']?.toString() ?? 'Dakar',
+        role: role,
+        sectors: _parseInterests(m['interests']),
         photoBase64: m['photoBase64']?.toString() ?? '',
-        compatibility: 80,   // Score par défaut pour un membre vérifié
-        // ...autres champs
       ));
     }
     return members;
   }
-}
-```
-
-**Intégration dans `page_matching.dart` :**
-```dart
-// Les membres réels sont chargés au démarrage et placés EN TÊTE de liste
-// avec un badge "Membre DIAPALER" distinctif
-
-List<Mentor> _members = const [];  // Membres Firebase
-bool _loadingMembers = true;
-
-@override
-void initState() {
-  super.initState();
-  _loadMembers();  // Charge les membres DIAPALER depuis Firebase
-}
-
-Future<void> _loadMembers() async {
-  try {
-    final members = await UsersService.listMembers();
-    if (!mounted) return;
-    setState(() { _members = members; _loadingMembers = false; });
-  } catch (_) {
-    if (!mounted) return;
-    setState(() => _loadingMembers = false);
-  }
-}
-
-// Fusion : membres Firebase (badge DIAPALER) + profils statiques sénégalais
-List<Mentor> get _filtered {
-  final all = [..._members, ...mentors]; // Membres réels en priorité
-  // Filtrage + tri...
 }
 ```
 

@@ -260,95 +260,39 @@ diapaler-africa-default-rtdb/
 **Structure des dossiers :**
 ```
 lib/
-├── main.dart                     ← Point d'entrée + firebaseReady (non bloquant)
-├── theme/
-│   └── theme_app.dart            ← Couleurs, typographies, styles globaux
-├── data/
-│   ├── profil_utilisateur.dart   ← UserProfile, Project, UserProfileController
-│   ├── donnees_mentors.dart      ← 100+ profils sénégalais pré-chargés
-│   └── interactions.dart         ← MentorRequest, ChatMessage, Conversation, Availability
-├── services/
-│   ├── service_authentification.dart  ← Firebase Auth wrapper
-│   ├── service_base_de_donnees.dart   ← Firebase DB : profils, pitchs, agenda
-│   ├── service_interactions.dart      ← Messages, conversations, demandes, planning
-│   ├── service_utilisateurs.dart      ← Découverte membres DIAPALER
-│   ├── service_cache.dart             ← SharedPreferences offline-first
-│   ├── service_chatbot.dart           ← API REST Groq (DIALI IA)
-│   ├── service_geolocation.dart       ← GPS + distances villes sénégalaises
-│   ├── service_navigation.dart        ← appTabIndex + unreadMessagesCount
-│   ├── service_notifications.dart     ← Centre de notifications réactif
-│   ├── service_agenda.dart            ← CRUD agenda Firebase
-│   ├── service_partage.dart           ← Partage natif (share_plus) : pitch, profil, DIALI
-│   └── service_wave.dart              ← Paiement Premium Wave (lien marchand + url_launcher)
-├── screens/
-│   ├── page_demarrage.dart            ← SplashPage + _bootstrap()
-│   ├── page_choix_role.dart           ← Sélection Entrepreneur/Mentor/Investisseur
-│   ├── page_decouverte.dart           ← Onboarding 3 slides
-│   ├── page_connexion.dart            ← Connexion email/password
-│   ├── page_inscription.dart          ← Inscription 4 étapes
-│   ├── page_mot_de_passe_oublie.dart  ← Reset MDP
-│   ├── coquille_principale.dart       ← RootShell : IndexedStack + FAB DIALI
-│   ├── page_accueil.dart              ← Dashboard Entrepreneur
-│   ├── page_dashboard_mentor.dart     ← Dashboard Mentor
-│   ├── page_dashboard_investisseur.dart ← Dashboard Investisseur
-│   ├── page_matching.dart             ← Matching + filtres + GPS
-│   ├── page_detail_mentor.dart        ← Profil détaillé d'un mentor
-│   ├── page_messages.dart             ← Liste des conversations
-│   ├── page_chat.dart                 ← Chat individuel temps réel
-│   ├── page_agenda.dart               ← Agenda Firebase
-│   ├── page_planning.dart             ← Planning mentor
-│   ├── page_profil.dart               ← Profil utilisateur
-│   ├── page_modification_profil.dart  ← Modification profil
-│   ├── page_pitch.dart                ← Dépôt de pitch (stepper 3 étapes)
-│   ├── page_pitches_publics.dart      ← Pitchs publiés (StreamBuilder)
-│   ├── page_notifications.dart        ← Centre de notifications
-│   ├── page_chatbot.dart              ← DIALI IA
-│   ├── page_requests.dart             ← Demandes de mentorat reçues
-│   ├── page_send_request.dart         ← Envoi d'une demande
-│   ├── page_mentors_recommandes.dart  ← Liste recommandations
-│   └── page_nouveau_projet.dart       ← Création d'un nouveau projet
-└── widgets/
-    ├── carte_mentor.dart              ← MentorCard (Matching)
-    ├── carte_lumineuse.dart           ← HoverGlowCard (carte réutilisable)
-    ├── avatar.dart                    ← Avatar (photo ou initiales)
-    ├── feuille_profil.dart            ← Bottom sheet profil
-    ├── bande_drapeau.dart             ← SenegalFlagStrip (bandeau drapeau sénégalais)
-    ├── logo_diapaler.dart             ← DiapalerLogoTile + DiapalerWordmark
-    └── ...                            ← 7+ autres widgets réutilisables
+├── main.dart                        ← Point d'entrée + firebaseReady (non bloquant)
+├── theme/theme_app.dart             ← Couleurs, typographies, styles globaux
+├── data/                            ← Modèles de données (UserProfile, Project, interactions…)
+├── services/                        ← 12 services métier
+│   ├── service_authentification.dart   ← Firebase Auth
+│   ├── service_base_de_donnees.dart    ← Firebase DB : profils, pitchs, agenda
+│   ├── service_interactions.dart       ← Messages, conversations, demandes, planning
+│   ├── service_notifications.dart      ← Centre de notifications réactif
+│   ├── service_cache.dart              ← SharedPreferences offline-first
+│   ├── service_chatbot.dart            ← API REST Groq (DIALI IA)
+│   ├── service_navigation.dart         ← appTabIndex + unreadMessagesCount
+│   └── … (5 autres services)
+├── screens/                         ← 26 écrans
+└── widgets/                         ← 13 widgets réutilisables
 ```
 
 **Pattern architectural : Services + ValueNotifier**
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          UI Layer (Screens / Widgets)                  │
-│  ValueListenableBuilder / StreamBuilder               │
+│  UI Layer      Screens / Widgets                      │
+│                ValueListenableBuilder / StreamBuilder │
 ├──────────────────────────────────────────────────────┤
-│          State Layer                                   │
-│  ValueNotifier<UserProfile>   (profil global)         │
-│  ValueNotifier<int>           (unreadMessages, tab)   │
-│  ValueNotifier<List<NotifItem>> (notifications)       │
+│  State Layer   ValueNotifier<UserProfile>             │
+│                ValueNotifier<int> (msgs, tab)         │
+│                ValueNotifier<List<NotifItem>>         │
 ├──────────────────────────────────────────────────────┤
-│          Service Layer                                 │
-│  AuthService / DatabaseService / InteractionsService  │
-│  UsersService / ChatbotService / CacheService         │
-│  NotificationService / GeolocationService             │
-│  NavigationService / AgendaService                    │
+│  Service Layer AuthService / DatabaseService / …      │
 ├──────────────────────────────────────────────────────┤
-│          Backend Layer                                 │
-│  Firebase Auth / Firebase Realtime DB / Groq API │
-│  SharedPreferences (cache local)                      │
+│  Backend       Firebase Auth + Realtime DB + Groq     │
+│                SharedPreferences (cache local)        │
 └──────────────────────────────────────────────────────┘
 ```
-
-**Principes appliqués :**
-- **Séparation des préoccupations** : `screens/`, `services/`, `data/`, `widgets/`
-- **Single Responsibility** : chaque service n'a qu'une responsabilité
-- **DRY** : widgets réutilisables (`Avatar`, `HoverGlowCard`, `MentorCard`…)
-- **Réactivité** : `ValueNotifier` + `ValueListenableBuilder` (zéro setState global)
-- **Offline-first** : `CacheService` affiché instantanément avant la réponse Firebase
-- **Null-safety** : code Dart 3 entièrement null-safe
-- **Immutabilité** : `UserProfile` et `Project` sont `@immutable` + `copyWith()`
 
 ---
 
@@ -793,13 +737,10 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 
 ### 6.2 Bonnes pratiques appliquées
 
-- **`@immutable`** sur `UserProfile` et `Project` — immutabilité garantie
-- **`copyWith()`** sur tous les modèles — mutation sans référence partagée
-- **`mounted` check** avant tout `setState()` après un `await` — pas de leak
-- **`dispose()`** systématique sur les `TextEditingController`, `AnimationController`, `ScrollController`
-- **`try/catch/finally`** autour de tous les appels Firebase et HTTP
-- **`const` constructor** partout où applicable — performance Flutter
-- **Séparation services/UI** stricte — aucun appel Firebase dans les widgets
+- **`@immutable` + `copyWith()`** sur `UserProfile` et `Project` — immutabilité garantie, mutation sans référence partagée
+- **`mounted` check + `dispose()`** systématiques — pas de leak après `await`, controllers libérés
+- **`try/catch/finally`** sur tous les appels Firebase et HTTP — toujours un `finally` pour réinitialiser `_loading`
+- **Séparation services/UI** stricte — aucun appel Firebase dans les widgets, `const` constructors partout où applicable
 
 ### 6.3 Gestion des erreurs
 

@@ -67,12 +67,6 @@
   - [1.3 Badge de notifications dynamique](#13-badge-de-notifications-dynamique)
   - [1.4 Centre de notifications](#14-centre-de-notifications-page_notificationsdart)
 - [2. Recherche et Filtres avancés](#2-recherche-et-filtres-avancés)
-  - [2.1 Barre de recherche textuelle en temps réel](#21-barre-de-recherche-textuelle-en-temps-réel)
-  - [2.2 Pills de filtre par rôle](#22-pills-de-filtre-par-rôle)
-  - [2.3 Pills de filtre par secteur](#23-pills-de-filtre-par-secteur)
-  - [2.4 Filtre par ville (dropdown)](#24-filtre-par-ville-dropdown)
-  - [2.5 Réinitialisation des filtres](#25-réinitialisation-des-filtres)
-  - [2.6 Membres DIAPALER réels en priorité](#26-membres-diapaler-réels-en-priorité)
 - [3. Géolocalisation GPS](#3-géolocalisation-gps)
   - [3.1 Service de géolocalisation](#31-service-de-géolocalisation-service_geolocationdart)
   - [3.2 Bouton "Près de moi"](#32-bouton-près-de-moi)
@@ -339,154 +333,39 @@ ValueListenableBuilder<List<NotificationItem>>(
 - Bouton **"Effacer tout"** → `NotificationService.clearAll()` — supprime le nœud Firebase
 - État vide illustré si aucune notification
 
+La page utilise un `ValueListenableBuilder` sur `NotificationService.notifications` et affiche soit un état vide illustré, soit une `ListView` de tuiles. Chaque tuile (`_NotificationTile`) déduit icône et couleur du champ `type` (String : `mentor_request`, `session_booked`, `session_cancelled`, `message`…). Tap → `markAsRead()`, bouton "Effacer tout" → `clearAll()`.
+
 ```dart
-class _NotificationsPageState extends State<NotificationsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          // Bouton "Effacer tout" — visible seulement si des notifs existent
-          ValueListenableBuilder<List<NotificationItem>>(
-            valueListenable: NotificationService.notifications,
-            builder: (context, notifs, _) {
-              if (notifs.isEmpty) return const SizedBox.shrink();
-              return TextButton(
-                onPressed: () => NotificationService.clearAll(),
-                child: const Text('Effacer tout',
-                    style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
-              );
-            },
-          ),
-        ],
-      ),
-      body: ValueListenableBuilder<List<NotificationItem>>(
-        valueListenable: NotificationService.notifications,
-        builder: (context, notifications, _) {
-          if (notifications.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_none_rounded, size: 60, color: AppColors.muted),
-                  SizedBox(height: 16),
-                  Text('Pas de notification',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep)),
-                  SizedBox(height: 6),
-                  Text('Tu recevras des notifications quand\ndes mises à jour importantes arrivent.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.5)),
-                ],
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final notif = notifications[index];
-              return _NotificationTile(
-                notification: notif,
-                onTap: () => NotificationService.markAsRead(notif.id),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Widget tuile de notification — couleur et icône déduites du type (String)
+// Tuile — couleur et icône selon le type de notification
 class _NotificationTile extends StatelessWidget {
-  final NotificationItem notification;
-  final VoidCallback onTap;
-
-  Color _getTypeColor() {
-    switch (notification.type) {
-      case 'mentor_request':           return AppColors.roleMentor;
-      case 'mentor_request_accepted':  return AppColors.green;
-      case 'mentor_request_rejected':  return AppColors.red;
-      case 'session_booked':
-      case 'rdv_booked':               return AppColors.blue;
-      case 'session_cancelled':        return AppColors.red;
-      case 'message':                  return AppColors.blue;
-      default:                         return AppColors.amber;
-    }
-  }
+  Color _getTypeColor() => switch (notification.type) {
+    'mentor_request'          => AppColors.roleMentor,
+    'mentor_request_accepted' => AppColors.green,
+    'mentor_request_rejected' || 'session_cancelled' => AppColors.red,
+    'session_booked' || 'message' => AppColors.blue,
+    _ => AppColors.amber,
+  };
 
   @override
   Widget build(BuildContext context) {
     final color = _getTypeColor();
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: notification.isRead ? AppColors.surface : color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: notification.isRead ? AppColors.border : color.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icône type
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(_getTypeIcon(), color: color, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(notification.title,
-                          style: const TextStyle(fontSize: 13,
-                              fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
-                    ),
-                    if (!notification.isRead)
-                      Container(width: 8, height: 8,
-                          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(notification.message,       // <-- champ 'message'
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-                  Text(_formatTime(notification.timestamp),   // <-- champ 'timestamp'
-                      style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return InkWell(onTap: onTap, child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: notification.isRead ? AppColors.surface : color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
+      child: Row(children: [
+        Icon(_getTypeIcon(), color: color),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(notification.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(notification.message, maxLines: 2),
+          Text(_formatTime(notification.timestamp)),
+        ])),
+      ]),
+    ));
   }
-
-  String _formatTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1)  return 'À l\'instant';
-    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes}m';
-    if (diff.inHours < 24)   return 'Il y a ${diff.inHours}h';
-    if (diff.inDays < 7)     return 'Il y a ${diff.inDays}j';
-    return '${dt.day}/${dt.month}/${dt.year}';
-  }
-
-  IconData _getTypeIcon() { /* … icône selon notification.type (String) … */ }
 }
 ```
 
@@ -500,258 +379,37 @@ class _NotificationTile extends StatelessWidget {
 
 ## 2. Recherche et Filtres avancés
 
-La page Matching (`page_matching.dart`) intègre un système de filtres multicritères complet.
+La page Matching intègre un système de filtres multicritères : **barre de recherche textuelle** (temps réel sur nom/secteur/ville), **pills de rôle** (Tous / Mentor / Investisseur), **pills de secteur** (10 secteurs sénégalais), **dropdown de ville**, et bouton **"Réinitialiser"** visible dès qu'un filtre est actif.
 
-### 2.1 Barre de recherche textuelle en temps réel
-
-```dart
-// Champ de recherche — rebuild à chaque frappe via TextEditingController listener
-final _searchCtrl = TextEditingController();
-String _query = '';
-
-@override
-void initState() {
-  super.initState();
-  _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text));
-  _loadMembers(); // Charge les membres DIAPALER depuis Firebase
-}
-
-// Filtre textuel dans le getter _filtered
-if (!m.matches(_query)) return false;
-// matches() recherche dans : nom, titre, ville, secteurs, tags
-
-// Barre de recherche avec bouton clear
-TextField(
-  controller: _searchCtrl,
-  decoration: InputDecoration(
-    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.subtle),
-    hintText: 'Nom, secteur, ville…',
-    suffixIcon: _query.isNotEmpty
-        ? IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.subtle),
-            onPressed: () => _searchCtrl.clear(),
-          )
-        : null,
-  ),
-),
-```
-
----
-
-### 2.2 Pills de filtre par rôle
+Tous les filtres convergent dans le getter `_filtered` qui combine les membres Firebase réels (priorité) et les 100+ profils statiques :
 
 ```dart
-// 3 pills : "Tous" | "Mentor" | "Investisseur"
-// Animés avec AnimatedContainer (180ms)
-String _role = 'Tous';
+// États des filtres
+String _query = '', _role = 'Tous', _sector = 'Tous', _city = 'Toutes';
+bool _nearMe = false;
 
-SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-  child: Row(
-    children: [
-      for (final r in ['Tous', 'Mentor', 'Investisseur'])
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: GestureDetector(
-            onTap: () => setState(() => _role = r),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: _role == r ? AppColors.navyDeep : Colors.white,
-                border: Border.all(
-                  color: _role == r ? AppColors.navyDeep : AppColors.border,
-                ),
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: _role == r
-                    ? [BoxShadow(
-                        color: AppColors.navyDeep.withValues(alpha: 0.18),
-                        blurRadius: 8, offset: const Offset(0, 2))]
-                    : null,
-              ),
-              child: Text(
-                r,
-                style: TextStyle(
-                  color: _role == r ? Colors.white : AppColors.navyDeep,
-                  fontWeight: FontWeight.w700, fontSize: 12.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-    ],
-  ),
-),
-```
-
----
-
-### 2.3 Pills de filtre par secteur
-
-10 secteurs sénégalais proposés en scroll horizontal :
-
-```dart
-String _sector = 'Tous';
-
-static const _topSectors = <String>[
-  'Tous', 'Agro-industrie', 'Tech & Digital', 'Gastronomie',
-  'FinTech', 'Mode & Textile', 'Cosmétique', 'Automobile', 'Énergie', 'Santé',
-];
-
-SizedBox(
-  height: 36,
-  child: ListView.separated(
-    scrollDirection: Axis.horizontal,
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    itemCount: _topSectors.length,
-    separatorBuilder: (_, __) => const SizedBox(width: 8),
-    itemBuilder: (_, i) {
-      final s = _topSectors[i];
-      final selected = s == _sector;
-      return GestureDetector(
-        onTap: () => setState(() => _sector = s),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.navy : Colors.white,
-            border: Border.all(
-              color: selected ? AppColors.navy : AppColors.border,
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Center(
-            child: Text(s, style: TextStyle(
-              color: selected ? Colors.white : AppColors.navyDeep,
-              fontWeight: FontWeight.w700, fontSize: 12.5,
-            )),
-          ),
-        ),
-      );
-    },
-  ),
-),
-```
-
----
-
-### 2.4 Filtre par ville (dropdown)
-
-```dart
-String _city = 'Toutes';
-
-// Liste dynamique des villes extraites de tous les profils
-List<String> get _cities {
-  final all = [..._members, ...mentors];
-  final s = all.map((m) => m.city).toSet().toList()..sort();
-  return ['Toutes', ...s];
-}
-
-// Dropdown compact dans la barre de filtres
-_CityDropdown(
-  value: _city,
-  values: _cities,
-  onChanged: (v) => setState(() => _city = v),
-),
-
-class _CityDropdown extends StatelessWidget {
-  final String value;
-  final List<String> values;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: value,
-        isDense: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-            color: AppColors.muted, size: 18),
-        style: const TextStyle(
-          fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.navyDeep,
-        ),
-        items: values.map((c) =>
-            DropdownMenuItem(value: c, child: Text(c))).toList(),
-        onChanged: (v) { if (v != null) onChanged(v); },
-      ),
-    );
-  }
-}
-```
-
----
-
-### 2.5 Réinitialisation des filtres
-
-```dart
-// Bouton "Réinitialiser" visible dans l'AppBar dès qu'un filtre est actif
-bool get _hasFilter =>
-    _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
-
-AppBar(
-  title: const Text('Mentors & Investisseurs'),
-  actions: [
-    if (_hasFilter)
-      TextButton(
-        onPressed: _resetFilters,
-        child: const Text('Réinitialiser',
-            style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
-      ),
-  ],
-),
-
-void _resetFilters() {
-  setState(() {
-    _searchCtrl.clear();
-    _query   = '';
-    _sector  = 'Tous';
-    _city    = 'Toutes';
-    _role    = 'Tous';
-    _nearMe  = false;
-    _userPosition = null;
-  });
-}
-```
-
----
-
-### 2.6 Membres DIAPALER réels en priorité
-
-```dart
-// Getter _filtered — logique de tri complet
+// Getter principal — filtre + tri
 List<Mentor> get _filtered {
   final all = [..._members, ...mentors]; // Membres Firebase + profils statiques
-
-  final list = all.where((m) {
-    if (!m.matches(_query)) return false;
-    if (_sector != 'Tous' &&
-        !m.sectors.any((s) => s.toLowerCase() == _sector.toLowerCase())) {
-      return false;
-    }
-    if (_city != 'Toutes' && m.city != _city) return false;
-    if (_role != 'Tous' && m.role != _role) return false;
-    return true;
-  }).toList();
+  final list = all.where((m) =>
+    m.matches(_query) &&                   // nom, secteur, ville, tags
+    (_role == 'Tous' || m.role == _role) &&
+    (_sector == 'Tous' || m.sectors.any((s) => s.toLowerCase() == _sector.toLowerCase())) &&
+    (_city == 'Toutes' || m.city == _city)
+  ).toList();
 
   if (_nearMe && _userPosition != null) {
-    // Tri par distance GPS (croissant)
-    list.sort((a, b) {
-      final da = _distanceFor(a) ?? double.infinity;
-      final db = _distanceFor(b) ?? double.infinity;
-      return da.compareTo(db);
-    });
+    list.sort((a, b) => (_distanceFor(a) ?? 9999).compareTo(_distanceFor(b) ?? 9999));
   } else {
-    // Tri : membres DIAPALER réels en premier, puis par compatibilité
-    list.sort((a, b) {
-      final aIsMember = a.uid.isNotEmpty ? 1 : 0;
-      final bIsMember = b.uid.isNotEmpty ? 1 : 0;
-      if (aIsMember != bIsMember) return bIsMember - aIsMember;
-      return b.compatibility.compareTo(a.compatibility);
-    });
+    // Membres DIAPALER réels (uid non vide) en tête, puis par compatibilité
+    list.sort((a, b) => b.uid.isNotEmpty == a.uid.isNotEmpty
+        ? b.compatibility.compareTo(a.compatibility)
+        : (b.uid.isNotEmpty ? 1 : -1));
   }
   return list;
 }
+
+bool get _hasFilter => _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Matching : barre de recherche + pills rôle + pills secteur**
@@ -1708,83 +1366,22 @@ class _PitchCard extends StatelessWidget {
 
 ### 8.1 Dashboard Mentor (`page_dashboard_mentor.dart`)
 
-Le dashboard Mentor est une `SliverAppBar` + `CustomScrollView`. Il agrège :
-- Header avec avatar + badge notifications
-- Statistiques (mentorés actifs, sessions, note)
-- Raccourcis vers Pitchs publiés, Planning, Demandes reçues
+`CustomScrollView` + `SliverAppBar` épinglée. Contient : header avec avatar vert + badge notifications, grille de 3 statistiques, et tuiles d'actions rapides (Pitchs publiés, Mon Planning, Demandes reçues). Le tout est enveloppé dans un `ValueListenableBuilder<UserProfile>` pour rester synchronisé.
 
 ```dart
-// lib/screens/page_dashboard_mentor.dart
-class MentorDashboard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<UserProfile>(
-      valueListenable: UserProfileController.profile,
-      builder: (context, profile, _) {
-        return CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics()),
-          slivers: [
-            // ── Header collant ──────────────────────────────────────
-            SliverAppBar(
-              pinned: true,
-              toolbarHeight: 68,
-              title: Row(children: [
-                Avatar(initials: profile.initials,
-                       background: AppColors.roleMentor,
-                       photoBase64: profile.photoBase64),
-                const SizedBox(width: 12),
-                Expanded(child: Column(children: [
-                  Text('Bienvenue ${profile.firstName} 👋'),
-                  Text(profile.role, style: const TextStyle(color: AppColors.muted)),
-                ])),
-                // Badge notifications
-                ValueListenableBuilder<List<NotificationItem>>(
-                  valueListenable: NotificationService.notifications,
-                  builder: (_, notifs, __) {
-                    final unread = notifs.where((n) => !n.isRead).length;
-                    return Stack(children: [
-                      IconButton(icon: const Icon(Icons.notifications_outlined),
-                          onPressed: () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const NotificationsPage()))),
-                      if (unread > 0) Positioned(
-                        right: 4, top: 4,
-                        child: Container(
-                          width: 18, height: 18,
-                          decoration: const BoxDecoration(
-                              color: AppColors.red, shape: BoxShape.circle),
-                          child: Center(child: Text('$unread',
-                              style: const TextStyle(color: Colors.white, fontSize: 10))),
-                        ),
-                      ),
-                    ]);
-                  },
-                ),
-              ]),
-            ),
-            // ── Statistiques ───────────────────────────────────────
-            SliverToBoxAdapter(child: _StatsGrid(profile: profile)),
-            // ── Actions rapides ────────────────────────────────────
-            SliverToBoxAdapter(child: Column(children: [
-              _ActionTile(label: 'Voir les Pitchs',
-                  icon: Icons.upload_file_rounded,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const PublicPitchesPage()))),
-              _ActionTile(label: 'Mon Planning',
-                  icon: Icons.calendar_today_rounded,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const PlanningPage()))),
-              _ActionTile(label: 'Demandes reçues',
-                  icon: Icons.handshake_rounded,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const RequestsPage()))),
-            ])),
-          ],
-        );
-      },
-    );
-  }
-}
+CustomScrollView(slivers: [
+  SliverAppBar(pinned: true, title: Row(children: [
+    Avatar(initials: profile.initials, background: AppColors.roleMentor),
+    Text('Bienvenue ${profile.firstName} 👋'),
+    _NotificationBadge(), // ValueListenableBuilder sur NotificationService
+  ])),
+  SliverToBoxAdapter(child: _StatsGrid(profile: profile)),
+  SliverToBoxAdapter(child: Column(children: [
+    _ActionTile('Voir les Pitchs', onTap: () => push(PublicPitchesPage())),
+    _ActionTile('Mon Planning',    onTap: () => push(PlanningPage())),
+    _ActionTile('Demandes reçues', onTap: () => push(RequestsPage())),
+  ])),
+])
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Mentor (header + stats + actions rapides)**
@@ -1794,50 +1391,20 @@ class MentorDashboard extends StatelessWidget {
 
 ### 8.2 Dashboard Investisseur (`page_dashboard_investisseur.dart`)
 
-Le dashboard Investisseur est similaire mais orienté découverte de projets :
-- Header avatar + badge notifications
-- Raccourci "Voir les Pitchs" (fil public entrepreneurs)
-- Raccourci "Trouver des entrepreneurs" → page Matching
+Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets : accès rapide aux pitchs des entrepreneurs et à la page Matching.
 
 ```dart
-// lib/screens/page_dashboard_investisseur.dart
-class InvestorDashboard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<UserProfile>(
-      valueListenable: UserProfileController.profile,
-      builder: (context, profile, _) {
-        return CustomScrollView(slivers: [
-          SliverAppBar(
-            pinned: true,
-            title: Row(children: [
-              Avatar(initials: profile.initials,
-                     background: AppColors.blue,
-                     photoBase64: profile.photoBase64),
-              const SizedBox(width: 12),
-              Column(children: [
-                Text('Bienvenue ${profile.firstName} 👋'),
-                Text(profile.role, style: const TextStyle(color: AppColors.muted)),
-              ]),
-              const Spacer(),
-              // Badge notifications (même pattern que MentorDashboard)
-              _NotificationBadge(),
-            ]),
-          ),
-          SliverToBoxAdapter(child: Column(children: [
-            _ActionTile(label: 'Pitchs des entrepreneurs',
-                icon: Icons.bar_chart_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const PublicPitchesPage()))),
-            _ActionTile(label: 'Matching entrepreneurs',
-                icon: Icons.people_rounded,
-                onTap: () => appTabIndex.value = 1), // Onglet Matching
-          ])),
-        ]);
-      },
-    );
-  }
-}
+CustomScrollView(slivers: [
+  SliverAppBar(pinned: true, title: Row(children: [
+    Avatar(initials: profile.initials, background: AppColors.blue),
+    Text('Bienvenue ${profile.firstName} 👋'),
+    _NotificationBadge(),
+  ])),
+  SliverToBoxAdapter(child: Column(children: [
+    _ActionTile('Pitchs des entrepreneurs', onTap: () => push(PublicPitchesPage())),
+    _ActionTile('Matching entrepreneurs',   onTap: () => appTabIndex.value = 1),
+  ])),
+])
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Investisseur (header + accès rapide Pitchs)**
@@ -1847,71 +1414,24 @@ class InvestorDashboard extends StatelessWidget {
 
 ## 9. Page Détail Mentor (`page_detail_mentor.dart`)
 
-La page détail affiche le profil complet d'un mentor/investisseur et permet de :
-1. **Réserver une session** (avec choix du créneau horaire)
-2. **Ajouter aux favoris** (incrémente `favoritesCount` dans le profil)
-3. **Ouvrir un chat** direct via `InteractionsService`
+La page affiche le profil complet (bio, secteurs, distance GPS) et propose trois actions : réserver une session, ajouter aux favoris, ouvrir un chat direct.
 
 ```dart
-// lib/screens/page_detail_mentor.dart
-class MentorDetailPage extends StatefulWidget {
-  final Mentor mentor;
-  const MentorDetailPage({super.key, required this.mentor});
+// Réservation bilatérale : calcule le prochain créneau Lun–Ven et écrit dans Firebase
+void _bookSession() {
+  final profile = UserProfileController.profile.value;
+  final daysUntil = slotWeekdays[_selectedSlotIndex] - DateTime.now().weekday;
+  final scheduledAt = DateTime.now().add(Duration(days: daysUntil <= 0 ? daysUntil + 7 : daysUntil));
+  AgendaController.bookBilateral(
+    requesterUid: AuthService.currentUid!, requesterName: profile.fullName,
+    otherUid: widget.mentor.uid, otherName: widget.mentor.name,
+    scheduledAt: scheduledAt,
+  );
 }
 
-class _MentorDetailPageState extends State<MentorDetailPage> {
-  bool _isFavorite = false;
-  int? _selectedSlotIndex; // Créneau sélectionné dans _SlotsRow
-
-  // Ajoute/retire le mentor des favoris et met à jour le compteur dans le profil
-  void _toggleFavorite() {
-    final profile = UserProfileController.profile.value;
-    final delta   = _isFavorite ? -1 : 1;
-    UserProfileController.update(profile.copyWith(
-      favoritesCount: (profile.favoritesCount + delta).clamp(0, 999),
-    ));
-    setState(() => _isFavorite = !_isFavorite);
-  }
-
-  // Calcule le prochain créneau disponible et réserve bilatéralement
-  void _bookSession() {
-    final profile = UserProfileController.profile.value;
-    final uid     = AuthService.currentUid;
-    if (uid == null) return;
-
-    // Incrémente sessionsCount dans le profil
-    UserProfileController.update(
-      profile.copyWith(sessionsCount: profile.sessionsCount + 1),
-    );
-
-    // Calcule la date du prochain créneau (Lun–Ven, 10h–16h)
-    const slotWeekdays = [1, 2, 3, 4, 5];
-    const slotHours    = [14, 10, 15, 11, 16];
-    final idx          = _selectedSlotIndex ?? 0;
-    final now          = DateTime.now();
-    var daysUntil      = slotWeekdays[idx] - now.weekday;
-    if (daysUntil <= 0) daysUntil += 7;
-    final scheduledAt  = DateTime(
-      now.year, now.month, now.day + daysUntil, slotHours[idx],
-    );
-
-    // Écriture Firebase bilatérale
-    AgendaController.bookBilateral(
-      requesterUid:      uid,
-      requesterName:     profile.fullName,
-      requesterInitials: profile.initials,
-      otherUid:          widget.mentor.uid,   // Vide si mentor statique
-      otherName:         widget.mentor.name,
-      otherInitials:     widget.mentor.initials,
-      scheduledAt:       scheduledAt,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Session réservée avec ${widget.mentor.name.split(" ").first} !'),
-      backgroundColor: AppColors.green,
-    ));
-  }
-}
+// Favori : incrémente/décrémente favoritesCount dans le profil
+void _toggleFavorite() => UserProfileController.update(
+  profile.copyWith(favoritesCount: profile.favoritesCount + (_isFavorite ? -1 : 1)));
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Profil détail mentor (bio + secteurs + créneaux disponibles)**

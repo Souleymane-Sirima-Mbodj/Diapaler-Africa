@@ -148,88 +148,32 @@ dev_dependencies:
 
 ```
 diapaler_africa/
-├── android/
-│   └── app/
-│       ├── google-services.json         # Configuration Firebase Android
-│       └── src/main/
-│           └── AndroidManifest.xml      # Permissions internet + GPS
-├── ios/
-├── web/                                 # Cible Web (Chrome) pour le développement
+├── android/app/
+│   ├── google-services.json             # Configuration Firebase Android
+│   └── src/main/AndroidManifest.xml    # Permissions internet + GPS
 ├── lib/
 │   ├── main.dart                        # Point d'entrée — init Firebase non-bloquante + runApp
 │   ├── firebase_options.dart            # Clés Firebase (FlutterFire CLI)
-│   │
-│   ├── data/                            # Modèles de données (pur Dart, immuables)
-│   │   ├── profil_utilisateur.dart      # UserProfile, Gender, Project + UserProfileController
-│   │   ├── donnees_mentors.dart         # 100+ profils mentors sénégalais (données statiques)
-│   │   ├── pays.dart                    # Pays + villes (Afrique de l'Ouest)
-│   │   ├── citations.dart               # Citations d'entrepreneurs africains (carrousel)
-│   │   └── interactions.dart            # MentorRequest, ChatMessage, Conversation, Availability
-│   │
-│   ├── screens/                         # 26 écrans
-│   │   ├── page_demarrage.dart          # Splash animé + bootstrap Firebase + routage auth
-│   │   ├── page_decouverte.dart         # Onboarding 3 slides (PageView)
-│   │   ├── page_choix_role.dart         # Sélection du rôle (Entrepreneur/Mentor/Investisseur)
-│   │   ├── page_connexion.dart          # Connexion email/password
-│   │   ├── page_inscription.dart        # Inscription 4 étapes avec validations
-│   │   ├── page_mot_de_passe_oublie.dart# Reset mot de passe via Firebase
-│   │   ├── coquille_principale.dart     # RootShell : IndexedStack 5 onglets + FAB chatbot
-│   │   ├── page_accueil.dart            # Dashboard adaptatif (Entrepreneur/Mentor/Investisseur)
-│   │   ├── page_dashboard_mentor.dart   # Vue spécialisée Mentor
-│   │   ├── page_dashboard_investisseur.dart # Vue spécialisée Investisseur
-│   │   ├── page_matching.dart           # Explorer la communauté (recherche + filtres + GPS)
-│   │   ├── page_detail_mentor.dart      # Profil détaillé + contacter + demande
-│   │   ├── page_messages.dart           # Liste des conversations (StreamBuilder)
-│   │   ├── page_chat.dart               # Chat individuel temps réel Firebase
-│   │   ├── page_notifications.dart      # Centre de notifications + badge + "Effacer tout"
-│   │   ├── page_profil.dart             # Mon profil + jauge de complétion
-│   │   ├── page_modification_profil.dart# Modifier mon profil (photo + tous champs)
-│   │   ├── page_pitch.dart              # Déposer un pitch (stepper 3 étapes)
-│   │   ├── page_pitches_publics.dart    # Pitchs publiés (vue Mentor/Investisseur)
-│   │   ├── page_nouveau_projet.dart     # Créer un nouveau projet
-│   │   ├── page_mentors_recommandes.dart# Mentors recommandés (filtre par intérêts)
-│   │   ├── page_agenda.dart             # Agenda + événements Firebase
-│   │   ├── page_planning.dart           # Gestion des disponibilités (Mentor)
-│   │   ├── page_requests.dart           # Demandes de mentorat reçues
-│   │   ├── page_send_request.dart       # Envoyer une demande de mentorat
-│   │   └── page_chatbot.dart            # Chatbot DIALI IA (Groq / Llama 3.1)
-│   │
-│   ├── services/                        # Couche métier — séparation des préoccupations
-│   │   ├── service_authentification.dart # Firebase Auth (connexion, inscription, reset, logout)
-│   │   ├── service_base_de_donnees.dart  # Firebase RTDB : profils + pitchs
-│   │   ├── service_interactions.dart     # RTDB : messages, conversations, demandes mentorat
-│   │   ├── service_chatbot.dart          # API REST Groq / Llama 3.1 (chatbot DIALI)
-│   │   ├── service_notifications.dart    # Notifications Firebase temps réel (ValueNotifier + StreamSubscription)
-│   │   ├── service_agenda.dart           # Agenda Firebase (CRUD événements)
-│   │   ├── service_geolocation.dart      # GPS + calcul distances (Haversine)
-│   │   ├── service_cache.dart            # Cache local SharedPreferences (hors-ligne)
-│   │   ├── service_navigation.dart       # appTabIndex + unreadMessagesCount (ValueNotifier)
-│   │   ├── service_utilisateurs.dart     # Chargement des membres réels depuis Firebase
-│   │   ├── service_partage.dart          # Partage social (share_plus) : pitch, profil, DIALI
-│   │   └── service_wave.dart             # Paiement Premium Wave (lien marchand + url_launcher)
-│   │
-│   ├── theme/
-│   │   └── theme_app.dart               # Palette couleurs, ThemeData, AppColors
-│   │
-│   └── widgets/                         # 13 composants réutilisables
-│       ├── avatar.dart                  # Avatar (initiales colorées / photo base64)
-│       ├── barre_navigation.dart        # Barre navigation 5 onglets + badge Messages
-│       ├── bande_drapeau.dart           # Bandeau drapeau sénégalais (vert/jaune/rouge)
-│       ├── carte_lumineuse.dart         # HoverGlowCard : carte avec glow amber au survol
-│       ├── carte_mentor.dart            # MentorCard : carte profil + badge Investisseur/CIS
-│       ├── carrousel_citations.dart     # Carrousel de citations africaines (auto-scroll)
-│       ├── compteur_anime.dart          # AnimatedCounter : chiffres qui s'incrémentent
-│       ├── curseur_suiveur.dart         # CursorFollower : animation curseur (web)
-│       ├── entete_section.dart          # SectionHeader : titre + sous-titre de section
-│       ├── feuille_profil.dart          # BottomSheet profil résumé (avatar, nom, stats)
-│       ├── logo_diapaler.dart           # DiapalerLogoTile + DiapalerWordmark
-│       ├── slogan_rotatif.dart          # Slogan animé rotatif (Timer)
-│       └── squelette.dart              # SkeletonLoader : placeholder de chargement animé
-│
-├── test/
-│   └── widget_test.dart                 # Tests unitaires
-├── analysis_options.yaml                # Linting strict Flutter
-└── pubspec.yaml
+│   ├── data/                            # Modèles de données (UserProfile, ChatMessage…)
+│   │   ├── profil_utilisateur.dart
+│   │   ├── donnees_mentors.dart         # 100+ profils sénégalais (statiques)
+│   │   ├── pays.dart
+│   │   ├── citations.dart
+│   │   └── interactions.dart
+│   ├── screens/                         # 26 écrans (auth, dashboard, matching, chat…)
+│   │   ├── page_demarrage.dart          # Splash + bootstrap Firebase
+│   │   ├── coquille_principale.dart     # RootShell : IndexedStack 5 onglets + FAB
+│   │   ├── page_accueil.dart            # Dashboard adaptatif (3 rôles)
+│   │   ├── page_matching.dart           # Explorer + recherche + GPS
+│   │   ├── page_messages.dart / page_chat.dart
+│   │   ├── page_profil.dart / page_modification_profil.dart
+│   │   ├── page_pitch.dart / page_pitches_publics.dart
+│   │   └── … (19 autres écrans)
+│   ├── services/                        # 12 services métier (auth, RTDB, GPS, cache…)
+│   ├── theme/theme_app.dart             # Palette couleurs + ThemeData
+│   └── widgets/                         # 13 composants réutilisables (avatar, nav, squelette…)
+├── pubspec.yaml
+└── analysis_options.yaml
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Structure du projet dans l'explorateur VS Code**
@@ -763,43 +707,19 @@ Navigator.of(context).pushAndRemoveUntil(
 ### 3.2 Flux de navigation complet
 
 ```
-[Splash + Bootstrap Firebase + Cache]
-  ├─→ [RootShell] ← utilisateur déjà connecté (session persistante)
-  └─→ [Choix du rôle] ← utilisateur non connecté (défaut)
-        ├─→ [Connexion]
-        │     ├─→ [RootShell] ← après connexion réussie
-        │     ├─→ [Inscription] ← lien "S'inscrire"
-        │     └─→ [Mot de passe oublié]
-        └─→ [Inscription 4 étapes]
-              └─→ [Onboarding 3 slides] ← affiché UNIQUEMENT après inscription
-                    └─→ [RootShell]
+[Splash + Bootstrap]
+  ├─→ [RootShell]          ← utilisateur déjà connecté
+  └─→ [Choix du rôle]      ← non connecté
+        ├─→ [Connexion] → [RootShell] | [Mot de passe oublié]
+        └─→ [Inscription 4 étapes] → [Onboarding] → [RootShell]
 
 [RootShell — 5 onglets IndexedStack]
-  │
-  ├── Onglet 0 : [Dashboard Entrepreneur / Mentor / Investisseur]
-  │     ├─→ [Pitch (3 étapes)]
-  │     ├─→ [Nouveau projet]
-  │     ├─→ [Mentors recommandés]
-  │     ├─→ [Notifications]
-  │     ├─→ [Pitchs publiés] (mentors + investisseurs)
-  │     ├─→ [Demandes reçues]
-  │     ├─→ [Planning]
-  │     └─→ [Feuille profil BottomSheet]
-  │
-  ├── Onglet 1 : [Matching / Explorer]
-  │     └─→ [Détail du profil]
-  │           ├─→ [Envoyer une demande]
-  │           └─→ [Chat individuel]
-  │
-  ├── Onglet 2 : [Messages]
-  │     └─→ [Chat individuel]
-  │
-  ├── Onglet 3 : [Agenda]
-  │
-  ├── Onglet 4 : [Mon Profil]
-  │     └─→ [Modifier le profil] ← fullscreenDialog
-  │
-  └── FAB (tous les onglets) : [Chatbot DIALI IA]
+  ├─ 0 : [Dashboard]  →  Pitch · Nouveau projet · Notifications · Demandes
+  ├─ 1 : [Matching]   →  [Détail profil] → Demande | Chat
+  ├─ 2 : [Messages]   →  [Chat individuel]
+  ├─ 3 : [Agenda]     →  Planning (Mentor)
+  ├─ 4 : [Mon Profil] →  [Modifier le profil]
+  └─ FAB              →  [Chatbot DIALI IA]
 ```
 
 ### 3.3 Boutons retour sur tous les écrans
@@ -818,42 +738,22 @@ Navigator.of(context).pushAndRemoveUntil(
 
 ### 3.4 Animations de transition
 
-**Transition globale `FadeThroughBuilder` :**
+Deux niveaux d'animation : une transition globale `FadeTransition + SlideTransition` (léger glissement vers le haut, `Curves.easeOutCubic`) est appliquée à tous les changements de page via `PageTransitionsBuilder`. Entre les étapes des formulaires (inscription, pitch), un `AnimatedSwitcher` assure un fondu + glissement horizontal doux.
+
 ```dart
-// main.dart — Transition Fade + Slide sur toutes les pages
+// Transition globale — main.dart
 class _FadeThroughBuilder extends PageTransitionsBuilder {
   @override
-  Widget buildTransitions<T>(route, context, animation, _, child) {
-    return FadeTransition(
+  Widget buildTransitions<T>(route, context, animation, _, child) =>
+    FadeTransition(
       opacity: animation,
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.025), // Léger glissement vers le haut
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        position: Tween<Offset>(begin: const Offset(0, 0.025), end: Offset.zero)
+            .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
         child: child,
       ),
     );
-  }
 }
-```
-
-**Transition entre étapes de l'inscription :**
-```dart
-// AnimatedSwitcher avec fade + slide horizontal
-AnimatedSwitcher(
-  duration: const Duration(milliseconds: 280),
-  transitionBuilder: (child, animation) => FadeTransition(
-    opacity: animation,
-    child: SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0.05, 0), end: Offset.zero,
-      ).animate(animation),
-      child: child,
-    ),
-  ),
-  child: KeyedSubtree(key: ValueKey(_step), child: _buildStep()),
-)
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Barre de navigation 5 onglets avec badge Messages**
