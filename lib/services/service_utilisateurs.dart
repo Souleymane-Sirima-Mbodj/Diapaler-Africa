@@ -38,7 +38,7 @@ class UsersService {
         rating: (m['score'] as num?)?.toDouble() ?? 0.0,
         reviews: 0,
         years: (m['yearsExperience'] as num?)?.toInt() ?? 0,
-        compatibility: 0,
+        compatibility: 80,
         gender: Gender.fromString(m['gender']?.toString()),
         bio: m['bio']?.toString() ?? '',
         role: role,

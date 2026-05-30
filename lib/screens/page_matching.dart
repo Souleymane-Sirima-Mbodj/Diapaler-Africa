@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_geolocation.dart';
 import '../services/service_utilisateurs.dart';
 import '../theme/theme_app.dart';
@@ -50,6 +51,38 @@ class _MatchingPageState extends State<MatchingPage> {
     _loadMembers();
   }
 
+  int _computeCompatibility(Mentor m) {
+    final profile = UserProfileController.profile.value;
+    final userInterests = profile.interests
+        .map((s) => s.toLowerCase().trim())
+        .toSet();
+    final mentorSectors = m.sectors
+        .map((s) => s.toLowerCase().trim())
+        .toSet();
+
+    if (userInterests.isEmpty || mentorSectors.isEmpty) return 50;
+
+    // Correspondance exacte
+    final exact = userInterests.intersection(mentorSectors);
+    if (exact.isNotEmpty) {
+      final pct = (65 + (exact.length / mentorSectors.length) * 34).round();
+      return pct.clamp(65, 99);
+    }
+
+    // Correspondance partielle (ex: "Agriculture" dans "Agro-industrie")
+    final partial = userInterests.any((ui) =>
+        mentorSectors.any((ms) => ms.contains(ui) || ui.contains(ms)));
+    if (partial) return 60;
+
+    // Même secteur principal
+    final userSector = profile.sector.toLowerCase().trim();
+    if (mentorSectors.any((ms) => ms.contains(userSector) || userSector.contains(ms))) {
+      return 58;
+    }
+
+    return (20 + (userInterests.length * 2)).clamp(20, 40).toInt();
+  }
+
   Future<void> _loadMembers() async {
     try {
       final members = await UsersService.listMembers();
@@ -90,12 +123,12 @@ class _MatchingPageState extends State<MatchingPage> {
         return da.compareTo(db);
       });
     } else {
-      // Membres DIAPALER (uid non vide) en priorité, puis tri par compatibilité.
+      // Membres DIAPALER (uid non vide) en priorité, puis tri par compatibilité calculée.
       list.sort((a, b) {
         final aIsMember = a.uid.isNotEmpty ? 1 : 0;
         final bIsMember = b.uid.isNotEmpty ? 1 : 0;
         if (aIsMember != bIsMember) return bIsMember - aIsMember;
-        return b.compatibility.compareTo(a.compatibility);
+        return _computeCompatibility(b).compareTo(_computeCompatibility(a));
       });
     }
     return list;
