@@ -10,8 +10,67 @@ import 'page_chat.dart';
 
 /// Liste temps réel de tous les pitchs publiés par les entrepreneurs.
 /// Accessible depuis les dashboards Mentor et Investisseur.
-class PublicPitchesPage extends StatelessWidget {
+/// Inclut une barre de recherche + filtres par secteur.
+class PublicPitchesPage extends StatefulWidget {
   const PublicPitchesPage({super.key});
+
+  @override
+  State<PublicPitchesPage> createState() => _PublicPitchesPageState();
+}
+
+class _PublicPitchesPageState extends State<PublicPitchesPage> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  String _selectedSector = 'Tous';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> _filter(List<Map<String, dynamic>> pitches) {
+    return pitches.where((p) {
+      final title = p['title']?.toString().toLowerCase() ?? '';
+      final sector = p['sector']?.toString() ?? '';
+      final userName = p['userName']?.toString().toLowerCase() ?? '';
+      final desc = p['description']?.toString().toLowerCase() ?? '';
+
+      // Filtre texte
+      final q = _query.toLowerCase().trim();
+      if (q.isNotEmpty &&
+          !title.contains(q) &&
+          !userName.contains(q) &&
+          !desc.contains(q) &&
+          !sector.toLowerCase().contains(q)) {
+        return false;
+      }
+
+      // Filtre secteur
+      if (_selectedSector != 'Tous' && sector != _selectedSector) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  /// Extrait la liste des secteurs présents dans les pitchs
+  List<String> _sectors(List<Map<String, dynamic>> pitches) {
+    final sectors = pitches
+        .map((p) => p['sector']?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return ['Tous', ...sectors];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,58 +104,154 @@ class PublicPitchesPage extends StatelessWidget {
             );
           }
 
-          final pitches = snapshot.data ?? [];
+          final allPitches = snapshot.data ?? [];
+          final sectors = _sectors(allPitches);
+          final filtered = _filter(allPitches);
+          final hasFilter = _query.isNotEmpty || _selectedSector != 'Tous';
 
-          if (pitches.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        color: AppColors.fieldBg,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.upload_file_rounded,
-                        color: AppColors.subtle,
-                        size: 38,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Aucun pitch publié',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Les pitchs des entrepreneurs apparaîtront ici dès qu\'ils sont publiés.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.muted,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
+          return Column(
+            children: [
+              // ── Barre de recherche ─────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                child: TextField(
+                  controller: _searchCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Titre, entrepreneur, secteur…',
+                    prefixIcon: const Icon(Icons.search_rounded,
+                        color: AppColors.subtle),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                color: AppColors.subtle),
+                            onPressed: () => _searchCtrl.clear(),
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
                 ),
               ),
-            );
-          }
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 90),
-            itemCount: pitches.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (_, i) => _PitchCard(pitch: pitches[i]),
+              // ── Pills secteur ──────────────────────────────
+              if (allPitches.isNotEmpty) ...[
+                SizedBox(
+                  height: 38,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: sectors.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) {
+                      final s = sectors[i];
+                      final selected = s == _selectedSector;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedSector = s),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? AppColors.amber
+                                : Colors.white,
+                            border: Border.all(
+                              color: selected
+                                  ? AppColors.amber
+                                  : AppColors.border,
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            s,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.navyDeep,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // ── Compteur + reset ───────────────────────────
+              if (allPitches.isNotEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${filtered.length} pitch${filtered.length > 1 ? 's' : ''}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (hasFilter)
+                        TextButton(
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _selectedSector = 'Tous');
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.blue,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Réinitialiser',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+              // ── Liste ─────────────────────────────────────
+              Expanded(
+                child: allPitches.isEmpty
+                    ? _EmptyState()
+                    : filtered.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.search_off_rounded,
+                                      size: 48, color: AppColors.subtle),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Aucun pitch ne correspond à ta recherche.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: AppColors.muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding:
+                                const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (_, i) =>
+                                _PitchCard(pitch: filtered[i]),
+                          ),
+              ),
+            ],
           );
         },
       ),
@@ -104,6 +259,53 @@ class PublicPitchesPage extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// État vide
+// ─────────────────────────────────────────────────────────────────
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: AppColors.fieldBg,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.upload_file_rounded,
+                  color: AppColors.subtle, size: 38),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Aucun pitch publié',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Les pitchs des entrepreneurs apparaîtront ici dès qu\'ils sont publiés.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte pitch
+// ─────────────────────────────────────────────────────────────────
 class _PitchCard extends StatelessWidget {
   final Map<String, dynamic> pitch;
   const _PitchCard({required this.pitch});
@@ -167,6 +369,8 @@ class _PitchCard extends StatelessWidget {
     final sector = pitch['sector']?.toString() ?? '';
     final description = pitch['description']?.toString() ?? '';
     final amount = pitch['amount']?.toString() ?? '';
+    final isInvestor =
+        UserProfileController.profile.value.role == 'Investisseur';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -209,18 +413,15 @@ class _PitchCard extends StatelessWidget {
                     ),
                     const Text(
                       'Entrepreneur',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 11.5, color: AppColors.muted),
                     ),
                   ],
                 ),
               ),
               if (sector.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(999),
@@ -238,7 +439,7 @@ class _PitchCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Titre du pitch
+          // Titre
           Text(
             title,
             style: const TextStyle(
@@ -256,43 +457,36 @@ class _PitchCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.muted,
-                height: 1.45,
-              ),
+                  fontSize: 13, color: AppColors.muted, height: 1.45),
             ),
           ],
 
-          // Besoin de financement
+          // Montant
           if (amount.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.green.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.green.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.payments_rounded,
+                      size: 13, color: AppColors.green),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$amount FCFA',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.green,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.payments_rounded,
-                          size: 13, color: AppColors.green),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$amount FCFA',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
 
@@ -309,15 +503,15 @@ class _PitchCard extends StatelessWidget {
                   const Icon(Icons.rocket_launch_rounded,
                       size: 14, color: AppColors.muted),
                   const SizedBox(width: 5),
-                  const Text(
-                    'Pitch publié · En attente de mentor',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.muted,
-                    ),
+                  Text(
+                    isInvestor
+                        ? 'Pitch · Opportunité d\'investissement'
+                        : 'Pitch publié · En attente de mentor',
+                    style: const TextStyle(
+                        fontSize: 11.5, color: AppColors.muted),
                   ),
                   const Spacer(),
-                  // Bouton Partager
+                  // Partager
                   IconButton(
                     onPressed: () => ShareService.sharePitch(
                       title: title,
@@ -328,11 +522,12 @@ class _PitchCard extends StatelessWidget {
                     ),
                     icon: const Icon(Icons.share_rounded, size: 18),
                     color: AppColors.muted,
-                    tooltip: 'Partager ce pitch',
+                    tooltip: 'Partager',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 8),
+                  // Contacter
                   TextButton(
                     onPressed: () {
                       final currentUid = AuthService.currentUid;
@@ -340,14 +535,16 @@ class _PitchCard extends StatelessWidget {
                       if (currentUid == null || otherUid.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Impossible de contacter cet entrepreneur.'),
+                            content:
+                                Text('Impossible de contacter cet entrepreneur.'),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
                         return;
                       }
-                      final convId = InteractionsService.generateConversationId(
-                          currentUid, otherUid);
+                      final convId =
+                          InteractionsService.generateConversationId(
+                              currentUid, otherUid);
                       Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => ChatPage(
                           conversationId: convId,
@@ -363,12 +560,15 @@ class _PitchCard extends StatelessWidget {
                     ),
                     child: const Text(
                       'Contacter  →',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                   ),
                 ],
               ),
-              if (UserProfileController.profile.value.role == 'Investisseur') ...[
+
+              // Bouton investissement (Investisseur uniquement)
+              if (isInvestor) ...[
                 const SizedBox(height: 8),
                 ElevatedButton.icon(
                   onPressed: () => _sendInvestmentRequest(context, pitch),
@@ -377,7 +577,8 @@ class _PitchCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.green,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
                   ),
                 ),
               ],
