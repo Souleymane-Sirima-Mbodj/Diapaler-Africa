@@ -274,49 +274,95 @@ class _StatsStrip extends StatelessWidget {
     final pitchsTotal = p.projects.length;
     final completed = p.projects.where((x) => x.isCompleted).length;
 
-    final String firstLabel;
-    final String thirdLabel;
-    if (p.role == 'Mentor') {
-      firstLabel = 'Projets';
-      thirdLabel = 'Mentorés';
-    } else if (p.role == 'Investisseur') {
-      firstLabel = 'Opportunités';
-      thirdLabel = 'Contacts';
-    } else {
-      firstLabel = 'Projets';
-      thirdLabel = 'Mentors';
-    }
+    // Labels et valeurs adaptés à chaque rôle
+    final List<_MiniStat> items;
 
-    final items = [
-      _MiniStat(
-          icon: Icons.workspace_premium_rounded,
-          color: AppColors.amber,
-          value: '$pitchsTotal',
-          label: firstLabel),
-      _MiniStat(
-          icon: Icons.check_circle_rounded,
-          color: AppColors.green,
-          value: '$completed',
-          label: p.role == 'Mentor' ? 'Sessions' : 'Terminés',
-          onTap: p.role == 'Mentor'
-              ? () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AgendaPage()),
-                  )
-              : null),
-      _MiniStat(
-          icon: Icons.handshake_rounded,
-          color: AppColors.blue,
-          value: '${p.mentorsActive}',
-          label: thirdLabel,
-          onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const RequestsPage()),
-              )),
-      _MiniStat(
-          icon: Icons.bookmark_rounded,
-          color: AppColors.red,
-          value: '${p.favoritesCount}',
-          label: 'Favoris'),
-    ];
+    if (p.role == 'Mentor') {
+      items = [
+        _MiniStat(
+            icon: Icons.school_rounded,
+            color: AppColors.roleMentor,
+            value: '${p.mentorsActive}',
+            label: 'Mentorés',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                )),
+        _MiniStat(
+            icon: Icons.calendar_month_rounded,
+            color: AppColors.blue,
+            value: '${p.sessionsCount}',
+            label: 'Sessions',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AgendaPage()),
+                )),
+        _MiniStat(
+            icon: Icons.workspace_premium_rounded,
+            color: AppColors.amber,
+            value: p.yearsExperience > 0 ? '${p.yearsExperience}' : '—',
+            label: 'Années expé.'),
+        _MiniStat(
+            icon: Icons.bookmark_rounded,
+            color: AppColors.red,
+            value: '${p.favoritesCount}',
+            label: 'Favoris'),
+      ];
+    } else if (p.role == 'Investisseur') {
+      items = [
+        _MiniStat(
+            icon: Icons.trending_up_rounded,
+            color: AppColors.blue,
+            value: '${p.mentorsActive}',
+            label: 'Contacts',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                )),
+        _MiniStat(
+            icon: Icons.rocket_launch_rounded,
+            color: AppColors.amber,
+            value: '${pitchsTotal}',
+            label: 'Pitchs vus'),
+        _MiniStat(
+            icon: Icons.bookmark_rounded,
+            color: AppColors.red,
+            value: '${p.favoritesCount}',
+            label: 'Favoris'),
+        _MiniStat(
+            icon: Icons.calendar_today_rounded,
+            color: AppColors.green,
+            value: '${p.sessionsCount}',
+            label: 'Rendez-vous',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AgendaPage()),
+                )),
+      ];
+    } else {
+      // Entrepreneur / Entrepreneure
+      items = [
+        _MiniStat(
+            icon: Icons.workspace_premium_rounded,
+            color: AppColors.amber,
+            value: '$pitchsTotal',
+            label: 'Projets'),
+        _MiniStat(
+            icon: Icons.check_circle_rounded,
+            color: AppColors.green,
+            value: '$completed',
+            label: 'Terminés'),
+        _MiniStat(
+            icon: Icons.handshake_rounded,
+            color: AppColors.blue,
+            value: '${p.mentorsActive}',
+            label: 'Mentors',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                )),
+        _MiniStat(
+            icon: Icons.bookmark_rounded,
+            color: AppColors.red,
+            value: '${p.favoritesCount}',
+            label: 'Favoris'),
+      ];
+    }
     return SizedBox(
       height: 74,
       child: Row(
