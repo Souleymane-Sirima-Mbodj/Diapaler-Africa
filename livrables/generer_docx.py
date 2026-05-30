@@ -27,8 +27,8 @@ MEMBRES = [
     "Mareme Tine",
 ]
 
-CLASSE      = "L3 Genie Informatique"    # <- modifier si besoin
-PROFESSEUR  = "[Nom du Professeur]"      # <- modifier si besoin
+CLASSE      = "L3GLSIB"                  # <- modifier si besoin
+PROFESSEUR  = "Mr Ndiaye"               # <- modifier si besoin
 DATE_REMISE = "24 mai 2026"
 
 LIVRABLES = [
