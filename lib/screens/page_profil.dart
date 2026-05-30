@@ -11,6 +11,7 @@ import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
 import 'page_choix_role.dart';
+import 'page_connexion.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
 import 'page_agenda.dart';
@@ -1710,7 +1711,7 @@ class _LogoutButton extends StatelessWidget {
       PageRouteBuilder(
         pageBuilder: (_, a, __) => FadeTransition(
           opacity: a,
-          child: const RoleSelectionPage(),
+          child: const LoginPage(),
         ),
         transitionDuration: const Duration(milliseconds: 350),
       ),
