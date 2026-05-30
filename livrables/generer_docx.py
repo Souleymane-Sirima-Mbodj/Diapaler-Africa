@@ -29,7 +29,7 @@ MEMBRES = [
 
 CLASSE      = "L3GLSIB"                  # <- modifier si besoin
 PROFESSEUR  = "Mr Ndiaye"               # <- modifier si besoin
-DATE_REMISE = "24 mai 2026"
+DATE_REMISE = "30 mai 2026"
 
 LIVRABLES = [
     (1, "Creation du projet Flutter, Interfaces, Navigation"),
