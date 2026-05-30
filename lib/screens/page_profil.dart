@@ -1221,8 +1221,8 @@ class _InteractionsSection extends StatelessWidget {
       buttons = [
         Expanded(
           child: _InteractionButton(
-            icon: Icons.mail_rounded,
-            label: 'Mes demandes',
+            icon: Icons.people_rounded,
+            label: 'Mes contacts',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const RequestsPage()),
             ),
