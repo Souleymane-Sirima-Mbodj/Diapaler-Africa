@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
@@ -111,6 +112,52 @@ class _PitchCard extends StatelessWidget {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  Future<void> _sendInvestmentRequest(
+      BuildContext context, Map<String, dynamic> pitch) async {
+    final currentUid = AuthService.currentUid;
+    final profile = UserProfileController.profile.value;
+    final toUserId = pitch['userId']?.toString() ?? '';
+    final toName = pitch['userName']?.toString() ?? 'Entrepreneur';
+
+    if (currentUid == null || toUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d\'envoyer la proposition.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await InteractionsService.sendMentorRequest(
+        fromUserId: currentUid,
+        toUserId: toUserId,
+        fromName: profile.fullName,
+        toName: toName,
+        message:
+            'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+        type: 'investment',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Proposition d\'investissement envoyée à $toName.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.green,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de l\'envoi de la proposition.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -254,68 +301,86 @@ class _PitchCard extends StatelessWidget {
           const SizedBox(height: 10),
 
           // Actions
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.rocket_launch_rounded,
-                  size: 14, color: AppColors.muted),
-              const SizedBox(width: 5),
-              const Text(
-                'Pitch publié · En attente de mentor',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.muted,
-                ),
-              ),
-              const Spacer(),
-              // Bouton Partager
-              IconButton(
-                onPressed: () => ShareService.sharePitch(
-                  title: title,
-                  sector: sector,
-                  description: description,
-                  authorName: userName,
-                  amount: amount.isNotEmpty ? amount : null,
-                ),
-                icon: const Icon(Icons.share_rounded, size: 18),
-                color: AppColors.muted,
-                tooltip: 'Partager ce pitch',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: () {
-                  final currentUid = AuthService.currentUid;
-                  final otherUid = pitch['userId']?.toString() ?? '';
-                  if (currentUid == null || otherUid.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Impossible de contacter cet entrepreneur.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
-                  final convId = InteractionsService.generateConversationId(
-                      currentUid, otherUid);
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ChatPage(
-                      conversationId: convId,
-                      otherUserName: userName,
-                      otherUserId: otherUid,
+              Row(
+                children: [
+                  const Icon(Icons.rocket_launch_rounded,
+                      size: 14, color: AppColors.muted),
+                  const SizedBox(width: 5),
+                  const Text(
+                    'Pitch publié · En attente de mentor',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
                     ),
-                  ));
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.navy,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                ),
-                child: const Text(
-                  'Contacter  →',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
+                  ),
+                  const Spacer(),
+                  // Bouton Partager
+                  IconButton(
+                    onPressed: () => ShareService.sharePitch(
+                      title: title,
+                      sector: sector,
+                      description: description,
+                      authorName: userName,
+                      amount: amount.isNotEmpty ? amount : null,
+                    ),
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    color: AppColors.muted,
+                    tooltip: 'Partager ce pitch',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () {
+                      final currentUid = AuthService.currentUid;
+                      final otherUid = pitch['userId']?.toString() ?? '';
+                      if (currentUid == null || otherUid.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Impossible de contacter cet entrepreneur.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+                      final convId = InteractionsService.generateConversationId(
+                          currentUid, otherUid);
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ChatPage(
+                          conversationId: convId,
+                          otherUserName: userName,
+                          otherUserId: otherUid,
+                        ),
+                      ));
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                    ),
+                    child: const Text(
+                      'Contacter  →',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
+              if (UserProfileController.profile.value.role == 'Investisseur') ...[
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _sendInvestmentRequest(context, pitch),
+                  icon: const Icon(Icons.monetization_on_rounded, size: 16),
+                  label: const Text('Proposer un investissement'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
             ],
           ),
         ],

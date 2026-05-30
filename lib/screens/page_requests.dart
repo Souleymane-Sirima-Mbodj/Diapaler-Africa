@@ -13,6 +13,43 @@ class RequestsPage extends StatefulWidget {
 }
 
 class _RequestsPageState extends State<RequestsPage> {
+  /// Construit les widgets d'une section (pending en premier, puis traitées).
+  List<Widget> _buildSection(List<MentorRequest> items) {
+    final pending = items.where((r) => r.status == RequestStatus.pending).toList();
+    final processed = items.where((r) => r.status != RequestStatus.pending).toList();
+    return [
+      if (pending.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Text(
+            'En attente (${pending.length})',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.amber,
+            ),
+          ),
+        ),
+        ...pending.map((r) => _RequestCard(request: r)),
+      ],
+      if (processed.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Text(
+            'Traitées',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
+        ...processed.map((r) => _RequestCard(request: r)),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = AuthService.currentUid ?? '';
@@ -23,7 +60,7 @@ class _RequestsPageState extends State<RequestsPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
-          'Demandes de mentorat',
+          'Demandes reçues',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -48,8 +85,12 @@ class _RequestsPageState extends State<RequestsPage> {
           }
 
           final requests = snapshot.data ?? [];
-          final pending = requests.where((r) => r.status == RequestStatus.pending).toList();
-          final processed = requests.where((r) => r.status != RequestStatus.pending).toList();
+
+          // Sépare par type
+          final mentorRequests =
+              requests.where((r) => r.type == 'mentor').toList();
+          final investmentRequests =
+              requests.where((r) => r.type == 'investment').toList();
 
           if (requests.isEmpty) {
             return const Center(
@@ -78,34 +119,36 @@ class _RequestsPageState extends State<RequestsPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
             children: [
-              if (pending.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+              // ── Section mentorat ──
+              if (mentorRequests.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
                   child: Text(
-                    'En attente (${pending.length})',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                    'Demandes de mentorat',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
                       color: AppColors.navyDeep,
                     ),
                   ),
                 ),
-                ...pending.map((r) => _RequestCard(request: r)),
+                ..._buildSection(mentorRequests),
               ],
-              if (processed.isNotEmpty) ...[
+              // ── Section investissement ──
+              if (investmentRequests.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(8, 8, 8, 12),
+                  padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
                   child: Text(
-                    'Traitées',
+                    'Propositions d\'investissement',
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.muted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.navyDeep,
                     ),
                   ),
                 ),
-                ...processed.map((r) => _RequestCard(request: r)),
+                ..._buildSection(investmentRequests),
               ],
             ],
           );
@@ -146,6 +189,18 @@ class _RequestCard extends StatelessWidget {
     }
   }
 
+  IconData get _typeIcon => request.type == 'investment'
+      ? Icons.monetization_on_rounded
+      : Icons.person_add_rounded;
+
+  Color get _typeColor => request.type == 'investment'
+      ? AppColors.green
+      : AppColors.amber;
+
+  String get _typeSubtitle => request.type == 'investment'
+      ? 'propose un investissement'
+      : 'souhaite être ton mentor';
+
   @override
   Widget build(BuildContext context) {
     final isPending = request.status == RequestStatus.pending;
@@ -157,7 +212,7 @@ class _RequestCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isPending ? AppColors.amber.withValues(alpha: 0.3) : AppColors.border,
+          color: isPending ? _typeColor.withValues(alpha: 0.3) : AppColors.border,
         ),
       ),
       child: Column(
@@ -165,8 +220,7 @@ class _RequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.person_add_rounded,
-                  color: AppColors.amber, size: 20),
+              Icon(_typeIcon, color: _typeColor, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -180,7 +234,16 @@ class _RequestCard extends StatelessWidget {
                         color: AppColors.navyDeep,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
+                    Text(
+                      _typeSubtitle,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: _typeColor,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
                     Text(
                       'Il y a ${_formatTime(request.createdAt)}',
                       style: const TextStyle(
@@ -254,11 +317,13 @@ class _RequestCard extends StatelessWidget {
 
   Future<void> _acceptRequest(BuildContext context) async {
     await InteractionsService.acceptRequest(request.id);
-    // Prévient le demandeur que sa demande a été acceptée.
+    final label = request.type == 'investment'
+        ? 'proposition d\'investissement'
+        : 'demande de mentorat';
     await NotificationService.notifyUser(
       uid: request.fromUserId,
       title: 'Demande acceptée',
-      message: '${request.toName} a accepté ta demande de mentorat.',
+      message: '${request.toName} a accepté ta $label.',
       type: 'mentor_request_accepted',
     );
     if (!context.mounted) return;
@@ -269,11 +334,13 @@ class _RequestCard extends StatelessWidget {
 
   Future<void> _rejectRequest(BuildContext context) async {
     await InteractionsService.rejectRequest(request.id);
-    // Prévient le demandeur du refus.
+    final label = request.type == 'investment'
+        ? 'proposition d\'investissement'
+        : 'demande de mentorat';
     await NotificationService.notifyUser(
       uid: request.fromUserId,
       title: 'Demande refusée',
-      message: '${request.toName} a décliné ta demande de mentorat.',
+      message: '${request.toName} a décliné ta $label.',
       type: 'mentor_request_rejected',
     );
     if (!context.mounted) return;

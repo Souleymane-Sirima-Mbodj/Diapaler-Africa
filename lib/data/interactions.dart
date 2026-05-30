@@ -114,6 +114,8 @@ class MentorRequest {
   final DateTime createdAt;
   final RequestStatus status;
   final String? respondedAt;
+  /// Type de la demande : 'mentor' (mentorat) ou 'investment' (investissement).
+  final String type;
 
   const MentorRequest({
     required this.id,
@@ -125,6 +127,7 @@ class MentorRequest {
     required this.createdAt,
     required this.status,
     this.respondedAt,
+    this.type = 'mentor',
   });
 
   Map<String, dynamic> toJson() => {
@@ -137,6 +140,7 @@ class MentorRequest {
     'createdAt': createdAt.toIso8601String(),
     'status': status.name,
     'respondedAt': respondedAt,
+    'type': type,
   };
 
   factory MentorRequest.fromJson(Map<String, dynamic> json) => MentorRequest(
@@ -149,6 +153,7 @@ class MentorRequest {
     createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
     status: RequestStatus.values.byName(json['status']?.toString() ?? 'pending'),
     respondedAt: json['respondedAt']?.toString(),
+    type: json['type']?.toString() ?? 'mentor',
   );
 }
 

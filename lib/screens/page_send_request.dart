@@ -49,23 +49,31 @@ class _SendRequestPageState extends State<SendRequestPage> {
       final toId = widget.mentor.uid.isNotEmpty
           ? widget.mentor.uid
           : widget.mentor.name;
+      final requestType = widget.mentor.isInvestor ? 'investment' : 'mentor';
       await InteractionsService.sendMentorRequest(
         fromUserId: uid,
         toUserId: toId,
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,
         message: _messageCtrl.text,
+        type: requestType,
       );
+      final notifLabel = widget.mentor.isInvestor
+          ? 'proposition d\'investissement'
+          : 'demande de mentorat';
       NotificationService.addNotification(
         title: 'Demande envoyée',
-        message: 'Ta demande de mentorat à ${widget.mentor.name} a bien été transmise.',
+        message: 'Ta $notifLabel à ${widget.mentor.name} a bien été transmise.',
         type: 'mentor_request',
       );
       // Notif côté destinataire si c'est un vrai membre.
       if (widget.mentor.uid.isNotEmpty) {
+        final notifTitle = widget.mentor.isInvestor
+            ? 'Nouvelle proposition d\'investissement'
+            : 'Nouvelle demande de mentorat';
         await NotificationService.notifyUser(
           uid: widget.mentor.uid,
-          title: 'Nouvelle demande de mentorat',
+          title: notifTitle,
           message: '${currentProfile.fullName} souhaite te contacter — "${_messageCtrl.text}"',
           type: 'mentor_request',
         );
@@ -92,9 +100,11 @@ class _SendRequestPageState extends State<SendRequestPage> {
         backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'Demander du mentorat',
-          style: TextStyle(
+        title: Text(
+          widget.mentor.isInvestor
+              ? 'Proposer un investissement'
+              : 'Demander du mentorat',
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
             color: AppColors.navyDeep,
@@ -177,7 +187,9 @@ class _SendRequestPageState extends State<SendRequestPage> {
             maxLines: 5,
             maxLength: 500,
             decoration: InputDecoration(
-              hintText: 'Explique pourquoi tu cherches du mentorat, tes objectifs...',
+              hintText: widget.mentor.isInvestor
+                  ? 'Présente ton projet et le type d\'investissement que tu recherches…'
+                  : 'Explique pourquoi tu cherches du mentorat, tes objectifs...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

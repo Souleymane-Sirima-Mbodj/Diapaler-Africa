@@ -7,6 +7,26 @@ import '../services/service_utilisateurs.dart';
 import '../theme/theme_app.dart';
 import '../widgets/carte_mentor.dart';
 
+/// Retourne le titre de la page selon le rôle de l'utilisateur courant.
+String _matchingTitle(String role) {
+  switch (role) {
+    case 'Mentor':
+      return 'Mes Entrepreneurs';
+    case 'Investisseur':
+      return 'Entrepreneurs à financer';
+    default:
+      return 'Mentors & Investisseurs';
+  }
+}
+
+/// Retourne les pills de filtre rôle selon le rôle de l'utilisateur courant.
+List<String> _rolePills(String role) {
+  if (role == 'Mentor' || role == 'Investisseur') {
+    return ['Tous', 'Entrepreneur'];
+  }
+  return ['Tous', 'Mentor', 'Investisseur'];
+}
+
 class MatchingPage extends StatefulWidget {
   const MatchingPage({super.key});
 
@@ -183,7 +203,7 @@ class _MatchingPageState extends State<MatchingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mentors & Investisseurs'),
+        title: Text(_matchingTitle(UserProfileController.profile.value.role)),
         actions: [
           if (hasFilter)
             TextButton(
@@ -266,7 +286,7 @@ class _MatchingPageState extends State<MatchingPage> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Row(
               children: [
-                for (final r in ['Tous', 'Mentor', 'Investisseur'])
+                for (final r in _rolePills(UserProfileController.profile.value.role))
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
