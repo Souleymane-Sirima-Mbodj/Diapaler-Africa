@@ -311,7 +311,7 @@ class _PitchPageState extends State<PitchPage> {
         _FieldLabel('Secteur d\'activité', required: true),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _sector,
+          initialValue: _sector,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
               color: AppColors.subtle),
