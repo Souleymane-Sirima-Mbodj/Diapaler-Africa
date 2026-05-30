@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../screens/page_profil.dart';
-import '../screens/page_choix_role.dart';
 import '../screens/page_connexion.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
