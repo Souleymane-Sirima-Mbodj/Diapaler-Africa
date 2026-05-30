@@ -17,6 +17,8 @@ class Mentor {
   final String bio;
   /// UID Firebase — vide pour les mentors statiques, rempli pour les membres réels.
   final String uid;
+  /// Photo base64 — vide pour les mentors statiques, rempli pour les membres Firebase.
+  final String photoBase64;
 
   const Mentor({
     required this.initials,
@@ -34,6 +36,7 @@ class Mentor {
     this.gender = Gender.undisclosed,
     this.bio = '',
     this.uid = '',
+    this.photoBase64 = '',
   });
 
   bool get isInvestor => role == 'Investisseur';
