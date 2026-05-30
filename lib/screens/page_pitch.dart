@@ -3,9 +3,10 @@ import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
+import '../services/service_navigation.dart';
 import '../theme/theme_app.dart';
 
-/// Stepper 3 étapes pour déposer un pitch (correspond à l'Écran 8 du doc).
+/// Stepper 3 étapes pour déposer un pitch.
 class PitchPage extends StatefulWidget {
   const PitchPage({super.key});
 
@@ -27,8 +28,32 @@ class _PitchPageState extends State<PitchPage> {
   static const _steps = [
     ('Informations', 'Présente ton projet en quelques mots'),
     ('Détails', 'Secteur, description, ambition'),
-    ('Documents', 'Pitch deck, vidéo, besoin de financement'),
+    ('Financement', 'Besoin de financement et informations complémentaires'),
   ];
+
+  // ── Validations par étape ──────────────────────────────────────
+  bool get _step0Valid => _title.text.trim().length >= 3;
+  bool get _step1Valid =>
+      _sector != null && _detailDescription.text.trim().length >= 20;
+  bool get _step2Valid => true; // Montant optionnel
+
+  bool get _currentStepValid {
+    switch (_step) {
+      case 0: return _step0Valid;
+      case 1: return _step1Valid;
+      case 2: return _step2Valid;
+      default: return false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild sur chaque frappe pour activer/désactiver le bouton
+    for (final c in [_title, _description, _detailDescription, _amount]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
 
   @override
   void dispose() {
@@ -40,31 +65,35 @@ class _PitchPageState extends State<PitchPage> {
   }
 
   Future<void> _next() async {
+    // Validation obligatoire avant de passer à l'étape suivante
+    if (!_currentStepValid) return;
+
     if (_step < _total - 1) {
       setState(() => _step++);
       return;
     }
-    // Dernière étape → sauvegarde réelle
+
+    // Dernière étape → publication
     setState(() => _loading = true);
     try {
       final profile = UserProfileController.profile.value;
       final uid = AuthService.currentUid;
-      final title =
-          _title.text.trim().isEmpty ? 'Mon Pitch' : _title.text.trim();
+      final title = _title.text.trim();
       final detail = _detailDescription.text.trim();
-      final description = [_description.text.trim(), detail]
+      final summary = _description.text.trim();
+      final description = [summary, detail]
           .where((s) => s.isNotEmpty)
           .join('\n\n');
       final sector = _sector ?? profile.sector;
 
-      // 1. Ajoute au profil de l'entrepreneur comme projet
+      // 1. Ajoute au profil de l'entrepreneur comme projet (3 étapes = pitch process)
       final project = Project(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: title,
         description: description,
         sector: sector,
         step: 1,
-        totalSteps: 5,
+        totalSteps: 3, // 3 étapes : Idée → En cours → Lancé
       );
       final updated = profile.copyWith(
         projects: [...profile.projects, project],
@@ -85,19 +114,26 @@ class _PitchPageState extends State<PitchPage> {
       );
 
       if (!mounted) return;
+
+      // 3. Navigue vers l'onglet Profil pour que l'entrepreneur voit son projet
+      appTabIndex.value = 4;
       Navigator.of(context).pop();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🎉 Pitch publié ! Visible auprès des mentors et investisseurs.'),
+          content: Text(
+            '🎉 Pitch publié ! Retrouve-le dans ton profil → Mes projets.',
+          ),
           backgroundColor: AppColors.green,
           behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 4),
         ),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erreur lors de la publication. Réessaie.'),
+        SnackBar(
+          content: Text('Erreur lors de la publication : $e'),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -136,36 +172,80 @@ class _PitchPageState extends State<PitchPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _next,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                children: [
+                  // Indicateur si le bouton est désactivé
+                  if (!_currentStepValid && _step < 2)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded,
+                              size: 14, color: AppColors.muted),
+                          const SizedBox(width: 6),
+                          Text(
+                            _stepHint(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
                           ),
-                        )
-                      : Text(
-                          _step == _total - 1 ? 'PUBLIER MON PITCH' : 'CONTINUER',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
-                            fontSize: 14,
-                          ),
-                        ),
-                ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: (_loading || !_currentStepValid) ? null : _next,
+                      style: ElevatedButton.styleFrom(
+                        disabledBackgroundColor:
+                            AppColors.navy.withValues(alpha: 0.35),
+                        disabledForegroundColor: Colors.white,
+                      ),
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              _step == _total - 1
+                                  ? 'PUBLIER MON PITCH'
+                                  : 'CONTINUER',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.5,
+                                fontSize: 14,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _stepHint() {
+    switch (_step) {
+      case 0:
+        return _title.text.trim().isEmpty
+            ? 'Remplis le titre de ton projet pour continuer.'
+            : 'Titre trop court (3 caractères minimum).';
+      case 1:
+        if (_sector == null) return 'Choisis un secteur d\'activité.';
+        return 'Description trop courte (20 caractères minimum).';
+      default:
+        return '';
+    }
   }
 
   Widget _buildStep() {
@@ -177,10 +257,7 @@ class _PitchPageState extends State<PitchPage> {
           const SizedBox(height: 8),
           Text(
             _steps[_step].$2,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.muted,
-            ),
+            style: const TextStyle(fontSize: 14, color: AppColors.muted),
           ),
           const SizedBox(height: 22),
           if (_step == 0) ..._step1(),
@@ -191,33 +268,50 @@ class _PitchPageState extends State<PitchPage> {
     );
   }
 
+  // ── ÉTAPE 1 — Titre + Elevator pitch ──────────────────────────
   List<Widget> _step1() => [
-        const _Label('Titre du projet'),
+        _FieldLabel('Titre du projet', required: true),
         const SizedBox(height: 6),
         TextField(
           controller: _title,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Ex. Téranga Mode',
-            prefixIcon: Icon(Icons.title_rounded, color: AppColors.subtle),
+            prefixIcon:
+                const Icon(Icons.title_rounded, color: AppColors.subtle),
+            suffixIcon: _title.text.isNotEmpty
+                ? Icon(
+                    _step0Valid
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                    color: _step0Valid ? AppColors.green : AppColors.red,
+                    size: 20,
+                  )
+                : null,
           ),
         ),
         const SizedBox(height: 16),
-        const _Label('Mon élévator pitch (1 phrase)'),
+        _FieldLabel('Mon élévator pitch', required: false),
+        const SizedBox(height: 4),
+        const Text(
+          'Décris ton projet en 1-2 phrases : ce que tu fais, pour qui, et pourquoi.',
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: _description,
           maxLines: 3,
           decoration: const InputDecoration(
-            hintText: 'Ce que tu fais, pour qui, et pourquoi.',
+            hintText: 'Ex. Je crée une plateforme de mode africaine pour valoriser le tissu sénégalais.',
           ),
         ),
       ];
 
+  // ── ÉTAPE 2 — Secteur + Description détaillée ─────────────────
   List<Widget> _step2() => [
-        const _Label('Secteur d\'activité'),
+        _FieldLabel('Secteur d\'activité', required: true),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _sector,
+          value: _sector,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
               color: AppColors.subtle),
@@ -241,51 +335,143 @@ class _PitchPageState extends State<PitchPage> {
           onChanged: (v) => setState(() => _sector = v),
         ),
         const SizedBox(height: 16),
-        const _Label('Description détaillée'),
+        _FieldLabel('Description détaillée', required: true),
+        const SizedBox(height: 4),
+        const Text(
+          'Marché cible, équipe, traction, vision à 3 ans…',
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: _detailDescription,
-          maxLines: 6,
+          maxLines: 8,
+          maxLength: 500,
           decoration: const InputDecoration(
-            hintText: 'Marché, équipe, traction, vision…',
+            hintText: 'Décris ton projet en détail…',
           ),
         ),
       ];
 
+  // ── ÉTAPE 3 — Financement ─────────────────────────────────────
   List<Widget> _step3() => [
-        const _Label('Besoin de financement (FCFA)'),
+        _FieldLabel('Besoin de financement (FCFA)', required: false),
+        const SizedBox(height: 4),
+        const Text(
+          'Montant recherché pour développer ton projet (optionnel).',
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             hintText: '5 000 000',
-            prefixIcon:
-                Icon(Icons.payments_rounded, color: AppColors.subtle),
+            prefixIcon: Icon(Icons.payments_rounded, color: AppColors.subtle),
+            suffixText: 'FCFA',
           ),
         ),
-        const SizedBox(height: 18),
-        const _UploadTile(
-          icon: Icons.picture_as_pdf_rounded,
-          label: 'Pitch deck (PDF)',
-          subtitle: 'Glisse ton fichier ou tape pour parcourir',
-          color: AppColors.red,
+        const SizedBox(height: 24),
+        // Info sur la visibilité
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.green.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.green.withValues(alpha: 0.3),
+            ),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.visibility_rounded,
+                  color: AppColors.green, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Qui verra ton pitch ?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Tous les mentors et investisseurs inscrits sur DIAPALER AFRICA pourront consulter ton pitch et te contacter directement.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 10),
-        const _UploadTile(
-          icon: Icons.videocam_rounded,
-          label: 'Vidéo de présentation (optionnel)',
-          subtitle: '1 minute max · MP4',
-          color: AppColors.blue,
+        const SizedBox(height: 14),
+        // Info sur le projet dans profil
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.amber.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.amber.withValues(alpha: 0.3),
+            ),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.person_rounded, color: AppColors.amber, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dans ton profil',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Ton projet sera ajouté à ton profil dans l\'onglet "Profil" → section "Mes projets".',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ];
 }
 
-class _Label extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────
+// Label de champ
+// ─────────────────────────────────────────────────────────────────
+class _FieldLabel extends StatelessWidget {
   final String text;
-  const _Label(this.text);
+  final bool required;
+  const _FieldLabel(this.text, {this.required = false});
+
   @override
-  Widget build(BuildContext context) => Text(
+  Widget build(BuildContext context) {
+    if (!required) {
+      return Text(
         text,
         style: const TextStyle(
           fontSize: 13,
@@ -293,8 +479,29 @@ class _Label extends StatelessWidget {
           color: AppColors.navyDeep,
         ),
       );
+    }
+    return RichText(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppColors.navyDeep,
+        ),
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(color: AppColors.red),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Barre de progression
+// ─────────────────────────────────────────────────────────────────
 class _StepBar extends StatelessWidget {
   final int step;
   final int total;
@@ -323,138 +530,4 @@ class _StepBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _UploadTile extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final Color color;
-  const _UploadTile({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.color,
-  });
-
-  @override
-  State<_UploadTile> createState() => _UploadTileState();
-}
-
-class _UploadTileState extends State<_UploadTile> {
-  bool _selected = false;
-
-  Widget _content() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: widget.color.withValues(alpha: _selected ? 0.2 : 0.13),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              _selected ? Icons.check_circle_rounded : widget.icon,
-              color: widget.color,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _selected ? 'Fichier ajouté ✓' : widget.subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _selected ? widget.color : AppColors.muted,
-                    fontWeight:
-                        _selected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            _selected ? Icons.check_rounded : Icons.add_rounded,
-            color: _selected ? widget.color : AppColors.muted,
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => setState(() => _selected = !_selected),
-      child: _selected
-          ? Container(
-              decoration: BoxDecoration(
-                color: widget.color.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: widget.color, width: 1.5),
-              ),
-              child: _content(),
-            )
-          : DottedBorder(child: _content()),
-    );
-  }
-}
-
-class DottedBorder extends StatelessWidget {
-  final Widget child;
-  const DottedBorder({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DottedPainter(),
-      child: child,
-    );
-  }
-}
-
-class _DottedPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-          Offset.zero & size, const Radius.circular(12)));
-    final dashed = Path();
-    const dashWidth = 6.0;
-    const dashGap = 4.0;
-    for (final metric in path.computeMetrics()) {
-      double dist = 0;
-      while (dist < metric.length) {
-        dashed.addPath(
-          metric.extractPath(dist, dist + dashWidth),
-          Offset.zero,
-        );
-        dist += dashWidth + dashGap;
-      }
-    }
-    canvas.drawPath(dashed, paint);
-  }
-
-  @override
-  bool shouldRepaint(_DottedPainter old) => false;
 }
