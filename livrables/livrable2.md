@@ -1012,4 +1012,4 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 | Sérialisation JSON | `_toMap()` / `_fromMap()` avec cast sécurisé | ✅ |
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
 | Découverte membres | `UsersService.listMembers()` | ✅ (bonus) |
-| Chatbot IA | API Meta Llama 3.1 via Groq via HTTP REST | ✅ (bonus) |
+| Chatbot IA | Llama 3.1 8B via Groq — HTTP REST + proxy Cloudflare | ✅ (bonus) |
