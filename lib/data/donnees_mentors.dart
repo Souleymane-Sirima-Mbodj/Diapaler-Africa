@@ -1,3 +1,5 @@
+import 'profil_utilisateur.dart';
+
 class Mentor {
   final String initials;
   final String name;
@@ -11,13 +13,10 @@ class Mentor {
   final int compatibility;
   final bool cis;
   final String role; // 'Mentor' ou 'Investisseur'
-
-  /// UID Firebase si ce mentor est un vrai utilisateur inscrit via SignUpPage.
-  /// Vide pour les mentors statiques de la liste de demo.
+  final Gender gender;
+  final String bio;
+  /// UID Firebase — vide pour les mentors statiques, rempli pour les membres réels.
   final String uid;
-
-  /// Photo de profil encodée en base64 (mentors inscrits seulement).
-  final String photoBase64;
 
   const Mentor({
     required this.initials,
@@ -32,8 +31,9 @@ class Mentor {
     required this.compatibility,
     this.cis = false,
     this.role = 'Mentor',
+    this.gender = Gender.undisclosed,
+    this.bio = '',
     this.uid = '',
-    this.photoBase64 = '',
   });
 
   bool get isInvestor => role == 'Investisseur';

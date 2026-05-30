@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import '../data/donnees_mentors.dart';
 import '../data/interactions.dart';
-import '../services/service_authentification.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_interactions.dart';
-import '../services/service_navigation.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
 import 'page_chat.dart';
+import 'page_detail_mentor.dart';
 
 // ─────────────────────────────────────────────────────────────────
 // Onglet Messages — liste Firebase des conversations en temps réel.
@@ -21,19 +22,6 @@ class MessagesPage extends StatefulWidget {
 
 class _MessagesPageState extends State<MessagesPage> {
   String _search = '';
-  late final Stream<List<Conversation>> _stream;
-
-  @override
-  void initState() {
-    super.initState();
-    final uid = AuthService.currentUid ?? '';
-    _stream = InteractionsService.getConversations(uid).map((convs) {
-      // Met à jour le badge de la barre de navigation dès que le stream émet.
-      unreadMessagesCount.value =
-          convs.fold<int>(0, (sum, c) => sum + c.unreadCount);
-      return convs;
-    });
-  }
 
   static const _colors = <Color>[
     AppColors.amber,
@@ -71,12 +59,12 @@ class _MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = AuthService.currentUid ?? '';
+    final currentEmail = UserProfileController.profile.value.email;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: StreamBuilder<List<Conversation>>(
-        stream: _stream,
+        stream: InteractionsService.getConversations(currentEmail),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -95,7 +83,7 @@ class _MessagesPageState extends State<MessagesPage> {
           final filtered = _search.isEmpty
               ? all
               : all.where((c) {
-                  final otherName = c.user1Id == currentUid
+                  final otherName = c.user1Id == currentEmail
                       ? c.user2Name
                       : c.user1Name;
                   return otherName
@@ -103,8 +91,10 @@ class _MessagesPageState extends State<MessagesPage> {
                       .contains(_search.toLowerCase());
                 }).toList();
 
-          final unreadTotal =
-              all.fold<int>(0, (sum, c) => sum + c.unreadCount);
+          final currentUid = UserProfileController.profile.value.email;
+          final unreadTotal = all
+              .where((c) => c.lastSenderId != currentUid)
+              .fold<int>(0, (sum, c) => sum + c.unreadCount);
 
           return Column(
             children: [
@@ -155,10 +145,10 @@ class _MessagesPageState extends State<MessagesPage> {
                             const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final conv = filtered[i];
-                          final otherName = conv.user1Id == currentUid
+                          final otherName = conv.user1Id == currentEmail
                               ? conv.user2Name
                               : conv.user1Name;
-                          final otherId = conv.user1Id == currentUid
+                          final otherId = conv.user1Id == currentEmail
                               ? conv.user2Id
                               : conv.user1Id;
                           final unread = conv.unreadCount > 0;
@@ -176,10 +166,32 @@ class _MessagesPageState extends State<MessagesPage> {
                             ),
                             child: Row(
                               children: [
-                                Avatar(
-                                  initials: _initials(otherName),
-                                  size: 50,
-                                  background: _colorFor(i),
+                                GestureDetector(
+                                  onLongPress: () {
+                                    // Cherche le mentor dans la liste statique
+                                    final found = mentors.where(
+                                      (m) => m.name == otherName || m.uid == otherId,
+                                    );
+                                    if (found.isNotEmpty) {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => MentorDetailPage(mentor: found.first),
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Profil de $otherName non disponible.'),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Avatar(
+                                    initials: _initials(otherName),
+                                    size: 50,
+                                    background: _colorFor(i),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

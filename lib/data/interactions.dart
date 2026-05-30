@@ -203,6 +203,9 @@ class Conversation {
   final String lastMessage;
   final DateTime lastMessageTime;
   final int unreadCount;
+  /// Identifiant de l'expéditeur du dernier message, pour éviter de
+  /// comptabiliser ses propres messages comme "non lus".
+  final String lastSenderId;
 
   const Conversation({
     required this.id,
@@ -213,6 +216,7 @@ class Conversation {
     required this.lastMessage,
     required this.lastMessageTime,
     required this.unreadCount,
+    this.lastSenderId = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -224,6 +228,7 @@ class Conversation {
     'lastMessage': lastMessage,
     'lastMessageTime': lastMessageTime.toIso8601String(),
     'unreadCount': unreadCount,
+    'lastSenderId': lastSenderId,
   };
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
@@ -235,5 +240,6 @@ class Conversation {
     lastMessage: json['lastMessage']?.toString() ?? '',
     lastMessageTime: DateTime.tryParse(json['lastMessageTime']?.toString() ?? '') ?? DateTime.now(),
     unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+    lastSenderId: json['lastSenderId']?.toString() ?? '',
   );
 }

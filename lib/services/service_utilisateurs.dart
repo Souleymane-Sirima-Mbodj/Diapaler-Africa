@@ -1,71 +1,55 @@
 import 'package:firebase_database/firebase_database.dart';
-
 import '../data/donnees_mentors.dart';
-import 'service_authentification.dart';
+import '../data/profil_utilisateur.dart';
 
-/// Service de découverte des utilisateurs inscrits.
-///
-/// Lit `users/` dans Firebase Realtime Database et expose les profils sous
-/// forme de [Mentor] (pour réutiliser directement [MentorCard] et
-/// [MentorDetailPage]). Seuls les rôles Mentor et Investisseur sont retournés,
-/// et l'utilisateur courant est exclu.
+/// Service de lecture des membres inscrits depuis Firebase Realtime Database.
 class UsersService {
-  static FirebaseDatabase get _db => FirebaseDatabase.instance;
+  static final _db = FirebaseDatabase.instance.ref();
 
-  /// Récupère la liste des membres DIAPALER (mentors + investisseurs)
-  /// inscrits via SignUpPage. L'utilisateur courant est exclu.
+  /// Retourne la liste des membres (Mentors / Investisseurs) enregistrés dans
+  /// Firebase sous le nœud `users/`. Chaque entrée est convertie en [Mentor]
+  /// pour être affichée dans l'interface.
   static Future<List<Mentor>> listMembers() async {
-    final snap = await _db.ref('users').get();
+    final snap = await _db.child('users').get();
     if (!snap.exists || snap.value == null) return [];
-    final map = Map<String, dynamic>.from(snap.value as Map);
-    final currentUid = AuthService.currentUid;
-
-    final members = <Mentor>[];
-    for (final entry in map.entries) {
+    final data = Map<String, dynamic>.from(snap.value as Map);
+    final result = <Mentor>[];
+    for (final entry in data.entries) {
       final uid = entry.key;
-      if (uid == currentUid) continue;
-      final raw = entry.value;
-      if (raw is! Map) continue;
-      final m = Map<String, dynamic>.from(raw);
-      final role = (m['role']?.toString() ?? '').trim();
+      final m = Map<String, dynamic>.from(entry.value as Map);
+      final role = m['role']?.toString() ?? 'Mentor';
       if (role != 'Mentor' && role != 'Investisseur') continue;
-
-      final firstName = m['firstName']?.toString() ?? '';
-      final lastName = m['lastName']?.toString() ?? '';
-      final fullName = '$firstName $lastName'.trim();
-      if (fullName.isEmpty) continue;
-
-      final interests = <String>[];
-      final rawInterests = m['interests'];
-      if (rawInterests is List) {
-        for (final v in rawInterests) {
-          interests.add(v.toString());
+      final rawSectors = m['interests'] ?? m['sectors'];
+      final sectors = <String>[];
+      if (rawSectors is List) {
+        for (final s in rawSectors) {
+          sectors.add(s.toString());
         }
       }
-
-      members.add(Mentor(
+      result.add(Mentor(
         uid: uid,
-        initials: _initialsOf(firstName, lastName),
-        name: fullName,
-        title: m['bio']?.toString().split('\n').first ?? role,
+        initials: _initials(m['firstName']?.toString() ?? '',
+            m['lastName']?.toString() ?? ''),
+        name: '${m['firstName'] ?? ''} ${m['lastName'] ?? ''}'.trim(),
+        title: m['sector']?.toString() ?? '',
         city: m['city']?.toString() ?? 'Dakar',
-        sectors: interests.isEmpty ? const ['Autre'] : interests,
+        sectors: sectors,
         companies: const [],
-        rating: 0,
+        rating: (m['score'] as num?)?.toDouble() ?? 0.0,
         reviews: 0,
-        years: 0,
-        compatibility: 80, // Score par défaut pour un membre vérifié.
+        years: (m['yearsExperience'] as num?)?.toInt() ?? 0,
+        compatibility: 0,
+        gender: Gender.fromString(m['gender']?.toString()),
+        bio: m['bio']?.toString() ?? '',
         role: role,
-        photoBase64: m['photoBase64']?.toString() ?? '',
       ));
     }
-    return members;
+    return result;
   }
 
-  static String _initialsOf(String first, String last) {
-    final a = first.isNotEmpty ? first[0] : '';
-    final b = last.isNotEmpty ? last[0] : '';
-    final res = (a + b).toUpperCase();
-    return res.isEmpty ? '?' : res;
+  static String _initials(String firstName, String lastName) {
+    final f = firstName.isNotEmpty ? firstName[0] : '';
+    final l = lastName.isNotEmpty ? lastName[0] : '';
+    return (f + l).toUpperCase();
   }
 }
