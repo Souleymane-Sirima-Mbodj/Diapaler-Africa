@@ -577,16 +577,21 @@ class AppColors {
 
 ### 2.14 Mon Profil — `page_profil.dart`
 
-**Fonctionnalités :**
-- Photo de profil base64 ou initiales colorées selon le rôle
-- Jauge de complétion du profil (0–100%) colorée (rouge/amber/vert)
-- Badge de rôle coloré
-- Toutes les informations : nom, email, téléphone, ville, pays, bio, LinkedIn
-- Centres d'intérêt (chips)
-- Liste des projets avec barres de progression (Entrepreneur)
-- Statistiques (mentors, sessions, score)
-- Bouton "Modifier" → `EditProfilePage` (fullscreenDialog)
-- Feuille de profil (BottomSheet) : "Mon profil" dans la navbar
+**Structure de la page (allégée et rôle-adaptive) :**
+- Carte identité : photo/initiales, nom, rôle, ville, barre de complétion 0–100%
+- Bandeau stats **adapté selon le rôle** :
+  - Entrepreneur : Projets / Terminés / Mentors / Favoris
+  - Mentor : Mentorés / Sessions / Années d'expé. / Favoris
+  - Investisseur : Contacts / Pitchs vus / Favoris / Rendez-vous
+- Carte "À propos" : bio + **LinkedIn cliquable** (url_launcher) + chip "X ans d'expérience" (Mentor) + chip ticket d'investissement (Investisseur)
+- Coordonnées condensées (3 colonnes) : email · téléphone · ville
+- Centres d'intérêt (chips colorés)
+- Mes Projets avec barres de progression (**Entrepreneur uniquement**)
+- Boutons d'actions **rôle-spécifiques** :
+  - Entrepreneur → "Mes demandes" (envoyées)
+  - Mentor → "Planning" + "Demandes reçues"
+  - Investisseur → "Pitchs publiés"
+- AppBar : Partager · Modifier · Déconnexion (icône rouge)
 
 > **📸 CAPTURE D'ÉCRAN — Mon Profil**
 > *(Insérer ici la capture d'écran)*
@@ -615,12 +620,13 @@ class AppColors {
 
 **Fonctionnalités :**
 - Stepper 3 étapes avec barre de progression amber
-- Étape 1 : Titre du projet + elevator pitch (1 phrase)
-- Étape 2 : Secteur (dropdown 20+ secteurs) + description détaillée
-- Étape 3 : Montant financement FCFA + informations complémentaires
-- Double sauvegarde : dans le profil (`projects/`) ET dans `pitches/` Firebase (visible mentors/investisseurs)
-- CircularProgressIndicator pendant la publication
-- SnackBar succès vert après publication
+- **Validation obligatoire par étape** — bouton CONTINUER désactivé si champs vides
+- Étape 1 : Titre du projet (min 3 chars, obligatoire) + elevator pitch
+- Étape 2 : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
+- Étape 3 : Montant financement FCFA (optionnel) + carte explicative "Qui verra ton pitch ?"
+- Double sauvegarde : dans le profil (`projects/` — Étape **1/3**) ET dans `pitches/` Firebase (visible mentors/investisseurs)
+- Après publication : navigation automatique vers l'**onglet Profil** → Mes projets
+- SnackBar "Retrouve-le dans ton profil → Mes projets"
 
 > **📸 CAPTURE D'ÉCRAN — Déposer un Pitch (Étape 1)**
 > *(Insérer ici la capture d'écran)*
@@ -651,9 +657,9 @@ class AppColors {
 - Sauvegarde dans le profil entrepreneur + Firebase
 
 **Agenda — `page_agenda.dart`**
-- Calendrier des sessions de mentorat et événements
-- Ajout / modification / suppression d'événements
-- Synchronisation Firebase temps réel (StreamBuilder)
+- Titre et messages **adaptés selon le rôle** : "Mes sessions" (Entrepreneur) / "Mon agenda" (Mentor) / "Mes rendez-vous" (Investisseur)
+- Sessions à venir + passées depuis Firebase
+- Bouton "Mon Planning" dans l'AppBar (Mentor uniquement)
 
 **Planning — `page_planning.dart`**
 - Gestion des disponibilités (Mentor)

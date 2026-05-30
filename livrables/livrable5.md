@@ -1576,108 +1576,39 @@ StreamBuilder<List<MentorRequest>>(
 
 ### 7.1 Dépôt de pitch — Formulaire 3 étapes (`page_pitch.dart`)
 
-Les entrepreneurs déposent leur pitch via un **stepper 3 étapes** avec `AnimatedSwitcher` pour les transitions.
+Les entrepreneurs déposent leur pitch via un **stepper 3 étapes** avec validation obligatoire par étape.
+
+**Fonctionnalités clés :**
+- Étape 1 : Titre (min 3 chars, obligatoire) + elevator pitch (optionnel)
+- Étape 2 : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
+- Étape 3 : Montant FCFA (optionnel) + carte explicative "Qui verra ton pitch ?"
+- **Validation par étape** : bouton CONTINUER désactivé + message d'aide si champ invalide
+- **Double sauvegarde** : profil entrepreneur (`projects/`, `totalSteps: 3`) + nœud global `pitches/`
+- **Après publication** : navigation vers l'onglet Profil + SnackBar "Retrouve-le dans ton profil → Mes projets"
 
 ```dart
-// lib/screens/page_pitch.dart
-class PitchPage extends StatefulWidget { ... }
+// Validations par étape — CONTINUER désactivé si non valide
+bool get _step0Valid => _title.text.trim().length >= 3;
+bool get _step1Valid =>
+    _sector != null && _detailDescription.text.trim().length >= 20;
+bool get _step2Valid => true; // Montant optionnel
 
-class _PitchPageState extends State<PitchPage> {
-  int _step = 0;
-  static const _total = 3;
+// Projet créé avec totalSteps: 3 (Idée → En cours → Lancé)
+final project = Project(
+  id: DateTime.now().millisecondsSinceEpoch.toString(),
+  name: title, description: description, sector: sector,
+  step: 1, totalSteps: 3,
+);
 
-  // Contrôleurs de champs
-  final _title       = TextEditingController(); // Nom du projet
-  final _description = TextEditingController(); // Résumé (étape 1)
-  final _detailDesc  = TextEditingController(); // Détails (étape 2)
-  final _amount      = TextEditingController(); // Besoin financement (étape 3)
-  String? _sector;
-
-  static const _steps = [
-    ('Informations', 'Présente ton projet en quelques mots'),
-    ('Détails',      'Secteur, description, ambition'),
-    ('Documents',    'Pitch deck, vidéo, besoin de financement'),
-  ];
+// Après publication : navigation vers onglet Profil
+appTabIndex.value = 4;
+Navigator.of(context).pop();
 ```
 
-**AppBar dynamique :**
-```dart
-AppBar(
-  title: Text('Étape ${_step + 1} / $_total · ${_steps[_step].$1}'),
-  leading: IconButton(
-    onPressed: () {
-      if (_step > 0) setState(() => _step--); // Retour à l'étape précédente
-      else Navigator.of(context).pop();
-    },
-    icon: const Icon(Icons.arrow_back_rounded),
-  ),
-)
-```
-
-**Barre de progression (`_StepBar`) :**
-```dart
-class _StepBar extends StatelessWidget {
-  final int step, total;
-  @override
-  Widget build(BuildContext context) {
-    return LinearProgressIndicator(
-      value: (step + 1) / total,
-      backgroundColor: AppColors.fieldBg,
-      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.navyDeep),
-      minHeight: 4,
-    );
-  }
-}
-```
-
-**Soumission finale — double sauvegarde :**
-```dart
-Future<void> _next() async {
-  if (_step < _total - 1) { setState(() => _step++); return; }
-
-  setState(() => _loading = true);
-  try {
-    final profile = UserProfileController.profile.value;
-    final uid     = AuthService.currentUid;
-
-    // 1. Ajout au profil entrepreneur (nœud users/ → projects[])
-    final project = Project(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _title.text.trim().isEmpty ? 'Mon Pitch' : _title.text.trim(),
-      description: [_description.text.trim(), _detailDesc.text.trim()]
-          .where((s) => s.isNotEmpty).join('\n\n'),
-      sector: _sector ?? profile.sector,
-      step: 1, totalSteps: 5,
-    );
-    final updated = profile.copyWith(projects: [...profile.projects, project]);
-    UserProfileController.update(updated);
-    if (uid != null) await DatabaseService.updateUserProfile(uid, updated);
-
-    // 2. Publication dans pitches/ → visible par TOUS (mentors + investisseurs)
-    await DatabaseService.publishPitch(
-      userId: uid ?? '',
-      userName: profile.fullName,
-      title: project.name,
-      sector: project.sector,
-      description: project.description,
-      amount: _amount.text.trim(),
-    );
-
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Pitch publié ! Visible auprès des mentors et investisseurs.'),
-      backgroundColor: AppColors.green,
-    ));
-  } finally {
-    if (mounted) setState(() => _loading = false);
-  }
-}
-```
-
-> **📸 CAPTURE D'ÉCRAN — Étape 1 du formulaire Pitch (champ titre + secteur)**
+> **📸 CAPTURE D'ÉCRAN — Étape 1 du formulaire Pitch (titre + bouton désactivé sans texte)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Étape 3 du formulaire Pitch (besoin financement) + bouton "PUBLIER MON PITCH"**
+> **📸 CAPTURE D'ÉCRAN — Étape 3 (montant FCFA + carte "Qui verra ton pitch ?")**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -2386,13 +2317,16 @@ Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense ne se just
 | Agenda Firebase | `AgendaController.bookBilateral()` + `cancel()` bilatéral | ✅ (bonus) |
 | Planning mentor | Gestion disponibilités via `InteractionsService` | ✅ (bonus) |
 | Demandes de mentorat | Envoi + accepter/refuser + notification automatique | ✅ (bonus) |
-| **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` | ✅ (bonus) |
+| **Pitch (stepper 3 étapes)** | `PitchPage` → validation par étape + double sauvegarde (`totalSteps: 3`) + redirect Profil | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream temps réel `DatabaseService.getPitches()` | ✅ (bonus) |
 | **Dashboard Mentor** | SliverAppBar + stats + raccourcis Pitchs/Planning/Demandes | ✅ (bonus) |
-| **Dashboard Investisseur** | SliverAppBar + accès Pitchs + Matching | ✅ (bonus) |
-| **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
+| **Dashboard Investisseur** | SliverAppBar + ticket investissement + accès Pitchs + Matching | ✅ (bonus) |
+| **Agenda rôle-spécifique** | Titre/description adaptés : "Mes sessions" / "Mon agenda" / "Mes rendez-vous" | ✅ (bonus) |
+| **Détail mentor** | Bio Firebase réelle + pronom genre + bouton "Envoyer une demande" (Entrepreneur) | ✅ (bonus) |
+| **Bouton CIS informatif** | Bottom sheet expliquant le Club des Investisseurs du Sénégal | ✅ (bonus) |
 | **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
+| **Sauvegarde MDP** | `AutofillGroup` + `finishAutofillContext` → Google/Samsung/iCloud Password Manager | ✅ (bonus) |
 | **Déploiement APK signé** | `flutter build apk --release` — APK 57.9 MB disponible en téléchargement | ✅ (bonus) |
 
 ---

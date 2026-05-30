@@ -366,12 +366,14 @@ App lancée (main.dart)
 |---|---|
 | En-tête | Gradient navy avec logo DIAPALER + bande drapeau sénégalais |
 | Sous-titre | "Bon retour ! 👋" + "Connecte-toi pour continuer ton parcours" |
-| Champ Email | Type email, autofill OS, icône mail bleue |
-| Champ Mot de passe | `obscureText`, bouton œil afficher/masquer, icône cadenas |
+| Champ Email | Type email, `autofillHints: [username, email]`, icône mail bleue |
+| Champ Mot de passe | `obscureText`, `autofillHints: [password]`, bouton œil afficher/masquer |
+| Sauvegarde MDP | `AutofillGroup` + `TextInput.finishAutofillContext(shouldSave: true)` après succès → Google Password Manager / Samsung Pass / iCloud Keychain |
 | Lien "Mot de passe oublié ?" | Aligné à droite, couleur bleue |
 | Bandeau d'erreur | Fond rouge 10%, icône alerte, message humanisé Firebase |
 | Bouton SE CONNECTER | Gradient navy→bleu, glow amber en ombre, spinner pendant l'appel |
 | Lien "S'inscrire" | Navigation `pushReplacement` vers `SignUpPage` |
+| Après déconnexion | Retour vers cette page (pas vers le choix de rôle) |
 
 > **📸 CAPTURE D'ÉCRAN — Écran de Connexion (état initial)**
 > *(Insérer ici la capture d'écran)*
@@ -1063,7 +1065,7 @@ static void reset() {
 > **📸 CAPTURE D'ÉCRAN — Dialog de confirmation de déconnexion**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Retour à l'écran de sélection de rôle après déconnexion**
+> **📸 CAPTURE D'ÉCRAN — Retour à l'écran de connexion après déconnexion**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -1075,8 +1077,10 @@ static void reset() {
 | Page de Connexion | Email + mot de passe, validation, gradient button + glow | ✅ |
 | Lien inscription | `pushReplacement` vers SignUpPage | ✅ |
 | Redirection après connexion | `pushAndRemoveUntil` vers RootShell | ✅ |
-| Page d'Inscription | Nom, téléphone, email, mot de passe — 4 étapes | ✅ |
-| Redirection vers la connexion | Lien "J'ai déjà un compte" | ✅ |
+| Page d'Inscription | Nom, téléphone, email, mot de passe + secteur + champs rôle — 4 étapes | ✅ |
+| Champs rôle-spécifiques | Années d'expérience (Mentor) + ticket investissement (Investisseur) à l'étape 3 | ✅ |
+| Redirection vers la connexion | Lien "J'ai déjà un compte" + déconnexion → LoginPage | ✅ |
+| Sauvegarde mot de passe | `AutofillGroup` + `finishAutofillContext(shouldSave: true)` — Google/Samsung/iCloud | ✅ |
 | Gestion des erreurs Firebase | Messages humanisés pour tous les codes d'erreur | ✅ |
 | Reset mot de passe | `sendPasswordResetEmail()` + confirmation visuelle | ✅ |
 | Persistance de session | Cache local offline-first + `_bootstrap()` Firebase | ✅ |
