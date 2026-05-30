@@ -901,7 +901,7 @@ final project = Project(
   description: _description.text.trim(),
   sector: _sector,
   step: 1,
-  totalSteps: 5,
+  totalSteps: 3,
 );
 // addProject() vérifie canStartNewProject avant d'ajouter
 final added = UserProfileController.addProject(project);

@@ -578,10 +578,10 @@ UserProfileController.reset();          // 4. Réinitialise le profil en mémoir
 appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
 await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
-// Redirection vers l'écran de sélection de rôle
+// Redirection vers la page de connexion (pile vidée)
 if (!mounted) return;
 Navigator.of(context).pushAndRemoveUntil(
-  MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+  MaterialPageRoute(builder: (_) => const LoginPage()),
   (_) => false,
 );
 ```
@@ -1172,7 +1172,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **DELETE** session réservée | `AgendaController` | `bookedSessions/{uid}/{id}.remove()` | Annulation rendez-vous |
 | **DELETE** déconnexion | `AuthService` | `signOut()` | Déconnexion |
 | **DELETE** cache local | `CacheService` | `prefs.remove(key)` | Déconnexion |
-| **POST** message IA | `ChatbotService` | `/v1/messages` (HTTP POST) | Chat DIALI |
+| **POST** message IA | `ChatbotService` | proxy `/chat` → Groq `/openai/v1/chat/completions` | Chat DIALI |
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : messages en temps réel dans messages/**
 > *(Insérer ici la capture d'écran)*

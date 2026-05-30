@@ -1476,8 +1476,28 @@ class AgendaController {
 class AgendaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final role = UserProfileController.profile.value.role;
+    // Titre adapté selon le rôle
+    final title = role == 'Mentor'
+        ? 'Mon agenda'
+        : role == 'Investisseur'
+            ? 'Mes rendez-vous'
+            : 'Mes sessions';
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Agenda')),
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          // Bouton Planning uniquement pour les Mentors
+          if (role == 'Mentor')
+            IconButton(
+              tooltip: 'Mon planning',
+              icon: const Icon(Icons.tune_rounded),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SchedulePage())),
+            ),
+        ],
+      ),
       body: ValueListenableBuilder<List<BookedSession>>(
         valueListenable: AgendaController.sessions,
         builder: (context, sessions, _) {
@@ -2264,29 +2284,9 @@ flutter build apk --release
 
 ---
 
-### 12.2 Distribution via Google Drive (au lieu du Play Store)
+### 12.2 Distribution via Google Drive
 
-**Pourquoi Google Drive et non le Google Play Store ?**
-
-La publication sur le **Google Play Store** nécessite le paiement d'un **frais d'inscription unique de 25 USD** (~15 000 FCFA) pour créer un compte développeur Google. Ce frais est obligatoire et non remboursable, quelle que soit la nature du projet (académique, commercial ou personnel).
-
-Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense ne se justifie pas. L'APK release signé est donc distribué via **Google Drive**, ce qui :
-- Permet une installation directe sur tout appareil Android (APK sideloading)
-- Ne nécessite aucun frais
-- Est suffisant pour démontrer la compilation, la signature et le déploiement d'une application Flutter production-ready
-
-> **Note :** L'APK est bien un **release signé** avec un keystore RSA 2048 bits (procédure identique à une publication Play Store). La seule différence est le canal de distribution.
-
-**Si le projet devait passer en production commerciale :**
-- Création d'un compte Google Play Developer (25 USD, paiement unique)
-- Publication dans le Play Store avec l'APK déjà signé (aucune recompilation nécessaire)
-- Mise en ligne en 24-48h après validation Google
-
-| Canal | Coût | Adapté pour |
-|---|---|---|
-| **Google Drive** ← choix actuel | Gratuit | Projet académique / démo |
-| **Google Play Store** | 25 USD (unique) | Publication commerciale |
-| **APK direct** (email, QR code) | Gratuit | Tests internes |
+L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académique). Le détail complet de la justification est dans le Livrable 6 §7.3.
 
 **Lien de téléchargement APK :**
 > 📦 https://drive.google.com/file/d/1XLJiSSJR8rQXCrAmY5mJWyx9i-6HFoGJ/view?usp=sharing
