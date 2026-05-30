@@ -3,6 +3,7 @@ import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
+import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
@@ -343,6 +344,13 @@ class _PitchCard extends StatelessWidget {
             'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
         type: 'investment',
       );
+      // Notifier l'entrepreneur
+      await NotificationService.notifyUser(
+        uid: toUserId,
+        title: 'Proposition d\'investissement',
+        message: '${profile.fullName} souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+        type: 'investment',
+      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -527,43 +535,44 @@ class _PitchCard extends StatelessWidget {
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 8),
-                  // Contacter
-                  TextButton(
-                    onPressed: () {
-                      final currentUid = AuthService.currentUid;
-                      final otherUid = pitch['userId']?.toString() ?? '';
-                      if (currentUid == null || otherUid.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content:
-                                Text('Impossible de contacter cet entrepreneur.'),
-                            behavior: SnackBarBehavior.floating,
+                  // Contacter — masqué pour les Investisseurs (contact via Messages après acceptation)
+                  if (!isInvestor)
+                    TextButton(
+                      onPressed: () {
+                        final currentUid = AuthService.currentUid;
+                        final otherUid = pitch['userId']?.toString() ?? '';
+                        if (currentUid == null || otherUid.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Impossible de contacter cet entrepreneur.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        final convId =
+                            InteractionsService.generateConversationId(
+                                currentUid, otherUid);
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ChatPage(
+                            conversationId: convId,
+                            otherUserName: userName,
+                            otherUserId: otherUid,
                           ),
-                        );
-                        return;
-                      }
-                      final convId =
-                          InteractionsService.generateConversationId(
-                              currentUid, otherUid);
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ChatPage(
-                          conversationId: convId,
-                          otherUserName: userName,
-                          otherUserId: otherUid,
-                        ),
-                      ));
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.navy,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        ));
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.navy,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                      ),
+                      child: const Text(
+                        'Contacter  →',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
                     ),
-                    child: const Text(
-                      'Contacter  →',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
-                  ),
                 ],
               ),
 
