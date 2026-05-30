@@ -442,7 +442,7 @@ class AppColors {
 - Barre de progression 4 segments animés (amber = complété, gris = à venir)
 - Étape 1 — Identité : nom complet (prénom + nom obligatoires), email (regex), sexe (pills), date naissance (DatePicker)
 - Étape 2 — Localisation : pays (dropdown Afrique de l'Ouest), ville (filtrée par pays), adresse
-- Étape 3 — Profil pro : photo (galerie/caméra, redim 512×512, base64), biographie, LinkedIn, intérêts (chips multi-sélection)
+- Étape 3 — Profil pro : secteur d'activité (dropdown, **adapté selon le rôle**), photo (galerie, redim 512×512, base64), biographie, LinkedIn, intérêts/domaines (chips multi-sélection) + années d'expérience (Mentor) + ticket d'investissement (Investisseur)
 - Étape 4 — Sécurité : téléphone +221 auto-format, mot de passe (jauge de force 5 niveaux), confirmation, CGU
 - Validation temps réel : icônes ✓/✗ colorées + messages d'aide sur chaque champ
 - Bouton CONTINUER désactivé si étape invalide

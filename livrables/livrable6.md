@@ -357,10 +357,10 @@ lib/
 > **📸 CAPTURE D'ÉCRAN — Splash Screen animé (logo + drapeau sénégalais)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Onboarding Slide 1 : "Trouve ton mentor idéal"**
+> **📸 CAPTURE D'ÉCRAN — Onboarding Slide 1 : "Trouve ton mentor"**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Onboarding Slide 3 : "Rejoins la communauté DIAPALER"**
+> **📸 CAPTURE D'ÉCRAN — Onboarding Slide 3 : "DER/FJ à portée de main"**
 > *(Insérer ici la capture d'écran)*
 
 > **📸 CAPTURE D'ÉCRAN — Choix du Rôle (3 cartes Entrepreneur/Mentor/Investisseur)**

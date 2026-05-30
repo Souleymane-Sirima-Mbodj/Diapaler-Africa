@@ -668,11 +668,16 @@ _InlineDropdown(
 
 ### 4.4 Étape 3 — Profil professionnel
 
-**Champs :**
-- Photo de profil (tap → galerie/caméra → `image_picker` → redimensionnement 512×512 → encodage base64)
+**Champs (communs à tous les rôles) :**
+- Secteur d'activité (dropdown obligatoire — libellé adapté : "Secteur d'activité" / "Secteur principal" / "Secteur d'investissement")
+- Photo de profil (tap → galerie → `image_picker` → redimensionnement 512×512 → encodage base64)
 - Biographie (textarea, 240 caractères max avec compteur)
 - LinkedIn (URL, optionnel)
 - Centres d'intérêt / domaines d'expertise (chips multi-sélection — au moins 1 obligatoire)
+
+**Champs spécifiques selon le rôle :**
+- **Mentor uniquement** : Années d'expérience (champ numérique optionnel)
+- **Investisseur uniquement** : Ticket d'investissement (ex. "500 000 – 5 000 000 FCFA", optionnel)
 
 ```dart
 Future<void> _pickProfilePhoto() async {
