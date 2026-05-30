@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
-import '../services/service_navigation.dart';
-import '../services/service_agenda.dart';
-import '../services/service_notifications.dart';
-import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -48,17 +44,6 @@ class ProfilePage extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Mon profil'),
             actions: [
-              IconButton(
-                tooltip: 'Partager mon profil',
-                onPressed: () => ShareService.shareMyProfile(
-                  name: p.fullName,
-                  role: p.role,
-                  sector: p.sector,
-                  city: p.city,
-                  projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
-                ),
-                icon: const Icon(Icons.share_rounded),
-              ),
               IconButton(
                 tooltip: 'Modifier',
                 onPressed: () => Navigator.of(context).push(
@@ -116,8 +101,10 @@ class ProfilePage extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 18),
-              _ProjectsSection(profile: p),
+              if (p.role == 'Entrepreneur' || p.role == 'Entrepreneure') ...[
+                const SizedBox(height: 18),
+                _ProjectsSection(profile: p),
+              ],
               const SizedBox(height: 22),
               const _InteractionsSection(),
               const SizedBox(height: 22),
@@ -170,7 +157,6 @@ class _IdentityCard extends StatelessWidget {
                       background: AppColors.amber,
                       foreground: AppColors.navyDeep,
                       photoBase64: profile.photoBase64,
-                      tappable: true,
                     ),
                   ),
                   Positioned(
@@ -202,36 +188,13 @@ class _IdentityCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          '${profile.role} · ${profile.sector}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (profile.isPremium) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              '⭐ Premium',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      '${profile.role} · ${profile.sector}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -314,12 +277,26 @@ class _StatsStrip extends StatelessWidget {
     final p = UserProfileController.profile.value;
     final pitchsTotal = p.projects.length;
     final completed = p.projects.where((x) => x.isCompleted).length;
+
+    final String firstLabel;
+    final String thirdLabel;
+    if (p.role == 'Mentor') {
+      firstLabel = 'Projets';
+      thirdLabel = 'Mentorés';
+    } else if (p.role == 'Investisseur') {
+      firstLabel = 'Opportunités';
+      thirdLabel = 'Contacts';
+    } else {
+      firstLabel = 'Projets';
+      thirdLabel = 'Mentors';
+    }
+
     final items = [
       _MiniStat(
           icon: Icons.workspace_premium_rounded,
           color: AppColors.amber,
           value: '$pitchsTotal',
-          label: 'Projets'),
+          label: firstLabel),
       _MiniStat(
           icon: Icons.check_circle_rounded,
           color: AppColors.green,
@@ -329,7 +306,7 @@ class _StatsStrip extends StatelessWidget {
           icon: Icons.handshake_rounded,
           color: AppColors.blue,
           value: '${p.mentorsActive}',
-          label: 'Mentors'),
+          label: thirdLabel),
       _MiniStat(
           icon: Icons.bookmark_rounded,
           color: AppColors.red,
@@ -454,7 +431,7 @@ class _CoordsCard extends StatelessWidget {
         ),
     ];
 
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -728,6 +705,7 @@ class _ProjectTile extends StatelessWidget {
     final accent = completed ? AppColors.green : AppColors.amber;
 
     return HoverGlowCard(
+      padding: const EdgeInsets.all(14),
       onTap: () => _showActions(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -861,6 +839,7 @@ class _EmptyProjects extends StatelessWidget {
           border: Border.all(
             color: AppColors.amber.withValues(alpha: 0.5),
             width: 1.5,
+            style: BorderStyle.solid,
           ),
         ),
         child: Column(
@@ -1084,7 +1063,7 @@ class _AboutCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      'Ajoute une bio pour te présenter aux mentors et investisseurs.',
+                      "Ajoute une bio pour te présenter aux mentors et investisseurs.",
                       style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.muted,
@@ -1111,6 +1090,36 @@ class _AchievementsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String secondLabel;
+    final IconData secondIcon;
+    final bool secondUnlocked;
+    final String thirdLabel;
+    final IconData thirdIcon;
+    final bool thirdUnlocked;
+
+    if (profile.role == 'Mentor') {
+      secondLabel = 'Première session';
+      secondIcon = Icons.video_call_rounded;
+      secondUnlocked = profile.sessionsCount > 0;
+      thirdLabel = 'Mentoré actif';
+      thirdIcon = Icons.groups_rounded;
+      thirdUnlocked = profile.mentorsActive > 0;
+    } else if (profile.role == 'Investisseur') {
+      secondLabel = 'Premier pitch';
+      secondIcon = Icons.trending_up_rounded;
+      secondUnlocked = profile.favoritesCount > 0;
+      thirdLabel = 'Connecté';
+      thirdIcon = Icons.link_rounded;
+      thirdUnlocked = profile.mentorsActive > 0;
+    } else {
+      secondLabel = '1er projet';
+      secondIcon = Icons.rocket_launch_rounded;
+      secondUnlocked = profile.projects.isNotEmpty;
+      thirdLabel = 'Mentoré';
+      thirdIcon = Icons.handshake_rounded;
+      thirdUnlocked = profile.mentorsActive > 0;
+    }
+
     final items = <_Achievement>[
       const _Achievement(
         icon: Icons.verified_rounded,
@@ -1119,15 +1128,15 @@ class _AchievementsRow extends StatelessWidget {
         color: AppColors.green,
       ),
       _Achievement(
-        icon: Icons.rocket_launch_rounded,
-        label: '1er projet',
-        unlocked: profile.projects.isNotEmpty,
+        icon: secondIcon,
+        label: secondLabel,
+        unlocked: secondUnlocked,
         color: AppColors.amber,
       ),
       _Achievement(
-        icon: Icons.handshake_rounded,
-        label: 'Mentoré',
-        unlocked: profile.mentorsActive > 0,
+        icon: thirdIcon,
+        label: thirdLabel,
+        unlocked: thirdUnlocked,
         color: AppColors.blue,
       ),
       _Achievement(
@@ -1432,11 +1441,6 @@ class _LogoutButton extends StatelessWidget {
     if (confirm != true) return;
     await AuthService.signOut();
     await CacheService.clear();
-    // Réinitialise les états globaux pour éviter la fuite entre sessions.
-    NotificationService.reset();
-    await AgendaController.reset();
-    UserProfileController.reset();
-    appTabIndex.value = 0;
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(

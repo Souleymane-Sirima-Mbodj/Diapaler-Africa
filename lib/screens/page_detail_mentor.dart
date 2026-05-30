@@ -2,12 +2,37 @@ import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
-import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
-import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_chat.dart';
+import 'page_send_request.dart';
+
+/// Construit la bio à afficher dans le détail d'un mentor.
+/// Utilise mentor.bio si non vide, sinon génère une bio automatique
+/// avec le bon pronom selon le genre.
+String _buildBio(Mentor mentor) {
+  if (mentor.bio.isNotEmpty) return mentor.bio;
+  final String pronom;
+  final String convaincu;
+  switch (mentor.gender) {
+    case Gender.male:
+      pronom = 'il';
+      convaincu = 'Convaincu';
+      break;
+    case Gender.female:
+      pronom = 'elle';
+      convaincu = 'Convaincue';
+      break;
+    default:
+      pronom = 'il/elle';
+      convaincu = 'Convaincu·e';
+  }
+  return '${mentor.name} accompagne les jeunes entrepreneurs sénégalais '
+      'depuis ${mentor.years} ans dans les secteurs ${mentor.sectors.join(", ")}. '
+      '$convaincu que l\'avenir de l\'Afrique se joue dans la jeunesse, '
+      '$pronom privilégie un mentorat sectoriel concret et bienveillant.';
+}
 
 class MentorDetailPage extends StatefulWidget {
   final Mentor mentor;
@@ -19,8 +44,6 @@ class MentorDetailPage extends StatefulWidget {
 
 class _MentorDetailPageState extends State<MentorDetailPage> {
   bool _isFavorite = false;
-  // Index du créneau sélectionné dans _SlotsRow (null = aucun sélectionné).
-  int? _selectedSlotIndex;
 
   void _toggleFavorite() {
     final profile = UserProfileController.profile.value;
@@ -35,37 +58,18 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
   void _bookSession() {
     final profile = UserProfileController.profile.value;
-    final uid = AuthService.currentUid;
-    if (uid == null) return;
-
     UserProfileController.update(
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
-
-    // Calcule la date du prochain créneau sélectionné (Lundi 14h par défaut).
-    const slotWeekdays = [1, 2, 3, 4, 5]; // Lun–Ven (weekday : 1 = Lundi)
-    const slotHours    = [14, 10, 15, 11, 16];
-    final idx          = _selectedSlotIndex ?? 0;
-    final targetDay    = slotWeekdays[idx];
-    final hour         = slotHours[idx];
-    final now          = DateTime.now();
-    var daysUntil      = targetDay - now.weekday;
-    if (daysUntil <= 0) daysUntil += 7; // prochain créneau dans la semaine
-    final sessionDate  = now.add(Duration(days: daysUntil));
-    final scheduledAt  = DateTime(
-        sessionDate.year, sessionDate.month, sessionDate.day, hour);
-
-    // Écriture bilatérale : le mentor (s'il a un compte) voit aussi le RDV.
-    AgendaController.bookBilateral(
-      requesterUid: uid,
-      requesterName: profile.fullName,
-      requesterInitials: profile.initials,
-      otherUid: widget.mentor.uid,
-      otherName: widget.mentor.name,
-      otherInitials: widget.mentor.initials,
-      scheduledAt: scheduledAt,
+    // Ajoute la session dans l'agenda (Firebase), planifiée 7 jours plus tard à 14h.
+    final sessionDate = DateTime.now().add(const Duration(days: 7));
+    final session = BookedSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      mentorName: widget.mentor.name,
+      mentorInitials: widget.mentor.initials,
+      scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
     );
-
+    AgendaController.add(profile.email, session);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -91,16 +95,6 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
             expandedHeight: 218,
             actions: [
               IconButton(
-                tooltip: 'Partager ce profil',
-                onPressed: () => ShareService.shareMentorProfile(
-                  name: mentor.name,
-                  role: mentor.role,
-                  sector: mentor.sectors.isNotEmpty ? mentor.sectors.first : '',
-                  city: mentor.city,
-                ),
-                icon: const Icon(Icons.share_rounded, color: Colors.white),
-              ),
-              IconButton(
                 onPressed: _toggleFavorite,
                 icon: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
@@ -115,7 +109,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: DecoratedBox(
+              background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -138,8 +132,6 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                               size: 70,
                               background: AppColors.amber,
                               foreground: AppColors.navyDeep,
-                              photoBase64: mentor.photoBase64,
-                              tappable: true,
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -247,10 +239,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  '${mentor.name} accompagne les jeunes entrepreneurs sénégalais '
-                  'depuis ${mentor.years} ans dans les secteurs ${mentor.sectors.join(", ")}. '
-                  'Convaincu·e que l\'avenir de l\'Afrique se joue dans la jeunesse, '
-                  'il/elle privilégie un mentorat sectoriel concret et bienveillant.',
+                  _buildBio(mentor),
                   style: const TextStyle(
                     fontSize: 13.5,
                     color: AppColors.muted,
@@ -307,8 +296,36 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              _SlotsRow(onSlotSelected: (i) => setState(() => _selectedSlotIndex = i)),
+              const _SlotsRow(),
               const SizedBox(height: 28),
+              Builder(
+                builder: (context) {
+                  final myRole = UserProfileController.profile.value.role;
+                  if (mentor.uid.isNotEmpty && myRole == 'Entrepreneur') {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SendRequestPage(mentor: mentor),
+                            ),
+                          ),
+                          icon: const Icon(Icons.handshake_rounded, size: 18),
+                          label: const Text('Envoyer une demande de mentorat'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: AppColors.green,
+                            side: const BorderSide(color: AppColors.green),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -316,24 +333,17 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          final uid = AuthService.currentUid;
-                          if (uid == null) return;
-                          // Si le mentor a un compte Firebase, on utilise son UID
-                          // pour que la conversation soit visible côté mentor.
-                          // Sinon on retombe sur son nom (mentor statique demo).
-                          final otherId = mentor.uid.isNotEmpty
-                              ? mentor.uid
-                              : mentor.name;
+                          final profile = UserProfileController.profile.value;
                           final convId = InteractionsService.generateConversationId(
-                            uid,
-                            otherId,
+                            profile.email,
+                            mentor.name,
                           );
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => ChatPage(
                                 conversationId: convId,
                                 otherUserName: mentor.name,
-                                otherUserId: otherId,
+                                otherUserId: mentor.name,
                               ),
                             ),
                           );
@@ -555,6 +565,7 @@ class _CompaniesList extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: AppColors.amber.withValues(alpha: 0.4),
+              width: 1,
             ),
           ),
           child: Row(
@@ -580,8 +591,7 @@ class _CompaniesList extends StatelessWidget {
 }
 
 class _SlotsRow extends StatefulWidget {
-  final ValueChanged<int?> onSlotSelected;
-  const _SlotsRow({required this.onSlotSelected});
+  const _SlotsRow();
 
   @override
   State<_SlotsRow> createState() => _SlotsRowState();
@@ -613,11 +623,8 @@ class _SlotsRowState extends State<_SlotsRow> {
           return MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () {
-                  final next = isSelected ? null : i;
-                  setState(() => _selected = next);
-                  widget.onSlotSelected(next);
-                },
+              onTap: () => setState(
+                  () => _selected = isSelected ? null : i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
