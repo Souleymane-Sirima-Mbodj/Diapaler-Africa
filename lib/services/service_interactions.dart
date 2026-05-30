@@ -12,6 +12,7 @@ class InteractionsService {
     required String fromName,
     required String toName,
     required String message,
+    String type = 'mentor',
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final request = MentorRequest(
@@ -23,6 +24,7 @@ class InteractionsService {
       message: message,
       createdAt: DateTime.now(),
       status: RequestStatus.pending,
+      type: type,
     );
     await _db.child('mentorRequests/$id').set(request.toJson());
   }

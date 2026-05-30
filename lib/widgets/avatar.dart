@@ -150,7 +150,7 @@ class _PhotoViewer extends StatelessWidget {
                   child: Center(
                     child: Image.memory(
                       bytes,
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
                       gaplessPlayback: true,
                     ),
                   ),

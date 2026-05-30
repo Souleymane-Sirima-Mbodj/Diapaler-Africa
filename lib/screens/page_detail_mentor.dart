@@ -59,9 +59,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     final mentor = widget.mentor;
     final myRole = UserProfileController.profile.value.role;
 
-    // Seul un Entrepreneur visitant un Mentor (avec uid) a besoin de la vérification.
-    // Pour les mentors statiques (uid vide), les investisseurs ou autres rôles : accès libre.
-    if (mentor.uid.isEmpty || myRole != 'Entrepreneur' || mentor.isInvestor) {
+    // Seul un Entrepreneur visitant un membre Firebase a besoin de la vérification.
+    // Pour les mentors statiques (uid vide) ou d'autres rôles : accès libre.
+    if (mentor.uid.isEmpty || myRole != 'Entrepreneur') {
       setState(() => _requestAccepted = true);
       return;
     }
@@ -72,6 +72,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       return;
     }
 
+    // Type attendu selon le profil visité
+    final expectedType = mentor.isInvestor ? 'investment' : 'mentor';
+
     try {
       final snap = await FirebaseDatabase.instance.ref('mentorRequests').get();
       final data = snap.value as Map?;
@@ -81,9 +84,11 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       }
       final accepted = data.values.any((v) {
         if (v is! Map) return false;
+        final reqType = v['type']?.toString() ?? 'mentor';
         return v['fromUserId'] == uid &&
             v['toUserId'] == mentor.uid &&
-            v['status'] == 'accepted';
+            v['status'] == 'accepted' &&
+            reqType == expectedType;
       });
       setState(() => _requestAccepted = accepted);
     } catch (_) {
@@ -348,6 +353,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                 builder: (context) {
                   final myRole = UserProfileController.profile.value.role;
                   if (myRole == 'Entrepreneur') {
+                    // Bouton adapté selon le type de profil visité
+                    final isInvestor = mentor.isInvestor;
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: SizedBox(
@@ -358,8 +365,17 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                               builder: (_) => SendRequestPage(mentor: mentor),
                             ),
                           ),
-                          icon: const Icon(Icons.handshake_rounded, size: 18),
-                          label: const Text('Envoyer une demande de mentorat'),
+                          icon: Icon(
+                            isInvestor
+                                ? Icons.monetization_on_rounded
+                                : Icons.handshake_rounded,
+                            size: 18,
+                          ),
+                          label: Text(
+                            isInvestor
+                                ? 'Proposer un investissement'
+                                : 'Envoyer une demande de mentorat',
+                          ),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             foregroundColor: AppColors.green,
@@ -384,10 +400,11 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
                   final myRole = UserProfileController.profile.value.role;
                   // Si la demande n'a pas encore été acceptée (et que l'utilisateur
-                  // est un Entrepreneur visitant un Mentor Firebase), on masque
+                  // est un Entrepreneur visitant un membre Firebase), on masque
                   // les boutons Message et Réserver.
                   if (!_requestAccepted! && myRole == 'Entrepreneur' &&
-                      mentor.uid.isNotEmpty && !mentor.isInvestor) {
+                      mentor.uid.isNotEmpty) {
+                    final isInvestor = mentor.isInvestor;
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Container(
@@ -397,9 +414,11 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.border),
                         ),
-                        child: const Text(
-                          'Envoie une demande de mentorat pour pouvoir contacter ce mentor et réserver une session.',
-                          style: TextStyle(
+                        child: Text(
+                          isInvestor
+                              ? 'Envoie une proposition d\'investissement pour pouvoir contacter cet investisseur et réserver une session.'
+                              : 'Envoie une demande de mentorat pour pouvoir contacter ce mentor et réserver une session.',
+                          style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.muted,
                             height: 1.4,
