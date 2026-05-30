@@ -423,7 +423,7 @@ class AppColors {
 
 **Fonctionnalités :**
 - En-tête sticky (SliverAppBar) avec avatar vert + badge "Mentor"
-- 3 cartes stats : Mentorés actifs / Sessions / Score
+- 3 cartes stats : Mentorés / Sessions / Années d'expérience
 - Domaines d'expertise (chips vert clair)
 - Bio complète
 - Accès rapide : Messages, Agenda, Demandes reçues, Mon Planning, Pitchs publiés
