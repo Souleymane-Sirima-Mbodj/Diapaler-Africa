@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
+import '../services/service_navigation.dart';
+import '../services/service_notifications.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -1156,6 +1161,97 @@ class _AboutCard extends StatelessWidget {
                 ],
               ),
             ),
+          // ── Infos pro + LinkedIn (si renseignés) ─────────────
+          if (profile.yearsExperience > 0 ||
+              profile.investmentRange.isNotEmpty ||
+              profile.linkedin.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Années d'expérience (Mentor)
+                if (profile.yearsExperience > 0)
+                  _ProChip(
+                    icon: Icons.workspace_premium_rounded,
+                    label: '${profile.yearsExperience} ans d\'expérience',
+                    color: AppColors.roleMentor,
+                  ),
+                // Ticket d'investissement (Investisseur)
+                if (profile.investmentRange.isNotEmpty)
+                  _ProChip(
+                    icon: Icons.payments_rounded,
+                    label: profile.investmentRange,
+                    color: AppColors.roleInvestor,
+                  ),
+                // LinkedIn (cliquable)
+                if (profile.linkedin.isNotEmpty)
+                  GestureDetector(
+                    onTap: () async {
+                      var url = profile.linkedin.trim();
+                      if (!url.startsWith('http')) url = 'https://$url';
+                      final uri = Uri.tryParse(url);
+                      if (uri != null && await canLaunchUrl(uri)) {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: _ProChip(
+                      icon: Icons.link_rounded,
+                      label: 'LinkedIn',
+                      color: AppColors.blue,
+                      tappable: true,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool tappable;
+  const _ProChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.tappable = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          if (tappable) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.open_in_new_rounded, size: 11, color: color),
+          ],
         ],
       ),
     );
