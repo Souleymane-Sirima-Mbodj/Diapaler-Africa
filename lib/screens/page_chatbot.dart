@@ -85,12 +85,22 @@ class _ChatbotPageState extends State<ChatbotPage>
       _scrollToBottom();
     } on Exception catch (e) {
       if (!mounted) return;
-      final msg = e.toString().replaceFirst('Exception: ', '');
+      String raw = e.toString().replaceFirst('Exception: ', '');
+      // Message convivial pour les erreurs courantes
+      final String msg;
+      if (raw.toLowerCase().contains('credit') || raw.toLowerCase().contains('balance')) {
+        msg = 'Service DIALI temporairement indisponible — crédits IA épuisés. L\'administrateur doit recharger les crédits sur console.anthropic.com.';
+      } else if (raw.toLowerCase().contains('timeout') || raw.toLowerCase().contains('network')) {
+        msg = 'Connexion internet instable. Vérifie ta connexion et réessaie.';
+      } else {
+        msg = 'DIALI rencontre une difficulté technique. Réessaie dans quelques instants.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
         ),
       );
       // On retire le message utilisateur si l'envoi a échoué

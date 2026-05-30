@@ -725,7 +725,7 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.green,
           title: 'CIS',
           subtitle: 'Investisseurs',
-          onTap: () => appTabIndex.value = 1,
+          onTap: () => _showCisSheet(context),
         ),
       ],
     );
@@ -1142,6 +1142,159 @@ class _DerFjSheet extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.navy,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              minimumSize: const Size(double.infinity, 0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CIS — Club des Investisseurs du Sénégal
+// ─────────────────────────────────────────────────────────────────
+void _showCisSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => const _CisSheet(),
+  );
+}
+
+class _CisSheet extends StatelessWidget {
+  const _CisSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.82,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, ctrl) => ListView(
+        controller: ctrl,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.navyDeep, AppColors.navy],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.workspace_premium_rounded,
+                    color: AppColors.green, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Club des Investisseurs du Sénégal',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Réseau d\'investisseurs privés sénégalais',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const _InfoTile(
+            icon: Icons.info_rounded,
+            color: AppColors.blue,
+            title: 'Qu\'est-ce que le CIS ?',
+            body:
+                'Le Club des Investisseurs du Sénégal (CIS) est un réseau privé d\'investisseurs sénégalais qui accompagnent les entrepreneurs à fort potentiel. Il facilite l\'accès au financement et au mentorat pour les startups et PME.',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.trending_up_rounded,
+            color: AppColors.green,
+            title: 'Types d\'investissement',
+            body:
+                '• Capital-risque (equity) pour les startups\n• Prêts participatifs pour les PME\n• Business angels individuels\n• Financement de série A et B',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.checklist_rounded,
+            color: AppColors.amber,
+            title: 'Profil des projets recherchés',
+            body:
+                '• Startups à fort potentiel de croissance\n• Projets innovants dans les secteurs porteurs\n• Équipe fondatrice solide et engagée\n• Marché addressable significatif en Afrique de l\'Ouest',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.handshake_rounded,
+            color: AppColors.purple,
+            title: 'Comment accéder au CIS ?',
+            body:
+                '• Déposer ton pitch sur DIAPALER AFRICA\n• Être recommandé par un membre du réseau\n• Participer aux événements entrepreneuriaux (CTIC Dakar, Yoban\'tel)\n• Contacter via la messagerie DIAPALER',
+          ),
+          const SizedBox(height: 10),
+          const _InfoTile(
+            icon: Icons.place_rounded,
+            color: AppColors.red,
+            title: 'Où trouver des investisseurs CIS ?',
+            body:
+                'Les membres CIS inscrits sur DIAPALER AFRICA sont identifiés par le badge vert "Investisseur". Utilise le Matching pour les contacter directement.\n\nÉvénements : CTIC Dakar, Silicon Valley of Africa, Dakar Startup Week',
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              appTabIndex.value = 1; // Ouvre le Matching
+            },
+            icon: const Icon(Icons.search_rounded, size: 18),
+            label: const Text(
+              'Trouver des investisseurs',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              minimumSize: const Size(double.infinity, 0),
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: const Text(
+              'Fermer',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               minimumSize: const Size(double.infinity, 0),
             ),
