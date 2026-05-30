@@ -149,24 +149,26 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 
 | Fonctionnalité | Description | Rôles |
 |---|---|---|
-| Authentification | Connexion, inscription 4 étapes, reset MDP, déconnexion | Tous |
+| Authentification | Connexion, inscription **rôle-spécifique** (4 étapes), reset MDP, déconnexion → LoginPage | Tous |
+| Sauvegarde MDP | `AutofillGroup` → Google/Samsung/iCloud Password Manager | Tous |
 | Persistance session | Cache offline-first + bootstrap Firebase | Tous |
-| Dashboards | 3 dashboards personnalisés avec stats dynamiques | Tous |
+| Dashboards | **3 dashboards distincts** : Entrepreneur (amber) / Mentor (vert) / Investisseur (bleu) | Selon rôle |
 | Matching | 100+ profils + membres DIAPALER réels + 4 filtres + GPS | Tous |
-| Messagerie | Chat temps réel Firebase + badge non lus global | Tous |
+| Messagerie | Chat temps réel Firebase + badge non lus filtré (ne compte pas les messages envoyés) | Tous |
 | Notifications | Centre + badge dynamique + "Effacer tout" | Tous |
-| Profil | Consultation + modification + photo galerie/caméra | Tous |
-| Dépôt de pitch | Stepper 3 étapes + double sauvegarde Firebase | Entrepreneur |
-| Pitchs publiés | StreamBuilder temps réel | Mentor, Investisseur |
-| Projets | Création + suivi de progression + suppression | Entrepreneur |
-| Agenda | Événements + synchronisation Firebase | Tous |
-| Planning | Gestion des créneaux disponibles | Mentor |
-| Demandes | Envoi et gestion (accepter/refuser) | Tous |
-| Chatbot DIALI | Claude claude-haiku-4-5-20251001 + FAB pulsant + historique session | Tous |
+| Profil | Stats rôle-spécifiques + LinkedIn cliquable + coordonnées condensées + boutons adaptatifs | Tous |
+| Dépôt de pitch | Stepper 3 étapes avec **validation** + double sauvegarde + redirect Profil | Entrepreneur |
+| Pitchs publiés | StreamBuilder temps réel + bouton partage | Mentor, Investisseur |
+| Projets | Création + suivi progression (Étape 1/3) + suppression | Entrepreneur |
+| Agenda | Titre/descriptions **rôle-spécifiques** + synchronisation Firebase | Tous |
+| Planning | Gestion créneaux disponibles + bouton dans AppBar Agenda | Mentor |
+| Demandes | Envoi + gestion (accepter/refuser) + bouton "Envoyer une demande" sur profil détail | Tous |
+| Chatbot DIALI | Claude claude-haiku-4-5-20251001 + proxy Cloudflare + FAB pulsant + messages d'erreur clairs | Tous |
 | Géolocalisation | GPS + bouton "Près de moi" + distances km | Tous |
 | Cache offline | Profil disponible sans internet (SharedPreferences) | Tous |
-| Partage social | Partage de pitchs et profils sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
+| Partage social | Pitchs, profils, conseils DIALI sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
 | Paiement Premium | Abonnement Wave (3 plans) + badge ⭐ + activation Firebase immédiate | Tous |
+| Bouton CIS | Bottom sheet informatif : Club des Investisseurs du Sénégal | Entrepreneur |
 
 ---
 
@@ -673,6 +675,51 @@ padding: const EdgeInsets.fromLTRB(20, 4, 76, 90),
 
 ---
 
+### 4.10 Inscription non rôle-spécifique
+
+**Problème :** L'inscription affichait exactement les mêmes champs pour les 3 rôles. Un Mentor n'avait pas de champ "Années d'expérience", un Investisseur pas de "Ticket d'investissement". Le secteur n'était jamais collecté (`sector: 'Autre'` hardcodé).
+
+**Solution :** Ajout conditionnel dans l'étape 3 :
+- Dropdown secteur (tous les rôles, obligatoire)
+- Champ "Années d'expérience" visible uniquement si `role == Mentor`
+- Champ "Ticket d'investissement" visible uniquement si `role == Investisseur`
+
+---
+
+### 4.11 Badge non lu déclenché par l'expéditeur lui-même
+
+**Problème :** Quand un utilisateur envoyait un message, son propre badge "messages non lus" s'incrémentait, créant une fausse alerte.
+
+**Cause :** `unreadCount` dans `Conversation` était toujours incrémenté sans distinguer l'expéditeur du destinataire.
+
+**Solution :** Ajout du champ `lastSenderId` dans `Conversation`. Le badge ne compte que les conversations où `c.lastSenderId != currentUid`.
+
+---
+
+### 4.12 Page pitch — faux uploads et absence de validation
+
+**Problème :** (1) Les tuiles "Pitch deck PDF" et "Vidéo" basculaient en "Fichier ajouté ✓" au simple tap, sans aucun fichier réel sélectionné. (2) L'utilisateur pouvait passer les étapes sans remplir les champs obligatoires.
+
+**Solution :** Suppression des fausses tuiles d'upload. Ajout de validations par étape (`_step0Valid`, `_step1Valid`) avec bouton CONTINUER désactivé et message d'aide. `totalSteps` corrigé à 3 au lieu de 5.
+
+---
+
+### 4.13 Bio et pronoms incorrects sur les profils statiques
+
+**Problème :** La page détail d'un mentor affichait une bio générique hardcodée avec "il/elle" pour tous les profils, ignorant la vraie bio Firebase et le genre de la personne.
+
+**Solution :** Utilisation de `mentor.bio` si non vide (membres Firebase), sinon génération automatique d'une bio avec le bon pronom selon `mentor.gender` (il / elle / il·elle).
+
+---
+
+### 4.14 Déconnexion — redirection incorrecte
+
+**Problème :** La déconnexion renvoyait vers la page de choix du rôle (`RoleSelectionPage`) au lieu de la page de connexion (`LoginPage`).
+
+**Solution :** Changement de la destination dans `_LogoutButton.confirmAndLogout()` et `feuille_profil.dart` : `const LoginPage()` à la place de `const RoleSelectionPage()`.
+
+---
+
 ## 5. Solutions proposées et innovations
 
 ### 5.1 Réactivité globale sans state management externe
@@ -862,12 +909,12 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 
 | Livrable | Fonctionnalités minimales | Fonctionnalités bonus |
 |---|---|---|
-| L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant |
-| L2 | Firebase CRUD (4 ops) | 20 opérations CRUD, `InteractionsService`, `UsersService`, cache offline |
-| L3 | Connexion + Inscription | 4 étapes, jauge MDP, cache session, `_bootstrap()` offline-first |
-| L4 | Profil + Photo | Projets CRUD, `UserProfileController` réactif, membres DIAPALER réels |
-| L5 | Notifs + Recherche + GPS | Filtres multicritères, badge Messages, DIALI IA, planning, demandes, **partage social**, **Wave Premium**, **badge ⭐** |
-| L6 | Rapport | 9 bugs documentés, métriques complètes, qualité du code, **APK signé déployé** |
+| L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique |
+| L2 | Firebase CRUD (4 ops) | 20+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId` |
+| L3 | Connexion + Inscription | 4 étapes rôle-adaptées, jauge MDP, `AutofillGroup` sauvegarde MDP, `_bootstrap()` offline-first |
+| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, projets Entrepreneur uniquement, boutons rôle-adaptatifs |
+| L5 | Notifs + Recherche + GPS | Filtres, DIALI IA, pitch validé (3 étapes), CIS informatif, Wave Premium, **sauvegarde MDP**, **déploiement APK** |
+| L6 | Rapport | 14+ bugs documentés, métriques complètes, qualité du code, **APK signé déployé et mis à jour** |
 
 Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur ajoutée** à l'écosystème entrepreneurial sénégalais, en connectant entrepreneurs, mentors et investisseurs dans une plateforme unifiée, moderne et accessible, avec :
 - Un **chatbot IA** (DIALI) contextuelisé à l'écosystème sénégalais

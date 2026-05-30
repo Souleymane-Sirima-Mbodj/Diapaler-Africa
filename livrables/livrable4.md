@@ -379,26 +379,36 @@ class UserProfileController {
 
 ## 2. Consultation du Profil (`page_profil.dart`)
 
-### 2.1 Description complète de l'écran
+### 2.1 Description complète de l'écran (page allégée et rôle-adaptive)
+
+**Structure de la page (de haut en bas) :**
 
 | Élément | Description |
 |---|---|
-| Photo / Avatar | Photo base64 (si renseignée) ou initiales colorées selon le rôle |
-| Badge de rôle | Chip coloré : Entrepreneur (amber) / Mentor (vert) / Investisseur (bleu) |
-| Jauge de complétion | Barre animée 0–100% avec couleur dynamique (vert/amber/rouge) |
-| Nom complet | `profile.fullName` en gras (24px) |
-| Email + Téléphone | Avec icônes |
-| Âge calculé | `profile.age` ans (calculé depuis `birthDate`) |
-| Ville + Pays | Avec icône localisation |
-| Biographie | Texte complet |
-| LinkedIn | Lien cliquable (url_launcher) |
-| Centres d'intérêt | Chips colorés scrollables |
-| Mes Projets | Liste avec barres de progression (Entrepreneur) |
-| Statistiques | Mentors actifs / Sessions / Score / Favoris |
-| Années d'expérience | (Mentor) |
-| Ticket d'investissement | (Investisseur) |
-| Bouton Modifier | Ouvre `EditProfilePage` en fullscreenDialog |
-| Bouton Déconnexion | Ouvre le bottom sheet profil |
+| Carte identité | Photo/initiales, nom, rôle · secteur, ville, barre de complétion 0–100% |
+| Bandeau stats (4 tuiles) | Labels **adaptés au rôle** — voir tableau ci-dessous |
+| Carte "À propos" | Bio + **LinkedIn cliquable** (url_launcher) + chip "X ans d'expé." (Mentor) + chip ticket (Investisseur) |
+| Coordonnées condensées | 3 colonnes compactes : email · téléphone · ville |
+| Centres d'intérêt | Chips colorés |
+| Mes Projets | Liste avec barres de progression (**Entrepreneur uniquement**) |
+| Boutons d'actions | Rôle-spécifiques (voir tableau ci-dessous) |
+| AppBar | Partager · Modifier · Déconnexion (icône rouge discrète) |
+
+**Stats par rôle :**
+
+| Rôle | Stat 1 | Stat 2 | Stat 3 | Stat 4 |
+|---|---|---|---|---|
+| Entrepreneur | Projets | Terminés | Mentors → RequestsPage | Favoris |
+| Mentor | Mentorés → RequestsPage | Sessions → AgendaPage | Années expé. | Favoris |
+| Investisseur | Contacts → RequestsPage | Pitchs vus | Favoris | Rendez-vous → AgendaPage |
+
+**Boutons d'actions par rôle :**
+
+| Rôle | Boutons |
+|---|---|
+| Entrepreneur | "Mes demandes" (envoyées) → RequestsPage |
+| Mentor | "Planning" → SchedulePage + "Demandes reçues" → RequestsPage |
+| Investisseur | "Pitchs publiés" → PublicPitchesPage |
 
 ---
 
@@ -1133,8 +1143,10 @@ class Avatar extends StatelessWidget {
 | Photo dans toute l'app | Widget `Avatar` réutilisable partout | ✅ |
 | Gestion de projets | `addProject` / `updateProject` / `deleteProject` | ✅ (bonus) |
 | Jauge de complétion | Indicateur 0–100% coloré (vert/amber/rouge) | ✅ (bonus) |
-| Déconnexion sécurisée | `reset()` + cache + Firebase signOut | ✅ |
+| Déconnexion sécurisée | `reset()` + cache + Firebase signOut → redirige vers LoginPage | ✅ |
 | Membres DIAPALER réels | `UsersService.listMembers()` + badge dans Matching | ✅ (bonus) |
-| Champs spécifiques rôle | `yearsExperience` (Mentor), `investmentRange` (Investisseur) | ✅ (bonus) |
+| Champs spécifiques rôle (inscription) | `yearsExperience` (Mentor), `investmentRange` (Investisseur) dès l'étape 3 | ✅ (bonus) |
+| Stats profil rôle-spécifiques | Labels et valeurs différents pour Entrepreneur / Mentor / Investisseur | ✅ (bonus) |
+| LinkedIn cliquable | Chip dans carte "À propos" → url_launcher → profil LinkedIn | ✅ (bonus) |
 | Bouton partage profil | `ShareService.shareMyProfile()` dans AppBar — WhatsApp, Telegram… | ✅ (bonus) |
 | Badge ⭐ Premium | Affiché sous le nom si `isPremium = true` — activé via Wave (L5) | ✅ (bonus) |
