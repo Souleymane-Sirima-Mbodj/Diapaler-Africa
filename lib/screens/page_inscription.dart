@@ -34,6 +34,9 @@ class _SignUpPageState extends State<SignUpPage> {
   final _bio = TextEditingController();
   String _city = 'Dakar';
   String _country = 'Sénégal';
+  String _sector = 'Agro-industrie';
+  final _yearsExp = TextEditingController();
+  final _investmentRange = TextEditingController();
   final Set<String> _interests = {};
 
   // Photo de profil (octets en memoire — compatible web ET mobile)
@@ -52,7 +55,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _error;
 
   static final _emailRegex =
-      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
 
 
   @override
@@ -73,6 +76,8 @@ class _SignUpPageState extends State<SignUpPage> {
     _phone.dispose();
     _password.dispose();
     _confirm.dispose();
+    _yearsExp.dispose();
+    _investmentRange.dispose();
     super.dispose();
   }
 
@@ -95,9 +100,7 @@ class _SignUpPageState extends State<SignUpPage> {
   bool get _step2Valid =>
       supportedCountries.contains(_country) &&
       citiesOf(_country).contains(_city);
-  bool get _photoRequired => _role != UserRole.entrepreneur;
-  bool get _step3Valid =>
-      _interests.isNotEmpty && (!_photoRequired || _photoBytes != null);
+  bool get _step3Valid => _interests.isNotEmpty;
   bool get _step4Valid =>
       _phoneValid &&
       _password.text.length >= 6 &&
@@ -123,10 +126,10 @@ class _SignUpPageState extends State<SignUpPage> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 22),
+      initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
       firstDate: DateTime(1940),
       lastDate: DateTime(now.year - 13, 12, 31),
-      helpText: 'Date de naissance',
+      helpText: 'Ta date de naissance',
     );
     if (picked != null) setState(() => _birthDate = picked);
   }
@@ -195,8 +198,14 @@ class _SignUpPageState extends State<SignUpPage> {
         address: _address.text.trim(),
         city: _city,
         country: _country,
-        sector: 'Autre',
+        sector: _sector,
         role: _roleLabel(_role),
+        yearsExperience: _role == UserRole.mentor
+            ? (int.tryParse(_yearsExp.text.trim()) ?? 0)
+            : 0,
+        investmentRange: _role == UserRole.investor
+            ? _investmentRange.text.trim()
+            : '',
         bio: _bio.text.trim(),
         linkedin: _linkedin.text.trim(),
         photoBase64: _photoBase64,
@@ -440,12 +449,21 @@ class _SignUpPageState extends State<SignUpPage> {
           onChanged: (g) => setState(() => _gender = g),
         ),
         const SizedBox(height: 14),
-        const _LabelRequired('Date de naissance'),
-        const SizedBox(height: 6),
-        _DatePickerField(
-          value: _birthDate,
-          onTap: _pickBirthDate,
-        ),
+        if (_role == UserRole.entrepreneur) ...[
+          const _LabelRequired('Date de naissance'),
+          const SizedBox(height: 6),
+          _DatePickerField(
+            value: _birthDate,
+            onTap: _pickBirthDate,
+          ),
+        ] else ...[
+          const _LabelRequired('Date de naissance'),
+          const SizedBox(height: 6),
+          _DatePickerField(
+            value: _birthDate,
+            onTap: _pickBirthDate,
+          ),
+        ],
       ],
     );
   }
@@ -507,10 +525,7 @@ class _SignUpPageState extends State<SignUpPage> {
       key: const ValueKey('step3'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
-        if (_photoRequired)
-          const _LabelRequired('Photo de profil')
-        else
-          const _Label('Photo de profil'),
+        const _Label('Photo de profil'),
         const SizedBox(height: 10),
         InkWell(
           onTap: _pickProfilePhoto,
@@ -522,9 +537,7 @@ class _SignUpPageState extends State<SignUpPage> {
               color: AppColors.fieldBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _photoBytes != null
-                    ? AppColors.blue
-                    : (_photoRequired ? AppColors.red : AppColors.border),
+                color: _photoBytes != null ? AppColors.blue : AppColors.border,
                 width: 2,
               ),
             ),
@@ -536,16 +549,16 @@ class _SignUpPageState extends State<SignUpPage> {
                       fit: BoxFit.cover,
                     ),
                   )
-                : Column(
+                : const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.camera_alt_rounded,
                         size: 40,
                         color: AppColors.muted,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: 8),
+                      Text(
                         'Ajouter une photo',
                         style: TextStyle(
                           fontSize: 13,
@@ -553,17 +566,12 @@ class _SignUpPageState extends State<SignUpPage> {
                           color: AppColors.muted,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
-                        _photoRequired ? 'Obligatoire' : 'Optionnel',
+                        'Optionnel',
                         style: TextStyle(
                           fontSize: 11,
-                          color: _photoRequired
-                              ? AppColors.red
-                              : AppColors.muted,
-                          fontWeight: _photoRequired
-                              ? FontWeight.w700
-                              : FontWeight.w400,
+                          color: AppColors.muted,
                         ),
                       ),
                     ],
@@ -571,6 +579,59 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
         const SizedBox(height: 18),
+        // Secteur d'activité (tous les rôles)
+        _LabelRequired(_role == UserRole.mentor
+            ? 'Secteur principal'
+            : _role == UserRole.investor
+                ? "Secteur d'investissement"
+                : "Secteur d'activité"),
+        const SizedBox(height: 6),
+        _InlineDropdown(
+          label: _role == UserRole.mentor
+              ? 'Secteur principal'
+              : _role == UserRole.investor
+                  ? "Secteur d'investissement"
+                  : "Secteur d'activité",
+          required: true,
+          icon: Icons.category_rounded,
+          value: _sector,
+          values: allSectors,
+          onChanged: (v) => setState(() => _sector = v),
+        ),
+        const SizedBox(height: 12),
+
+        // Années d'expérience (Mentor uniquement)
+        if (_role == UserRole.mentor) ...[
+          const _Label("Années d'expérience"),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _yearsExp,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.workspace_premium_rounded,
+                  color: AppColors.subtle, size: 20),
+              hintText: 'Ex. 12',
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // Ticket d'investissement (Investisseur uniquement)
+        if (_role == UserRole.investor) ...[
+          const _Label("Ticket d'investissement"),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _investmentRange,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.payments_rounded,
+                  color: AppColors.subtle, size: 20),
+              hintText: '500 000 – 5 000 000 FCFA',
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
         const _Label('À propos de moi'),
         const SizedBox(height: 6),
         TextField(
@@ -594,11 +655,8 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
         const SizedBox(height: 8),
-        _Hint(
-          text: _photoRequired
-              ? 'À propos et LinkedIn sont optionnels — la photo est obligatoire pour ton rôle.'
-              : 'À propos, LinkedIn et photo sont optionnels — tu peux les ajouter plus tard.',
-        ),
+        const _Hint(
+            text: 'À propos, LinkedIn et photo sont optionnels — tu peux les ajouter plus tard.'),
         const SizedBox(height: 18),
         Row(
           children: [

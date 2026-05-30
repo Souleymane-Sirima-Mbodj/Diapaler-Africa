@@ -387,14 +387,16 @@ class AppColors {
 
 ### 2.3 Onboarding / Découverte — `page_decouverte.dart`
 
+> ⚠️ **Cet écran apparaît uniquement après une inscription réussie** — pas au premier lancement. Les utilisateurs déjà connectés arrivent directement dans le RootShell (§2.7).
+
 **Fonctionnalités :**
-- 3 slides de présentation avec animations d'entrée
-- Slide 1 : "Trouve ton mentor idéal" — mise en relation
-- Slide 2 : "Présente ton projet" — dépôt de pitch
-- Slide 3 : "Rejoins la communauté" — réseau d'entrepreneurs
+- 3 slides de présentation avec animations d'entrée, affichées après la création du compte
+- Slide 1 : "Trouve ton mentor" — icône poignée de main bleue
+- Slide 2 : "Dépose ton pitch" — icône upload amber
+- Slide 3 : "DER/FJ à portée de main" — dispositifs de financement sénégalais
 - Indicateurs de pagination animés (dots)
-- Bouton "COMMENCER" sur la dernière slide → Choix du rôle
-- Bouton "Passer" pour ignorer l'onboarding → Choix du rôle
+- Bouton "COMMENCER" sur la dernière slide → **RootShell** (app principale)
+- Bouton "Passer" pour ignorer l'onboarding → **RootShell** (app principale)
 
 > **📸 CAPTURE D'ÉCRAN — Écran d'Onboarding (slide 1)**
 > *(Insérer ici la capture d'écran)*
@@ -757,14 +759,14 @@ Navigator.of(context).pushAndRemoveUntil(
 ```
 [Splash + Bootstrap Firebase + Cache]
   ├─→ [RootShell] ← utilisateur déjà connecté (session persistante)
-  └─→ [Onboarding 3 slides]
-        └─→ [Choix du rôle]
-              ├─→ [Connexion]
-              │     ├─→ [RootShell] ← après connexion réussie
-              │     ├─→ [Inscription] ← lien "S'inscrire"
-              │     └─→ [Mot de passe oublié]
-              └─→ [Inscription 4 étapes]
-                    └─→ [Onboarding] → [RootShell]
+  └─→ [Choix du rôle] ← utilisateur non connecté (défaut)
+        ├─→ [Connexion]
+        │     ├─→ [RootShell] ← après connexion réussie
+        │     ├─→ [Inscription] ← lien "S'inscrire"
+        │     └─→ [Mot de passe oublié]
+        └─→ [Inscription 4 étapes]
+              └─→ [Onboarding 3 slides] ← affiché UNIQUEMENT après inscription
+                    └─→ [RootShell]
 
 [RootShell — 5 onglets IndexedStack]
   │
