@@ -113,7 +113,7 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | Recherche | Barre textuelle en temps réel (nom, secteur, ville) | ✅ |
 | Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
 | Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km | ✅ |
-| Chatbot IA | DIALI (Claude claude-haiku-4-5-20251001) + proxy Cloudflare + FAB pulsant | ✅ |
+| Chatbot IA | DIALI (Llama 3.1 8B via Groq) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge `unreadMessagesCount` global | ✅ (bonus) |
 | Agenda | `AgendaController.bookBilateral()` + annulation bilatérale | ✅ (bonus) |
 | Planning | Gestion disponibilités mentor via Firebase | ✅ (bonus) |
@@ -961,12 +961,12 @@ if (distanceKm != null)
 
 ### 4.1 Présentation
 
-**DIALI** (wolof : "aller de l'avant") est l'assistant IA de DIAPALER AFRICA. Propulsé par **Claude claude-haiku-4-5-20251001** d'Anthropic, il accompagne les entrepreneurs, mentors et investisseurs avec des conseils contextualisés à l'écosystème sénégalais.
+**DIALI** (wolof : "aller de l'avant") est l'assistant IA de DIAPALER AFRICA. Propulsé par **Llama 3.1 8B** de Meta via **Groq**, il accompagne les entrepreneurs, mentors et investisseurs avec des conseils contextualisés à l'écosystème sénégalais.
 
 | Caractéristique | Détail |
 |---|---|
-| API | Anthropic Messages API |
-| Modèle | claude-haiku-4-5-20251001 (rapide + haute qualité) |
+| API | Groq Chat Completions API |
+| Modèle | llama-3.1-8b-instant (rapide + haute qualité) |
 | Langue | Français (compréhension du wolof) |
 | Contexte système | DER/FJ, BNDE, FONGIP, FONSIS, secteurs porteurs |
 | Accès | FAB pulsant amber visible depuis tous les onglets |
@@ -2289,7 +2289,7 @@ Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense ne se just
 | **APK direct** (email, QR code) | Gratuit | Tests internes |
 
 **Lien de téléchargement APK :**
-> 📦 https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing
+> 📦 https://drive.google.com/file/d/1XLJiSSJR8rQXCrAmY5mJWyx9i-6HFoGJ/view?usp=sharing
 
 > **📸 CAPTURE D'ÉCRAN — Google Drive : APK DIAPALER AFRICA disponible au téléchargement**
 > *(Insérer ici la capture d'écran)*
@@ -2309,7 +2309,7 @@ Dans le cadre de ce projet académique à l'ESP Dakar, cette dépense ne se just
 | Recherche | Filtre textuel temps réel (nom, secteur, ville) | ✅ |
 | Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
 | Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km | ✅ |
-| Chatbot IA | DIALI (claude-haiku-4-5-20251001) + proxy Cloudflare + FAB pulsant | ✅ |
+| Chatbot IA | DIALI (llama-3.1-8b-instant) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge global `unreadMessagesCount` | ✅ (bonus) |
 | Badge messages non lus | `ValueNotifier<int>` global dans `service_navigation.dart` | ✅ (bonus) |
 | Bouton "Près de moi" | GPS + tri distance + animation couleur | ✅ (bonus) |

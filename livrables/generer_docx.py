@@ -312,7 +312,11 @@ def set_font(para, size=Pt(11), name='Times New Roman', bold=False, italic=False
 
 
 def add_screenshot_placeholder(doc, label: str):
-    """Cadre gris vide comme emplacement pour une capture d'écran."""
+    """Cadre gris adaptatif comme emplacement pour une capture d'écran.
+
+    La cellule a une hauteur MINIMALE de 3 cm (atLeast) et s'agrandit
+    automatiquement pour contenir l'image insérée — elle ne déborde jamais.
+    """
 
     # Ligne de label (italique gris)
     p_lbl = doc.add_paragraph()
@@ -324,7 +328,7 @@ def add_screenshot_placeholder(doc, label: str):
     r.font.color.rgb = GRIS
     r.italic         = True
 
-    # Cadre placeholder : table 1×1, hauteur fixe ~7 cm, fond gris clair
+    # Cadre placeholder : table 1×1, fond gris clair
     tbl = doc.add_table(rows=1, cols=1)
     tbl.style     = 'Table Grid'
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -332,18 +336,30 @@ def add_screenshot_placeholder(doc, label: str):
     cell = tbl.rows[0].cells[0]
     set_cell_shading(cell, 'F0F0F0')
 
-    # Hauteur fixe 7 cm (1 cm ≈ 567 twips)
+    # Hauteur MINIMALE 3 cm (atLeast) — la cellule GRANDIT avec l'image
+    # Contrairement à 'exact', 'atLeast' ne bloque pas le contenu qui dépasse.
     tr   = tbl.rows[0]._tr
     trPr = tr.get_or_add_trPr()
     trH  = OxmlElement('w:trHeight')
-    trH.set(qn('w:val'), '3969')   # 7 cm
-    trH.set(qn('w:hRule'), 'exact')
+    trH.set(qn('w:val'), '1701')    # 3 cm (1 cm ≈ 567 twips)
+    trH.set(qn('w:hRule'), 'atLeast')
     trPr.append(trH)
 
-    # Texte d'indication centré
+    # Marge interne de la cellule pour que l'image ne touche pas les bords
+    tcPr = cell._tc.get_or_add_tcPr()
+    tcMar = OxmlElement('w:tcMar')
+    for side in ('top', 'left', 'bottom', 'right'):
+        m = OxmlElement(f'w:{side}')
+        m.set(qn('w:w'),    '113')   # ~2 mm
+        m.set(qn('w:type'), 'dxa')
+        tcMar.append(m)
+    tcPr.append(tcMar)
+
+    # Texte d'indication centré (remplacé par l'image lors de l'insertion)
     pc = cell.paragraphs[0]
     pc.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    pc.paragraph_format.space_before = Pt(54)  # décalage vertical approximatif
+    pc.paragraph_format.space_before = Pt(10)
+    pc.paragraph_format.space_after  = Pt(10)
     rc = pc.add_run('[ Insérer la capture d\'écran ici ]')
     rc.font.name      = 'Times New Roman'
     rc.font.size      = Pt(10)
