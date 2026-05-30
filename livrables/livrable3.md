@@ -1040,10 +1040,10 @@ Future<void> _signOut(BuildContext context) async {
   appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
   await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
-  // ── Redirection vers le choix du rôle (pile vidée)
+  // ── Redirection vers la page de connexion (pile vidée)
   if (!mounted) return;
   Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+    MaterialPageRoute(builder: (_) => const LoginPage()),
     (_) => false,
   );
 }

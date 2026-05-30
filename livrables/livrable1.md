@@ -129,7 +129,7 @@ dependencies:
   shared_preferences: ^2.3.0    # Cache local (session persistante, mode hors-ligne)
   image_picker: ^1.1.0          # Photo de profil (galerie/caméra)
   geolocator: ^11.0.0           # GPS et calcul de distances (Haversine)
-  http: ^1.2.2                  # Requêtes HTTP vers l'API Anthropic (chatbot)
+  http: ^1.2.2                  # Requêtes HTTP vers l'API Groq (chatbot DIALI)
   share_plus: ^10.1.4           # Partage natif (WhatsApp, Facebook, Telegram, X, LinkedIn…)
   url_launcher: ^6.3.1          # Ouverture de liens externes (Wave, Play Store…)
 
@@ -192,13 +192,13 @@ diapaler_africa/
 │   │   ├── page_planning.dart           # Gestion des disponibilités (Mentor)
 │   │   ├── page_requests.dart           # Demandes de mentorat reçues
 │   │   ├── page_send_request.dart       # Envoyer une demande de mentorat
-│   │   └── page_chatbot.dart            # Chatbot DIALI IA (Claude Anthropic)
+│   │   └── page_chatbot.dart            # Chatbot DIALI IA (Groq / Llama 3.1)
 │   │
 │   ├── services/                        # Couche métier — séparation des préoccupations
 │   │   ├── service_authentification.dart # Firebase Auth (connexion, inscription, reset, logout)
 │   │   ├── service_base_de_donnees.dart  # Firebase RTDB : profils + pitchs
 │   │   ├── service_interactions.dart     # RTDB : messages, conversations, demandes mentorat
-│   │   ├── service_chatbot.dart          # API Anthropic Claude (HTTP REST)
+│   │   ├── service_chatbot.dart          # API REST Groq / Llama 3.1 (chatbot DIALI)
 │   │   ├── service_notifications.dart    # Notifications Firebase temps réel (ValueNotifier + StreamSubscription)
 │   │   ├── service_agenda.dart           # Agenda Firebase (CRUD événements)
 │   │   ├── service_geolocation.dart      # GPS + calcul distances (Haversine)
@@ -674,7 +674,7 @@ class AppColors {
 - Message personnalisé → sauvegarde dans Firebase (`mentorRequests/`)
 
 **Chatbot DIALI IA — `page_chatbot.dart`**
-- Interface de chat avec l'IA Claude Anthropic
+- Interface de chat avec l'IA Llama 3.1 (Groq)
 - Message de bienvenue personnalisé selon le rôle
 - Bulles de messages (utilisateur / IA)
 - Indicateur de frappe animé (3 points)
