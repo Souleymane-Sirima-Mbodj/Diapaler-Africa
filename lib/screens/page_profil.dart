@@ -8,6 +8,8 @@ import '../widgets/carte_lumineuse.dart';
 import 'page_choix_role.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
+import 'page_agenda.dart';
+import 'page_pitches_publics.dart';
 import 'page_planning.dart';
 import 'page_requests.dart';
 
@@ -301,12 +303,20 @@ class _StatsStrip extends StatelessWidget {
           icon: Icons.check_circle_rounded,
           color: AppColors.green,
           value: '$completed',
-          label: 'Terminés'),
+          label: p.role == 'Mentor' ? 'Sessions' : 'Terminés',
+          onTap: p.role == 'Mentor'
+              ? () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AgendaPage()),
+                  )
+              : null),
       _MiniStat(
           icon: Icons.handshake_rounded,
           color: AppColors.blue,
           value: '${p.mentorsActive}',
-          label: thirdLabel),
+          label: thirdLabel,
+          onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RequestsPage()),
+              )),
       _MiniStat(
           icon: Icons.bookmark_rounded,
           color: AppColors.red,
@@ -334,46 +344,53 @@ class _MiniStat extends StatelessWidget {
   final Color color;
   final String value;
   final String label;
+  final VoidCallback? onTap;
   const _MiniStat({
     required this.icon,
     required this.color,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: AppColors.navyDeep,
-              height: 1.1,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: onTap != null ? AppColors.blue.withValues(alpha: 0.35) : AppColors.border,
           ),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              height: 1.2,
-              color: AppColors.muted,
-              fontWeight: FontWeight.w600,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: AppColors.navyDeep,
+                height: 1.1,
+              ),
             ),
-          ),
-        ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                height: 1.2,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1325,6 +1342,63 @@ class _InteractionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = UserProfileController.profile.value;
+    final role = p.role;
+
+    // Boutons affichés selon le rôle :
+    // • Entrepreneur  → "Mes demandes" seulement
+    // • Mentor        → "Planning" + "Demandes reçues"
+    // • Investisseur  → "Pitchs publiés" seulement
+    List<Widget> buttons;
+    if (role == 'Mentor') {
+      buttons = [
+        Expanded(
+          child: _InteractionButton(
+            icon: Icons.calendar_today_rounded,
+            label: 'Planning',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SchedulePage()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _InteractionButton(
+            icon: Icons.mail_rounded,
+            label: 'Demandes reçues',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RequestsPage()),
+            ),
+          ),
+        ),
+      ];
+    } else if (role == 'Investisseur') {
+      buttons = [
+        Expanded(
+          child: _InteractionButton(
+            icon: Icons.bar_chart_rounded,
+            label: 'Pitchs publiés',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PublicPitchesPage()),
+            ),
+          ),
+        ),
+      ];
+    } else {
+      // Entrepreneur / Entrepreneure
+      buttons = [
+        Expanded(
+          child: _InteractionButton(
+            icon: Icons.mail_rounded,
+            label: 'Mes demandes',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RequestsPage()),
+            ),
+          ),
+        ),
+      ];
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1337,29 +1411,7 @@ class _InteractionsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _InteractionButton(
-                icon: Icons.calendar_today_rounded,
-                label: 'Planning',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SchedulePage()),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InteractionButton(
-                icon: Icons.mail_rounded,
-                label: 'Demandes',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
-                ),
-              ),
-            ),
-          ],
-        ),
+        Row(children: buttons),
       ],
     );
   }
