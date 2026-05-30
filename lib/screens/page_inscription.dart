@@ -215,6 +215,8 @@ class _SignUpPageState extends State<SignUpPage> {
       await DatabaseService.createUserProfile(uid, profile);
       UserProfileController.update(profile);
 
+      // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
+      TextInput.finishAutofillContext(shouldSave: true);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
@@ -222,6 +224,7 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } catch (e) {
       if (!mounted) return;
+      TextInput.finishAutofillContext(shouldSave: false);
       setState(() => _error = AuthService.humanError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -431,6 +434,8 @@ class _SignUpPageState extends State<SignUpPage> {
           controller: _email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
+          autofillHints: const [AutofillHints.newUsername, AutofillHints.email],
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.mail_outline_rounded,
                 color: AppColors.subtle, size: 20),
@@ -758,7 +763,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
   // ─── ÉTAPE 4 — Sécurité ───
   Widget _buildStep4() {
-    return ListView(
+    return AutofillGroup(
+      child: ListView(
       key: const ValueKey('step4'),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       children: [
@@ -811,6 +817,8 @@ class _SignUpPageState extends State<SignUpPage> {
         TextField(
           controller: _password,
           obscureText: _obscure,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.lock_outline_rounded,
                 color: AppColors.subtle, size: 20),
@@ -838,6 +846,8 @@ class _SignUpPageState extends State<SignUpPage> {
         TextField(
           controller: _confirm,
           obscureText: _obscure,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.lock_outline_rounded,
                 color: AppColors.subtle, size: 20),
@@ -869,6 +879,7 @@ class _SignUpPageState extends State<SignUpPage> {
           onChanged: (v) => setState(() => _accept = v ?? false),
         ),
       ],
+    ),
     );
   }
 }

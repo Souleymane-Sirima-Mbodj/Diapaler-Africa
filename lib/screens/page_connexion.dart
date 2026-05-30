@@ -52,6 +52,9 @@ class _LoginPageState extends State<LoginPage> {
           UserProfileController.update(remote);
         }
       }
+      // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
+      // les identifiants (Google Password Manager, Samsung Pass, iCloud Keychain…)
+      TextInput.finishAutofillContext(shouldSave: true);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const RootShell()),
@@ -59,6 +62,8 @@ class _LoginPageState extends State<LoginPage> {
       );
     } catch (e) {
       if (!mounted) return;
+      // Connexion échouée : on annule la sauvegarde des identifiants
+      TextInput.finishAutofillContext(shouldSave: false);
       setState(() => _error = AuthService.humanError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -171,10 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                           obscureText: _obscure,
                           autofillHints: const [AutofillHints.password],
                           textInputAction: TextInputAction.done,
-                          onSubmitted: (_) {
-                            TextInput.finishAutofillContext();
-                            _signIn();
-                          },
+                          onSubmitted: (_) => _signIn(),
                     decoration: InputDecoration(
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(8),
