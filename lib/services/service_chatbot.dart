@@ -9,13 +9,13 @@ class ChatbotMessage {
 }
 
 class ChatbotService {
-  /// URL du proxy Cloudflare Worker qui détient la clé Anthropic côté serveur.
-  /// Voir [proxy/worker.js] et [proxy/README.md] pour le déploiement.
-  /// Remplace cette valeur par l'URL retournée par Cloudflare après déploiement.
+  /// URL du proxy Cloudflare Worker qui détient la clé Groq côté serveur.
+  /// Le Worker appelle l'API Groq (llama-3.1-8b-instant) et retourne
+  /// le même format de réponse — aucun changement côté Flutter nécessaire.
   static const _proxyUrl =
       'https://diali-proxy.sirimambodj.workers.dev/chat';
 
-  static const _model = 'claude-haiku-4-5-20251001';
+  static const _model = 'llama-3.1-8b-instant';
 
   static String _systemPrompt({
     required String userName,

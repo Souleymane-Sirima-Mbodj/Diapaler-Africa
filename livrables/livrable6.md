@@ -51,7 +51,7 @@
 
 ## Résumé exécutif
 
-**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Claude Anthropic, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
+**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
 
 ---
 
@@ -74,7 +74,7 @@
 - [2. Choix Techniques](#2-choix-techniques)
   - [2.1 Framework — Flutter](#21-framework--flutter)
   - [2.2 Backend — Firebase](#22-backend--firebase-google)
-  - [2.3 Intelligence Artificielle — Anthropic Claude](#23-intelligence-artificielle--anthropic-claude)
+  - [2.3 Intelligence Artificielle — Meta Llama 3.1 via Groq](#23-intelligence-artificielle--groq--llama-31)
   - [2.4 Dépendances et justifications](#24-dépendances-et-justifications)
   - [2.5 Architecture du code](#25-architecture-du-code)
 - [3. Captures d'écran de l'application](#3-captures-décran-de-lapplication)
@@ -163,7 +163,7 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Agenda | Titre/descriptions **rôle-spécifiques** + synchronisation Firebase | Tous |
 | Planning | Gestion créneaux disponibles + bouton dans AppBar Agenda | Mentor |
 | Demandes | Envoi + gestion (accepter/refuser) + bouton "Envoyer une demande" sur profil détail | Tous |
-| Chatbot DIALI | Claude claude-haiku-4-5-20251001 + proxy Cloudflare + FAB pulsant + messages d'erreur clairs | Tous |
+| Chatbot DIALI | Llama 3.1 8B (Groq) + proxy Cloudflare + FAB pulsant + messages d'erreur clairs | Tous |
 | Géolocalisation | GPS + bouton "Près de moi" + distances km | Tous |
 | Cache offline | Profil disponible sans internet (SharedPreferences) | Tous |
 | Partage social | Pitchs, profils, conseils DIALI sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
@@ -223,18 +223,18 @@ diapaler-africa-default-rtdb/
 
 ---
 
-### 2.3 Intelligence Artificielle — Anthropic Claude
+### 2.3 Intelligence Artificielle — Meta Llama 3.1 via Groq
 
 | Paramètre | Valeur |
 |---|---|
-| API | Anthropic Messages API |
-| Modèle | claude-haiku-4-5-20251001 |
+| API | Groq Chat Completions API |
+| Modèle | llama-3.1-8b-instant |
 | Langue | Français (compréhension du wolof) |
 | Accès | HTTP REST (package `http`) |
 | Contexte | Entrepreneuriat sénégalais (DER/FJ, BNDE, FONGIP, FONSIS) |
 | Historique | Conversation complète transmise à chaque appel |
 
-**Justification :** Claude claude-haiku-4-5-20251001 est rapide (< 1s de latence), économique, et produit des réponses contextualisées de haute qualité. Son support d'instructions système longues permet de configurer DIALI avec une personnalité précise ancrée dans l'écosystème sénégalais.
+**Justification :** Llama 3.1 8B via Groq est rapide (< 500ms de latence), **gratuit** (14 400 requêtes/jour) et produit des réponses contextualisées de haute qualité. Son support d'instructions système longues permet de configurer DIALI avec une personnalité précise ancrée dans l'écosystème sénégalais. Le modèle est servi par Groq (infrastructure LPU dédiée à l'inférence IA), via un proxy Cloudflare Worker qui garde la clé API côté serveur.
 
 ---
 
@@ -248,7 +248,7 @@ diapaler-africa-default-rtdb/
 | `google_fonts` | ^6.2.1 | Typographies Mulish/Plus Jakarta Sans |
 | `image_picker` | ^1.1.0 | Photo profil depuis galerie ou caméra |
 | `geolocator` | ^11.0.0 | GPS + distances Haversine intégrées |
-| `http` | ^1.2.2 | Requêtes HTTP vers API Anthropic |
+| `http` | ^1.2.2 | Requêtes HTTP vers API Groq |
 | `shared_preferences` | ^2.3.0 | Cache local profil (offline-first) |
 | `share_plus` | ^10.1.4 | Partage natif (WhatsApp, Facebook, Telegram, X, LinkedIn) |
 | `url_launcher` | ^6.3.1 | Ouverture de liens externes (paiement Wave, sites) |
@@ -273,7 +273,7 @@ lib/
 │   ├── service_interactions.dart      ← Messages, conversations, demandes, planning
 │   ├── service_utilisateurs.dart      ← Découverte membres DIAPALER
 │   ├── service_cache.dart             ← SharedPreferences offline-first
-│   ├── service_chatbot.dart           ← API REST Anthropic (DIALI IA)
+│   ├── service_chatbot.dart           ← API REST Groq (DIALI IA)
 │   ├── service_geolocation.dart       ← GPS + distances villes sénégalaises
 │   ├── service_navigation.dart        ← appTabIndex + unreadMessagesCount
 │   ├── service_notifications.dart     ← Centre de notifications réactif
@@ -336,7 +336,7 @@ lib/
 │  NavigationService / AgendaService                    │
 ├──────────────────────────────────────────────────────┤
 │          Backend Layer                                 │
-│  Firebase Auth / Firebase Realtime DB / Anthropic API │
+│  Firebase Auth / Firebase Realtime DB / Groq API │
 │  SharedPreferences (cache local)                      │
 └──────────────────────────────────────────────────────┘
 ```
@@ -809,7 +809,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Réseau | `timeout(Duration(seconds: 4-5))` sur tous les appels Firebase |
 | Cache | `try/catch` silencieux — le cache ne bloque jamais l'app |
 | Firebase | `catchError()` sur `_syncToFirebase()` — sync non bloquante |
-| Chatbot | Fallback message si l'API Anthropic est indisponible |
+| Chatbot | Fallback message si l'API Groq est indisponible |
 
 ---
 
@@ -820,7 +820,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Livrable | Contenu | Fonctionnalités clés | Statut |
 |---|---|---|---|
 | **L1** | Architecture Flutter + Navigation | 26 écrans, IndexedStack, ValueNotifier | ✅ Complet |
-| **L2** | Consommation API | Firebase CRUD + Interactions + Anthropic REST | ✅ Complet |
+| **L2** | Consommation API | Firebase CRUD + Interactions + Groq REST | ✅ Complet |
 | **L3** | Authentification | Connexion, Inscription 4 étapes, Reset, Cache session | ✅ Complet |
 | **L4** | Gestion de profil | Modification + Photo + Projets CRUD + UsersService | ✅ Complet |
 | **L5** | Fonctionnalités avancées | Notifs + Filtres + GPS + DIALI IA + Messagerie | ✅ Complet |
@@ -840,7 +840,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Modèles de données | 6 classes de données |
 | Packages Flutter | 11 packages |
 | Commits git documentés | 12+ commits |
-| API externes | 2 (Firebase + Anthropic) |
+| API externes | 2 (Firebase + Groq) |
 | Nœuds Firebase | 8 nœuds (users, pitches, messages, conversations, mentorRequests, availability, bookedSessions, notifications) |
 | Profils mentors pré-chargés | 100+ profils sénégalais |
 | Villes sénégalaises (GPS) | 40+ villes avec coordonnées |
@@ -854,7 +854,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 L'application a été compilée en APK release signé (57.9 MB) et est disponible au téléchargement :
 
 > **📦 Télécharger DIAPALER AFRICA :**  
-> **https://drive.google.com/file/d/1BGuJWRnuixcEPl0bMOqY-3E6v-TexXlN/view?usp=sharing**
+> **https://drive.google.com/file/d/1XLJiSSJR8rQXCrAmY5mJWyx9i-6HFoGJ/view?usp=sharing**
 
 **Détails du build :**
 
@@ -922,7 +922,7 @@ Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur 
 - Une **messagerie instantanée** Firebase temps réel
 - Un système de **matching avancé** combinant membres réels et profils curatés
 
-Ce projet démontre qu'il est possible, avec Flutter, Firebase et l'API Anthropic, de concevoir en quelques semaines une application mobile de **qualité professionnelle**, complète, réactive et prête pour la mise sur le marché africain.
+Ce projet démontre qu'il est possible, avec Flutter, Firebase et l'API Groq, de concevoir en quelques semaines une application mobile de **qualité professionnelle**, complète, réactive et prête pour la mise sur le marché africain.
 
 ---
 

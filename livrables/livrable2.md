@@ -78,7 +78,7 @@
   - [2.2 Messagerie temps réel (messages + conversations)](#22-messagerie-temps-réel-messages--conversations)
   - [2.3 Disponibilités mentor (availability)](#23-disponibilités-mentor-availability)
 - [3. Service de découverte des membres (`service_utilisateurs.dart`)](#3-service-de-découverte-des-membres-service_utilisateursdart)
-- [4. Anthropic Claude API (Chatbot DIALI IA)](#4-anthropic-claude-api-chatbot-diali-ia)
+- [4. Groq API (Llama 3.1) (Chatbot DIALI IA)](#4-groq-api-llama-31-chatbot-diali-ia)
   - [4.1 Présentation technique](#41-présentation-technique)
   - [4.2 Service chatbot](#42-service-chatbot-service_chatbotdart)
   - [4.3 Appel depuis page_chatbot.dart](#43-appel-depuis-page_chatbotdart)
@@ -95,7 +95,7 @@ DIAPALER AFRICA consomme **deux API externes** pour assurer la persistance des d
 |---|---|---|
 | **Firebase Authentication** | REST (Google) | Connexion, inscription, reset MDP, sessions |
 | **Firebase Realtime Database** | WebSocket + REST (Google) | Profils, pitchs, messages, sessions, demandes mentorat, notifications |
-| **Anthropic Claude API** | HTTP REST | Chatbot IA DIALI |
+| **Groq API (Llama 3.1)** | HTTP REST | Chatbot IA DIALI |
 
 Le code d'appel est isolé dans le dossier `lib/services/` pour respecter la séparation des préoccupations. Chaque service ne connaît que sa responsabilité :
 
@@ -106,7 +106,7 @@ Le code d'appel est isolé dans le dossier `lib/services/` pour respecter la sé
 | `service_utilisateurs.dart` | Découverte des membres DIAPALER |
 | `service_authentification.dart` | Auth Firebase (connexion, inscription, reset) |
 | `service_cache.dart` | Cache local `SharedPreferences` (offline-first) |
-| `service_chatbot.dart` | API REST Anthropic (chatbot DIALI IA) |
+| `service_chatbot.dart` | API REST Groq (chatbot DIALI IA) |
 | `service_partage.dart` | Partage social natif (share_plus) — pitch, profil, conseil DIALI |
 | `service_wave.dart` | Paiement Premium Wave — lien marchand + activation Firebase |
 
@@ -977,11 +977,11 @@ List<Mentor> get _filtered {
 
 ---
 
-## 4. Anthropic Claude API (Chatbot DIALI IA)
+## 4. Groq API — Llama 3.1 (Chatbot DIALI IA)
 
 ### 4.1 Architecture sécurisée — Proxy Cloudflare Worker
 
-Pour des raisons de **sécurité**, la clé API Anthropic n'est **jamais** embarquée dans le code Flutter. L'appel passe par un **Cloudflare Worker** déployé côté serveur qui détient la clé et joue le rôle de proxy.
+Pour des raisons de **sécurité**, la clé API Groq n'est **jamais** embarquée dans le code Flutter. L'appel passe par un **Cloudflare Worker** déployé côté serveur qui détient la clé et joue le rôle de proxy.
 
 ```
 ┌─────────────────┐   HTTP POST (JSON)   ┌────────────────────────────┐
@@ -992,17 +992,17 @@ Pour des raisons de **sécurité**, la clé API Anthropic n'est **jamais** embar
                                                        │  HTTP POST + x-api-key
                                                        ▼
                                          ┌─────────────────────────────┐
-                                         │  Anthropic Messages API      │
-                                         │  claude-haiku-4-5-20251001  │
+                                         │  Groq Chat Completions API      │
+                                         │  llama-3.1-8b-instant  │
                                          └─────────────────────────────┘
 ```
 
 | Paramètre | Valeur |
 |---|---|
-| **API** | Anthropic Messages API (via proxy) |
+| **API** | Groq Chat Completions API (via proxy) |
 | **Proxy URL** | `https://diali-proxy.sirimambodj.workers.dev/chat` |
 | **Méthode HTTP** | POST |
-| **Modèle** | `claude-haiku-4-5-20251001` |
+| **Modèle** | `llama-3.1-8b-instant` |
 | **Authentification** | Aucune clé côté client — gérée côté Worker |
 | **Format** | JSON (Content-Type: application/json) |
 | **Package Flutter** | `http: ^1.2.2` |
@@ -1022,11 +1022,11 @@ class ChatbotMessage {
 }
 
 class ChatbotService {
-  /// Proxy Cloudflare Worker — la clé Anthropic est côté serveur (sécurité).
+  /// Proxy Cloudflare Worker — la clé Groq est côté serveur (sécurité).
   static const _proxyUrl =
       'https://diali-proxy.sirimambodj.workers.dev/chat';
 
-  static const _model = 'claude-haiku-4-5-20251001';
+  static const _model = 'llama-3.1-8b-instant';
 
   /// Construit le prompt système personnalisé selon le profil de l'utilisateur.
   static String _systemPrompt({
@@ -1055,7 +1055,7 @@ Directives :
 - Pour le financement, cite les montants en FCFA et conditions précises''';
   }
 
-  /// Envoie la conversation au proxy → Anthropic et retourne la réponse texte.
+  /// Envoie la conversation au proxy → Groq et retourne la réponse texte.
   static Future<String> sendMessage({
     required List<ChatbotMessage> messages,
     required String userName,
@@ -1116,7 +1116,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _scrollToBottom();
 
     try {
-      // Appel HTTP POST → proxy Cloudflare → Anthropic API
+      // Appel HTTP POST → proxy Cloudflare → Groq API
       final reply = await ChatbotService.sendMessage(
         messages: _messages,
         userName: profile.firstName,       // Prénom pour personnalisation
@@ -1185,7 +1185,7 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 
 | Critère | Détail | Statut |
 |---|---|---|
-| API REST intégrée | Firebase Realtime Database + Anthropic Claude | ✅ |
+| API REST intégrée | Firebase Realtime Database + Meta Llama 3.1 via Groq | ✅ |
 | Récupérer des données | `readUserProfile()`, `getPitches()`, `getMessages()`, `getConversations()` | ✅ |
 | Ajouter des données | `createUserProfile()`, `publishPitch()`, `sendMessage()`, `sendMentorRequest()` | ✅ |
 | Modifier des données | `updateUserProfile()`, `acceptRequest()`, `updateAvailability()` | ✅ |
@@ -1194,4 +1194,4 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 | Sérialisation JSON | `_toMap()` / `_fromMap()` avec cast sécurisé | ✅ |
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
 | Découverte membres | `UsersService.listMembers()` | ✅ (bonus) |
-| Chatbot IA | API Anthropic Claude via HTTP REST | ✅ (bonus) |
+| Chatbot IA | API Meta Llama 3.1 via Groq via HTTP REST | ✅ (bonus) |
