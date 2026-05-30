@@ -916,10 +916,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
 ## 6. Déconnexion sécurisée
 
-La déconnexion est gérée depuis `feuille_profil.dart` (bottom sheet du profil) avec un **dialog de confirmation** et un **nettoyage complet** en 6 étapes :
+La déconnexion est accessible depuis **deux points d'entrée** : l'icône rouge dans l'AppBar de `page_profil.dart` et le bottom sheet profil (`feuille_profil.dart`). Les deux déclenchent un **dialog de confirmation** puis un **nettoyage complet** en 6 étapes avant de rediriger vers `LoginPage` :
 
 ```dart
-// widgets/feuille_profil.dart — Déconnexion depuis le bottom sheet profil
+// Logique partagée — _LogoutButton.confirmAndLogout()
 Future<void> _signOut(BuildContext context) async {
   // ── Dialog de confirmation avant déconnexion
   final confirm = await showDialog<bool>(
