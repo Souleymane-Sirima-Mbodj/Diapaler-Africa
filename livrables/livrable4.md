@@ -63,8 +63,7 @@
 - [Introduction](#introduction)
 - [1. Modèle de données utilisateur](#1-modèle-de-données-utilisateur-profil_utilisateurdart)
   - [1.1 La classe UserProfile](#11-la-classe-userprofile)
-  - [1.2 La classe Project](#12-la-classe-project)
-  - [1.3 Contrôleur réactif global — UserProfileController](#13-contrôleur-réactif-global--userprofilecontroller)
+  - [1.2 Contrôleur réactif global — UserProfileController](#12-contrôleur-réactif-global--userprofilecontroller)
 - [2. Consultation du Profil](#2-consultation-du-profil-page_profildart)
   - [2.1 Description complète de l'écran](#21-description-complète-de-lécran)
   - [2.2 Jauge de complétion du profil](#22-jauge-de-complétion-du-profil)
@@ -78,8 +77,7 @@
   - [3.5 Sauvegarde avec synchronisation Firebase](#35-sauvegarde-avec-synchronisation-firebase)
 - [4. Gestion des projets (Entrepreneur)](#4-gestion-des-projets-entrepreneur)
 - [5. Propagation réactive des modifications](#5-propagation-réactive-des-modifications)
-- [6. Membres DIAPALER dans le Matching](#6-membres-diapaler-dans-le-matching-service_utilisateursdart)
-- [7. Widget Avatar réutilisable](#7-widget-avatar-réutilisable-widgetsavatardart)
+- [6. Widget Avatar réutilisable](#6-widget-avatar-réutilisable-widgetsavatardart)
 - [Conclusion](#conclusion-du-livrable-4)
 
 ---
@@ -102,189 +100,46 @@ Toutes les modifications sont propagées **instantanément** dans toute l'interf
 
 ### 1.1 La classe `UserProfile`
 
+Classe **immuable** (`@immutable`) regroupant tous les champs du profil. Le pattern `copyWith` garantit l'immuabilité lors des mises à jour.
+
 ```dart
-// lib/data/profil_utilisateur.dart
 @immutable
 class UserProfile {
-  // ── Identité
-  final String firstName;    // Prénom
-  final String lastName;     // Nom de famille
-  final String email;        // Email (identifiant unique)
-  final String phone;        // Téléphone (+221 XX XXX XX XX)
-  final Gender gender;       // Enum : male | female | other | undisclosed
-  final DateTime? birthDate; // Date de naissance (nullable)
-
-  // ── Localisation
-  final String address;  // Adresse complète
-  final String city;     // Ville (ex: "Dakar")
-  final String country;  // Pays (ex: "Sénégal")
-
-  // ── Profil professionnel
-  final String sector;       // Secteur d'activité
-  final String role;         // 'Entrepreneur' | 'Mentor' | 'Investisseur'
-  final String bio;          // Biographie (240 char max)
-  final String linkedin;     // URL LinkedIn
-  final String photoBase64;  // Photo encodée en base64 (vide = initiales)
-
-  // ── Centres d'intérêt / domaines
+  // Identité
+  final String firstName, lastName, email, phone;
+  final Gender gender;
+  final DateTime? birthDate;
+  // Localisation & profil professionnel
+  final String address, city, country, sector, role, bio, linkedin, photoBase64;
+  // Données structurées
   final List<String> interests;
-
-  // ── Projets (Entrepreneur uniquement)
   final List<Project> projects;
+  // Statistiques
+  final int mentorsActive, sessionsCount, favoritesCount;
+  final double score;
+  // Champs rôle-spécifiques
+  final int yearsExperience;          // Mentor
+  final String investmentRange;        // Investisseur
+  // Premium (Wave)
+  final bool isPremium;
+  final String premiumPlan;
 
-  // ── Statistiques
-  final int    mentorsActive;    // Mentors actifs / Mentorés actifs
-  final int    sessionsCount;    // Nombre de sessions
-  final int    favoritesCount;   // Favoris (Investisseur)
-  final double score;            // Score / Note (0.0 → 5.0)
+  // Getters calculés
+  String get fullName  => '$firstName $lastName'.trim();
+  String get initials  => (firstName.isNotEmpty ? firstName[0] : '')
+                        + (lastName.isNotEmpty  ? lastName[0]  : '');
+  bool   get canStartNewProject => projects.isEmpty || projects.every((p) => p.isCompleted);
 
-  // ── Champs spécifiques par rôle
-  final int    yearsExperience;  // Années d'expérience (Mentor)
-  final String investmentRange;  // Ticket investissement ex: "500k–5M FCFA" (Investisseur)
-
-  // ── Statut Premium (abonnement Wave)
-  final bool   isPremium;        // true si abonnement Premium actif
-  final String premiumPlan;      // 'entrepreneur' | 'mentor' | 'investisseur' | ''
-
-  const UserProfile({
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    required this.phone,
-    this.gender = Gender.undisclosed,
-    this.birthDate,
-    this.address = '',
-    required this.city,
-    this.country = 'Sénégal',
-    required this.sector,
-    required this.role,
-    required this.bio,
-    this.linkedin = '',
-    this.photoBase64 = '',
-    required this.interests,
-    required this.projects,
-    this.mentorsActive = 0,
-    this.sessionsCount = 0,
-    this.favoritesCount = 0,
-    this.score = 0.0,
-    this.yearsExperience = 0,
-    this.investmentRange = '',
-    this.isPremium = false,
-    this.premiumPlan = '',
-  });
-
-  // ── Getters calculés
-  String get fullName => '$firstName $lastName'.trim();
-
-  String get initials {
-    final f = firstName.isNotEmpty ? firstName[0] : '';
-    final l = lastName.isNotEmpty  ? lastName[0]  : '';
-    return (f + l).toUpperCase();
-  }
-
-  int? get age {
-    if (birthDate == null) return null;
-    final now = DateTime.now();
-    var a = now.year - birthDate!.year;
-    if (now.month < birthDate!.month ||
-        (now.month == birthDate!.month && now.day < birthDate!.day)) a--;
-    return a;
-  }
-
-  // Projet courant (premier non terminé, ou dernier si tous terminés)
-  Project? get currentProject {
-    final active = projects.where((p) => !p.isCompleted).toList();
-    if (active.isNotEmpty) return active.first;
-    if (projects.isNotEmpty) return projects.last;
-    return null;
-  }
-
-  bool get canStartNewProject =>
-      projects.isEmpty || projects.every((p) => p.isCompleted);
-
-  // ── Copie avec modifications (immutabilité)
-  UserProfile copyWith({
-    String? firstName, String? lastName, String? email, String? phone,
-    Gender? gender, DateTime? birthDate, bool clearBirthDate = false,
-    String? address, String? city, String? country, String? sector,
-    String? role, String? bio, String? linkedin, String? photoBase64,
-    List<String>? interests, List<Project>? projects,
-    int? mentorsActive, int? sessionsCount, int? favoritesCount,
-    double? score, int? yearsExperience, String? investmentRange,
-    bool? isPremium, String? premiumPlan,
-  }) {
-    return UserProfile(
-      firstName:      firstName      ?? this.firstName,
-      lastName:       lastName       ?? this.lastName,
-      email:          email          ?? this.email,
-      phone:          phone          ?? this.phone,
-      gender:         gender         ?? this.gender,
-      birthDate:      clearBirthDate ? null : (birthDate ?? this.birthDate),
-      address:        address        ?? this.address,
-      city:           city           ?? this.city,
-      country:        country        ?? this.country,
-      sector:         sector         ?? this.sector,
-      role:           role           ?? this.role,
-      bio:            bio            ?? this.bio,
-      linkedin:       linkedin       ?? this.linkedin,
-      photoBase64:    photoBase64    ?? this.photoBase64,
-      interests:      interests      ?? this.interests,
-      projects:       projects       ?? this.projects,
-      mentorsActive:  mentorsActive  ?? this.mentorsActive,
-      sessionsCount:  sessionsCount  ?? this.sessionsCount,
-      favoritesCount: favoritesCount ?? this.favoritesCount,
-      score:          score          ?? this.score,
-      yearsExperience: yearsExperience ?? this.yearsExperience,
-      investmentRange: investmentRange ?? this.investmentRange,
-      isPremium:       isPremium       ?? this.isPremium,
-      premiumPlan:     premiumPlan     ?? this.premiumPlan,
-    );
-  }
+  // copyWith : retourne une copie avec les champs modifiés
+  UserProfile copyWith({String? firstName, String? lastName, String? bio,
+      String? photoBase64, List<String>? interests, List<Project>? projects,
+      String? city, String? sector, /* … tous les champs … */}) { /* … */ }
 }
 ```
 
 ---
 
-### 1.2 La classe `Project`
-
-```dart
-@immutable
-class Project {
-  final String id;          // Identifiant unique (timestamp ms)
-  final String name;        // Nom du projet
-  final String description; // Description
-  final String sector;      // Secteur d'activité
-  final int step;           // Étape actuelle (ex: 2)
-  final int totalSteps;     // Total d'étapes (ex: 5)
-
-  const Project({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.sector,
-    this.step = 1,
-    this.totalSteps = 5,
-  });
-
-  bool   get isCompleted => step >= totalSteps;
-  double get progress    => step / totalSteps;  // 0.0 → 1.0
-
-  Project copyWith({
-    String? id, String? name, String? description,
-    String? sector, int? step, int? totalSteps,
-  }) {
-    return Project(
-      id: id ?? this.id, name: name ?? this.name,
-      description: description ?? this.description, sector: sector ?? this.sector,
-      step: step ?? this.step, totalSteps: totalSteps ?? this.totalSteps,
-    );
-  }
-}
-```
-
----
-
-### 1.3 Contrôleur réactif global — `UserProfileController`
+### 1.2 Contrôleur réactif global — `UserProfileController`
 
 Le `UserProfileController` est le **cœur de la réactivité** de DIAPALER AFRICA. Il orchestre :
 1. La mise à jour de l'état en mémoire (`ValueNotifier`)
@@ -459,103 +314,27 @@ Text(
 
 ### 2.3 Réactivité avec ValueListenableBuilder
 
+Toute la page est enveloppée dans un `ValueListenableBuilder<UserProfile>` abonné au `UserProfileController.profile`. Chaque appel à `update()` déclenche un rebuild instantané sans `setState` global.
+
 ```dart
-// La page se reconstruit automatiquement à chaque modification du profil
-// Sans setState, sans rebuild global — uniquement les widgets abonnés
 ValueListenableBuilder<UserProfile>(
   valueListenable: UserProfileController.profile,
   builder: (_, profile, __) {
-    final completion = _profileCompletion(profile);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mon profil'),
+      appBar: AppBar(title: const Text('Mon profil'),
         actions: [
-          // Bouton partage — ouvre la feuille de partage native
-          IconButton(
-            tooltip: 'Partager mon profil',
-            onPressed: () => ShareService.shareMyProfile(
-              name: p.fullName,
-              role: p.role,
-              sector: p.sector,
-              city: p.city,
-              projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
-            ),
-            icon: const Icon(Icons.share_rounded),
-          ),
-          IconButton(
-            onPressed: () => Navigator.push(context,
-              MaterialPageRoute(
-                fullscreenDialog: true,
-                builder: (_) => const EditProfilePage(),
-              )),
-            icon: const Icon(Icons.edit_rounded),
-            tooltip: 'Modifier le profil',
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          // ── Avatar ou photo
-          Center(
-            child: Avatar(
-              initials: profile.initials,
-              photoBase64: profile.photoBase64,
-              size: 88,
-              background: _roleColor(profile.role),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Nom + badge rôle
-          Center(child: Text(profile.fullName,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
-          Center(child: _RoleBadge(role: profile.role)),
-          const SizedBox(height: 10),
-
-          // ── Jauge de complétion
-          LinearProgressIndicator(value: completion,
-            valueColor: AlwaysStoppedAnimation<Color>(color)),
-          Text('${(completion * 100).round()} % complété'),
-          const SizedBox(height: 16),
-
-          // ── Informations
-          _InfoRow(icon: Icons.email_outlined, text: profile.email),
-          _InfoRow(icon: Icons.phone_outlined,
-              text: profile.phone.isEmpty ? 'Non renseigné' : profile.phone),
-          if (profile.age != null)
-            _InfoRow(icon: Icons.cake_outlined, text: '${profile.age} ans'),
-          _InfoRow(icon: Icons.place_outlined,
-              text: '${profile.city}, ${profile.country}'),
-          if (profile.bio.isNotEmpty)
-            _InfoRow(icon: Icons.info_outline, text: profile.bio),
-
-          // ── Centres d'intérêt
-          if (profile.interests.isNotEmpty) ...[
-            const _SectionTitle('Centres d\'intérêt'),
-            Wrap(spacing: 8, runSpacing: 8,
-              children: profile.interests.map((i) => _InterestChip(i)).toList()),
-          ],
-
-          // ── Projets (Entrepreneur)
-          if (profile.role == 'Entrepreneur' && profile.projects.isNotEmpty) ...[
-            const _SectionTitle('Mes Projets'),
-            for (final p in profile.projects)
-              _ProjectCard(project: p),
-          ],
-
-          // ── Statistiques
-          const _SectionTitle('Statistiques'),
-          Row(children: [
-            _StatCard('Mentors', '${profile.mentorsActive}',
-                Icons.people_outline_rounded),
-            _StatCard('Sessions', '${profile.sessionsCount}',
-                Icons.calendar_today_outlined),
-            _StatCard('Score', profile.score.toStringAsFixed(1),
-                Icons.star_outline_rounded),
-          ]),
-        ],
-      ),
+          IconButton(icon: const Icon(Icons.share_rounded),
+              onPressed: () => ShareService.shareMyProfile(name: profile.fullName, /* … */)),
+          IconButton(icon: const Icon(Icons.edit_rounded),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(
+                  fullscreenDialog: true, builder: (_) => const EditProfilePage()))),
+        ]),
+      body: ListView(children: [
+        Avatar(initials: profile.initials, photoBase64: profile.photoBase64, size: 88),
+        Text(profile.fullName), _RoleBadge(role: profile.role),
+        LinearProgressIndicator(value: _profileCompletion(profile)),
+        // … infos, intérêts, projets, stats …
+      ]),
     );
   },
 )
@@ -574,73 +353,7 @@ ValueListenableBuilder<UserProfile>(
 
 ### 2.4 Feuille de profil (bottom sheet)
 
-Un bottom sheet récapitulatif (`feuille_profil.dart`) est accessible depuis l'AppBar de chaque dashboard. Il affiche le résumé du profil et propose les actions rapides :
-
-```dart
-// widgets/feuille_profil.dart
-void showProfileSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => const _ProfileSheet(),
-  );
-}
-
-class _ProfileSheet extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<UserProfile>(
-      valueListenable: UserProfileController.profile,
-      builder: (_, profile, __) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Poignée
-              Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: AppColors.border,
-                      borderRadius: BorderRadius.circular(99))),
-              const SizedBox(height: 16),
-              // Avatar + Nom + Rôle
-              Avatar(initials: profile.initials,
-                  photoBase64: profile.photoBase64, size: 64),
-              const SizedBox(height: 8),
-              Text(profile.fullName,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              Text(profile.role, style: const TextStyle(color: AppColors.muted)),
-              const SizedBox(height: 20),
-              // Actions
-              ListTile(
-                leading: const Icon(Icons.edit_rounded, color: AppColors.blue),
-                title: const Text('Modifier le profil'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(
-                    fullscreenDialog: true,
-                    builder: (_) => const EditProfilePage(),
-                  ));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout_rounded, color: AppColors.red),
-                title: const Text('Se déconnecter',
-                    style: TextStyle(color: AppColors.red)),
-                onTap: () => _signOut(context),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-```
+Un bottom sheet récapitulatif (`feuille_profil.dart`) est accessible depuis l'AppBar de chaque dashboard. Il affiche avatar, nom et rôle, et propose les actions rapides : "Modifier le profil" et "Se déconnecter". Il utilise `ValueListenableBuilder` pour rester synchronisé avec le profil courant, et `showModalBottomSheet` avec `isScrollControlled: true` pour s'adapter à la taille du contenu.
 
 > **📸 CAPTURE D'ÉCRAN — Bottom sheet profil (avatar + actions)**
 > *(Insérer ici la capture d'écran)*
@@ -994,119 +707,9 @@ UserProfileController.update(updated)
 
 ---
 
-## 6. Membres DIAPALER dans le Matching (`service_utilisateurs.dart`)
+## 6. Widget Avatar réutilisable (`widgets/avatar.dart`)
 
-Le `UsersService` charge les **vraies inscriptions** depuis `users/` dans Firebase et les expose en tant que `List<Mentor>` pour les afficher dans la page Matching au-dessus des profils pré-chargés.
-
-```dart
-// lib/services/service_utilisateurs.dart
-class UsersService {
-  static FirebaseDatabase get _db => FirebaseDatabase.instance;
-
-  /// Récupère les membres inscrits (Mentor + Investisseur uniquement).
-  /// L'utilisateur courant est exclu de la liste.
-  static Future<List<Mentor>> listMembers() async {
-    final snap = await _db.ref('users').get();
-    if (!snap.exists || snap.value == null) return [];
-
-    final map = Map<String, dynamic>.from(snap.value as Map);
-    final currentUid = AuthService.currentUid;
-
-    final members = <Mentor>[];
-    for (final entry in map.entries) {
-      final uid = entry.key;
-      if (uid == currentUid) continue;
-      final raw = entry.value;
-      if (raw is! Map) continue;
-      final m = Map<String, dynamic>.from(raw);
-      final role = (m['role']?.toString() ?? '').trim();
-      if (role != 'Mentor' && role != 'Investisseur') continue;
-
-      final firstName = m['firstName']?.toString() ?? '';
-      final lastName  = m['lastName']?.toString()  ?? '';
-      final fullName  = '$firstName $lastName'.trim();
-      if (fullName.isEmpty) continue;
-
-      members.add(Mentor(
-        uid: uid,             // UID non vide = badge "Membre DIAPALER"
-        name: fullName,
-        title: m['bio']?.toString().split('\n').first ?? role,
-        city: m['city']?.toString() ?? 'Dakar',
-        sectors: _parseInterests(m['interests']),
-        role: role,
-        photoBase64: m['photoBase64']?.toString() ?? '',
-        compatibility: 80,
-      ));
-    }
-    return members;
-  }
-}
-```
-
-**Dans `page_matching.dart` :**
-```dart
-// Membres DIAPALER (uid != '') affichés EN TÊTE, triés par compatibilité
-list.sort((a, b) {
-  final aIsMember = a.uid.isNotEmpty ? 1 : 0;
-  final bIsMember = b.uid.isNotEmpty ? 1 : 0;
-  if (aIsMember != bIsMember) return bIsMember - aIsMember; // Membres en premier
-  return b.compatibility.compareTo(a.compatibility);
-});
-```
-
-> **📸 CAPTURE D'ÉCRAN — Matching : membre DIAPALER réel en tête de liste**
-> *(Insérer ici la capture d'écran)*
-
----
-
-## 7. Widget Avatar réutilisable (`widgets/avatar.dart`)
-
-Le widget `Avatar` est utilisé partout dans l'application (dashboard, profil, matching, chat, pitchs) :
-
-```dart
-// widgets/avatar.dart — Affiche photo base64 ou initiales colorées
-class Avatar extends StatelessWidget {
-  final String initials;
-  final double size;
-  final Color background;
-  final Color foreground;
-  final String photoBase64;
-
-  const Avatar({
-    super.key,
-    this.initials = '?',
-    required this.size,
-    this.background = AppColors.navy,
-    this.foreground = Colors.white,
-    this.photoBase64 = '',
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (photoBase64.isNotEmpty) {
-      // Décodage et affichage de la photo
-      final bytes = base64Decode(photoBase64);
-      return ClipOval(
-        child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover),
-      );
-    }
-    // Cercle coloré avec les initiales
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: background),
-      alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: TextStyle(
-          color: foreground,
-          fontWeight: FontWeight.w800,
-          fontSize: size * 0.35,
-        ),
-      ),
-    );
-  }
-}
-```
+Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` dans un `ClipOval`), soit un cercle coloré avec les initiales si aucune photo n'est disponible. Il est utilisé à toutes les tailles dans l'app :
 
 **Tailles utilisées dans l'app :**
 
