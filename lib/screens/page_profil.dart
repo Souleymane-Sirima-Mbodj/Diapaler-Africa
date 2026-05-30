@@ -46,6 +46,19 @@ class ProfilePage extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Mon profil'),
             actions: [
+              // Partage
+              IconButton(
+                tooltip: 'Partager mon profil',
+                onPressed: () => ShareService.shareMyProfile(
+                  name: p.fullName,
+                  role: p.role,
+                  sector: p.sector,
+                  city: p.city,
+                  projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
+                ),
+                icon: const Icon(Icons.share_rounded),
+              ),
+              // Modifier
               IconButton(
                 tooltip: 'Modifier',
                 onPressed: () => Navigator.of(context).push(
@@ -56,61 +69,37 @@ class ProfilePage extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.edit_rounded),
               ),
+              // Déconnexion (icône discrète dans l'AppBar)
+              IconButton(
+                tooltip: 'Se déconnecter',
+                onPressed: () => _LogoutButton.confirmAndLogout(context),
+                icon: const Icon(Icons.logout_rounded, color: AppColors.red),
+              ),
             ],
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
+              // 1. Carte identité (photo, nom, rôle, complétion)
               _IdentityCard(profile: p, completion: completion),
-              const SizedBox(height: 14),
-              _AchievementsRow(profile: p, completion: completion),
-              if (completion < 1.0) ...[
-                const SizedBox(height: 14),
-                _CompleteProfileCta(percent: completion),
-              ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              // 2. Stats (tappables)
               const _StatsStrip(),
-              const SizedBox(height: 18),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final wide = constraints.maxWidth >= 700;
-                  if (wide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              _AboutCard(profile: p),
-                              const SizedBox(height: 14),
-                              _CoordsCard(profile: p),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(child: _InterestsCard(interests: p.interests)),
-                      ],
-                    );
-                  }
-                  return Column(
-                    children: [
-                      _AboutCard(profile: p),
-                      const SizedBox(height: 14),
-                      _CoordsCard(profile: p),
-                      const SizedBox(height: 14),
-                      _InterestsCard(interests: p.interests),
-                    ],
-                  );
-                },
-              ),
+              const SizedBox(height: 16),
+              // 3. Bio + Coordonnées principales (condensées) + Intérêts
+              _AboutCard(profile: p),
+              const SizedBox(height: 12),
+              _CompactCoordsCard(profile: p),
+              const SizedBox(height: 12),
+              _InterestsCard(interests: p.interests),
+              // 4. Projets (Entrepreneur uniquement)
               if (p.role == 'Entrepreneur' || p.role == 'Entrepreneure') ...[
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 _ProjectsSection(profile: p),
               ],
-              const SizedBox(height: 22),
+              // 5. Boutons d'actions rapides (rôle-dépendant)
+              const SizedBox(height: 16),
               const _InteractionsSection(),
-              const SizedBox(height: 22),
-              const _LogoutButton(),
             ],
           ),
         );
@@ -397,7 +386,83 @@ class _MiniStat extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Coordonnées
+// Coordonnées condensées (email + téléphone + ville uniquement)
+// ─────────────────────────────────────────────────────────────────
+class _CompactCoordsCard extends StatelessWidget {
+  final UserProfile profile;
+  const _CompactCoordsCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          // Email
+          Expanded(
+            child: _CompactRow(
+              icon: Icons.mail_outline_rounded,
+              text: profile.email.isEmpty ? '—' : profile.email,
+            ),
+          ),
+          Container(width: 1, height: 36, color: AppColors.border,
+              margin: const EdgeInsets.symmetric(horizontal: 10)),
+          // Téléphone
+          Expanded(
+            child: _CompactRow(
+              icon: Icons.phone_outlined,
+              text: profile.phone.isEmpty ? 'Non renseigné' : profile.phone,
+            ),
+          ),
+          Container(width: 1, height: 36, color: AppColors.border,
+              margin: const EdgeInsets.symmetric(horizontal: 10)),
+          // Ville
+          Expanded(
+            child: _CompactRow(
+              icon: Icons.place_outlined,
+              text: profile.city.isEmpty ? '—' : profile.city,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _CompactRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColors.navy),
+        const SizedBox(height: 4),
+        Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.navyDeep,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Coordonnées complètes (utilisées dans modifier le profil uniquement)
 // ─────────────────────────────────────────────────────────────────
 class _CoordsCard extends StatelessWidget {
   final UserProfile profile;
@@ -1466,7 +1531,8 @@ class _InteractionButton extends StatelessWidget {
 class _LogoutButton extends StatelessWidget {
   const _LogoutButton();
 
-  Future<void> _confirmAndLogout(BuildContext context) async {
+  // Statique pour être appelable depuis l'AppBar
+  static Future<void> confirmAndLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1491,8 +1557,12 @@ class _LogoutButton extends StatelessWidget {
       ),
     );
     if (confirm != true) return;
-    await AuthService.signOut();
     await CacheService.clear();
+    NotificationService.reset();
+    await AgendaController.reset();
+    UserProfileController.reset();
+    appTabIndex.value = 0;
+    await AuthService.signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
@@ -1511,7 +1581,7 @@ class _LogoutButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () => _confirmAndLogout(context),
+        onPressed: () => confirmAndLogout(context),
         icon: const Icon(Icons.logout_rounded, size: 18),
         label: const Text(
           'Se déconnecter',

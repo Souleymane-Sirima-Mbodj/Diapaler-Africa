@@ -98,14 +98,41 @@ class AgendaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final role = UserProfileController.profile.value.role;
     final upcoming = _sessions.where((s) => !s.isPast).toList();
     final past = _sessions.where((s) => s.isPast).toList();
 
+    // Textes adaptés selon le rôle
+    final String agendaTitle;
+    final String summarySubtitle;
+    final String emptyUpcoming;
+    final String emptyPast;
+
+    switch (role) {
+      case 'Mentor':
+        agendaTitle = 'Mon agenda';
+        summarySubtitle = 'Tes sessions de mentorat avec tes mentorés.';
+        emptyUpcoming = 'Aucune session planifiée. Définis tes disponibilités dans "Mon planning".';
+        emptyPast = 'Tes sessions terminées apparaîtront ici.';
+        break;
+      case 'Investisseur':
+        agendaTitle = 'Mes rendez-vous';
+        summarySubtitle = 'Tes rendez-vous avec les entrepreneurs.';
+        emptyUpcoming = 'Aucun rendez-vous planifié. Explore les pitchs pour contacter des entrepreneurs.';
+        emptyPast = 'Tes rendez-vous passés apparaîtront ici.';
+        break;
+      default: // Entrepreneur
+        agendaTitle = 'Mes sessions';
+        summarySubtitle = 'Tes sessions de mentorat planifiées.';
+        emptyUpcoming = 'Aucune session planifiée. Réserve une session depuis le profil d\'un mentor.';
+        emptyPast = 'Tes sessions terminées apparaîtront ici.';
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agenda'),
+        title: Text(agendaTitle),
         actions: [
-          if (UserProfileController.profile.value.role == 'Mentor')
+          if (role == 'Mentor')
             IconButton(
               tooltip: 'Mon planning',
               icon: const Icon(Icons.tune_rounded),
@@ -123,12 +150,15 @@ class AgendaPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
             children: [
-              _SummaryCard(upcomingCount: totalUpcoming),
+              _SummaryCard(
+                upcomingCount: totalUpcoming,
+                subtitle: summarySubtitle,
+              ),
               const SizedBox(height: 20),
               const _SectionLabel('À venir'),
               const SizedBox(height: 10),
               if (totalUpcoming == 0)
-                const _EmptyHint('Aucune session planifiée pour le moment.')
+                _EmptyHint(emptyUpcoming)
               else ...[
                 for (final s in bookedSessions) ...[
                   _BookedSessionCard(session: s),
@@ -143,7 +173,7 @@ class AgendaPage extends StatelessWidget {
               const _SectionLabel('Passées'),
               const SizedBox(height: 10),
               if (past.isEmpty)
-                const _EmptyHint('Tes sessions terminées apparaîtront ici.')
+                _EmptyHint(emptyPast)
               else
                 for (final s in past) ...[
                   _SessionCard(session: s),
@@ -160,7 +190,8 @@ class AgendaPage extends StatelessWidget {
 /// Carte de résumé en haut de l'agenda.
 class _SummaryCard extends StatelessWidget {
   final int upcomingCount;
-  const _SummaryCard({required this.upcomingCount});
+  final String subtitle;
+  const _SummaryCard({required this.upcomingCount, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +224,8 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 Text(
                   upcomingCount > 0
-                      ? '$upcomingCount session${upcomingCount > 1 ? "s" : ""} à venir'
-                      : 'Aucune session à venir',
+                      ? '$upcomingCount rendez-vous à venir'
+                      : 'Aucun rendez-vous à venir',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -202,9 +233,9 @@ class _SummaryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'Retrouve ici tous tes rendez-vous de mentorat.',
-                  style: TextStyle(
+                Text(
+                  subtitle,
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12.5,
                     height: 1.35,
