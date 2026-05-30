@@ -42,55 +42,59 @@ class _Session {
 class AgendaPage extends StatelessWidget {
   const AgendaPage({super.key});
 
-  /// Sessions de démonstration, basées sur les mentors de la plateforme.
+  /// Sessions de démonstration, basées sur les mentors du domaine Agro-industrie.
   static final List<_Session> _sessions = [
     _Session(
-      mentor: mentors[3], // Babacar Ngom
-      topic: 'Revue de ton business plan',
+      mentor: const Mentor(
+        initials: 'ID',
+        name: 'Ibrahima Diop',
+        title: 'PDG · Groupe Téranga Agri',
+        city: 'Thiès',
+        sectors: ['Agro-industrie'],
+        companies: ['Groupe Téranga Agri', 'SénéMaïs SA'],
+        rating: 4.8, reviews: 24, years: 12, compatibility: 95,
+      ),
+      topic: 'Accès aux financements DER/FJ pour l\'agriculture',
       weekday: 'Jeudi',
-      day: '28',
-      month: 'MAI',
-      time: '15:00 – 16:00',
+      day: '05',
+      month: 'JUIN',
+      time: '10:00 – 11:00',
       place: 'En ligne',
       status: _Status.confirmed,
     ),
     _Session(
-      mentor: mentors[5], // Aminata Niane
-      topic: 'Stratégie de lancement de la marketplace',
+      mentor: const Mentor(
+        initials: 'AF',
+        name: 'Abdoulaye Fall',
+        title: 'Directeur · CNAAS Sénégal',
+        city: 'Dakar',
+        sectors: ['Agro-industrie', 'Agroécologie'],
+        companies: ['CNAAS', 'Agri-Finance Sénégal'],
+        rating: 4.7, reviews: 31, years: 18, compatibility: 92,
+      ),
+      topic: 'Structuration de mon projet agricole',
       weekday: 'Lundi',
-      day: '01',
-      month: 'JUIN',
-      time: '10:00 – 11:00',
-      place: 'En ligne',
-      status: _Status.pending,
-    ),
-    _Session(
-      mentor: mentors[0], // Anta Diama Kama
-      topic: 'Positionnement et image de marque',
-      weekday: 'Mercredi',
-      day: '03',
+      day: '09',
       month: 'JUIN',
       time: '14:00 – 15:00',
       place: 'Bureau · Dakar-Plateau',
       status: _Status.confirmed,
     ),
     _Session(
-      mentor: mentors[1], // Yérim Habib Sow
-      topic: 'Premier échange découverte',
-      weekday: 'Lundi',
-      day: '12',
+      mentor: const Mentor(
+        initials: 'FD',
+        name: 'Fatou Diallo',
+        title: 'Fondatrice · AgriTech Sénégal',
+        city: 'Saint-Louis',
+        sectors: ['Agro-industrie', 'Tech & Digital'],
+        companies: ['AgriTech Sénégal', 'Doolel Farm'],
+        rating: 4.9, reviews: 18, years: 8, compatibility: 97,
+      ),
+      topic: 'Digitaliser ma chaîne de valeur agricole',
+      weekday: 'Mercredi',
+      day: '14',
       month: 'MAI',
       time: '11:00 – 12:00',
-      place: 'En ligne',
-      status: _Status.done,
-    ),
-    _Session(
-      mentor: mentors[4], // Mossane Diop
-      topic: 'Cadrage des objectifs du projet',
-      weekday: 'Jeudi',
-      day: '08',
-      month: 'MAI',
-      time: '16:00 – 17:00',
       place: 'En ligne',
       status: _Status.done,
     ),
@@ -572,6 +576,45 @@ class _BookedSessionCard extends StatelessWidget {
   final BookedSession session;
   const _BookedSessionCard({required this.session});
 
+  Future<void> _cancelSession(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Annuler la session ?'),
+        content: Text(
+          'Veux-tu annuler ta session avec ${session.mentorName} ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final profile = UserProfileController.profile.value;
+    await AgendaController.cancel(
+      userId: profile.email,
+      userName: profile.fullName,
+      session: session,
+      reason: 'Annulation par l\'entrepreneur',
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session annulée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = session;
@@ -699,6 +742,20 @@ class _BookedSessionCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _cancelSession(context),
+              icon: const Icon(Icons.cancel_outlined, size: 16),
+              label: const Text('Annuler'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
           ),
         ],
       ),

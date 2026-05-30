@@ -1,7 +1,9 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
+import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
@@ -44,6 +46,50 @@ class MentorDetailPage extends StatefulWidget {
 
 class _MentorDetailPageState extends State<MentorDetailPage> {
   bool _isFavorite = false;
+  // null = chargement en cours, true = acceptée, false = non acceptée
+  bool? _requestAccepted;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRequestStatus();
+  }
+
+  Future<void> _checkRequestStatus() async {
+    final mentor = widget.mentor;
+    final myRole = UserProfileController.profile.value.role;
+
+    // Seul un Entrepreneur visitant un Mentor (avec uid) a besoin de la vérification.
+    // Pour les mentors statiques (uid vide), les investisseurs ou autres rôles : accès libre.
+    if (mentor.uid.isEmpty || myRole != 'Entrepreneur' || mentor.isInvestor) {
+      setState(() => _requestAccepted = true);
+      return;
+    }
+
+    final uid = AuthService.currentUid;
+    if (uid == null) {
+      setState(() => _requestAccepted = false);
+      return;
+    }
+
+    try {
+      final snap = await FirebaseDatabase.instance.ref('mentorRequests').get();
+      final data = snap.value as Map?;
+      if (data == null) {
+        setState(() => _requestAccepted = false);
+        return;
+      }
+      final accepted = data.values.any((v) {
+        if (v is! Map) return false;
+        return v['fromUserId'] == uid &&
+            v['toUserId'] == mentor.uid &&
+            v['status'] == 'accepted';
+      });
+      setState(() => _requestAccepted = accepted);
+    } catch (_) {
+      setState(() => _requestAccepted = false);
+    }
+  }
 
   void _toggleFavorite() {
     final profile = UserProfileController.profile.value;
@@ -301,7 +347,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               Builder(
                 builder: (context) {
                   final myRole = UserProfileController.profile.value.role;
-                  if (mentor.uid.isNotEmpty && myRole == 'Entrepreneur') {
+                  if (myRole == 'Entrepreneur') {
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: SizedBox(
@@ -326,51 +372,93 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   return const SizedBox.shrink();
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          final profile = UserProfileController.profile.value;
-                          final convId = InteractionsService.generateConversationId(
-                            profile.email,
-                            mentor.name,
-                          );
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ChatPage(
-                                conversationId: convId,
-                                otherUserName: mentor.name,
-                                otherUserId: mentor.name,
-                              ),
+              Builder(
+                builder: (context) {
+                  // Pendant le chargement de la vérification, on affiche un indicateur.
+                  if (_requestAccepted == null) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final myRole = UserProfileController.profile.value.role;
+                  // Si la demande n'a pas encore été acceptée (et que l'utilisateur
+                  // est un Entrepreneur visitant un Mentor Firebase), on masque
+                  // les boutons Message et Réserver.
+                  if (!_requestAccepted! && myRole == 'Entrepreneur' &&
+                      mentor.uid.isNotEmpty && !mentor.isInvestor) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.blueTint,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Text(
+                          'Envoie une demande de mentorat pour pouvoir contacter ce mentor et réserver une session.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.muted,
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              final profile = UserProfileController.profile.value;
+                              final convId = InteractionsService.generateConversationId(
+                                profile.email,
+                                mentor.uid.isNotEmpty ? mentor.uid : mentor.name,
+                              );
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ChatPage(
+                                    conversationId: convId,
+                                    otherUserName: mentor.name,
+                                    otherUserId: mentor.uid.isNotEmpty
+                                        ? mentor.uid
+                                        : mentor.name,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline_rounded,
+                                size: 18),
+                            label: const Text('Message'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.chat_bubble_outline_rounded,
-                            size: 18),
-                        label: const Text('Message'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: _bookSession,
-                        icon: const Icon(Icons.calendar_month_rounded,
-                            size: 18),
-                        label: const Text('Réserver une session'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: _bookSession,
+                            icon: const Icon(Icons.calendar_month_rounded,
+                                size: 18),
+                            label: const Text('Réserver une session'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 32),
             ]),

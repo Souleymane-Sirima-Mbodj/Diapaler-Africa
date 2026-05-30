@@ -70,6 +70,7 @@ const mentors = <Mentor>[
     years: 15,
     compatibility: 96,
     cis: true,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'YS',
@@ -90,6 +91,7 @@ const mentors = <Mentor>[
     years: 25,
     compatibility: 92,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MN',
@@ -112,6 +114,7 @@ const mentors = <Mentor>[
     years: 8,
     compatibility: 88,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'BN',
@@ -131,6 +134,7 @@ const mentors = <Mentor>[
     years: 30,
     compatibility: 84,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MD',
@@ -146,6 +150,7 @@ const mentors = <Mentor>[
     reviews: 34,
     years: 7,
     compatibility: 91,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'AN',
@@ -163,6 +168,7 @@ const mentors = <Mentor>[
     years: 12,
     compatibility: 94,
     cis: true,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'KB',
@@ -181,6 +187,7 @@ const mentors = <Mentor>[
     years: 18,
     compatibility: 78,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AD',
@@ -197,6 +204,7 @@ const mentors = <Mentor>[
     reviews: 42,
     years: 22,
     compatibility: 97,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'PD',
@@ -213,6 +221,7 @@ const mentors = <Mentor>[
     years: 9,
     compatibility: 95,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MW',
@@ -229,6 +238,7 @@ const mentors = <Mentor>[
     reviews: 39,
     years: 14,
     compatibility: 82,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'OS',
@@ -244,6 +254,7 @@ const mentors = <Mentor>[
     reviews: 21,
     years: 10,
     compatibility: 80,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FF',
@@ -259,6 +270,7 @@ const mentors = <Mentor>[
     reviews: 33,
     years: 11,
     compatibility: 89,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'KS',
@@ -275,6 +287,7 @@ const mentors = <Mentor>[
     reviews: 44,
     years: 9,
     compatibility: 90,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'CN',
@@ -291,6 +304,7 @@ const mentors = <Mentor>[
     reviews: 29,
     years: 12,
     compatibility: 78,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AB',
@@ -307,6 +321,7 @@ const mentors = <Mentor>[
     reviews: 51,
     years: 13,
     compatibility: 82,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'MT',
@@ -323,6 +338,7 @@ const mentors = <Mentor>[
     reviews: 38,
     years: 16,
     compatibility: 85,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AS',
@@ -339,6 +355,7 @@ const mentors = <Mentor>[
     reviews: 42,
     years: 8,
     compatibility: 88,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'IS',
@@ -355,6 +372,7 @@ const mentors = <Mentor>[
     reviews: 22,
     years: 14,
     compatibility: 76,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MF',
@@ -370,6 +388,7 @@ const mentors = <Mentor>[
     reviews: 47,
     years: 17,
     compatibility: 84,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'DM',
@@ -388,6 +407,7 @@ const mentors = <Mentor>[
     years: 20,
     compatibility: 81,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'CD',
@@ -404,6 +424,7 @@ const mentors = <Mentor>[
     reviews: 31,
     years: 19,
     compatibility: 79,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AC',
@@ -419,6 +440,7 @@ const mentors = <Mentor>[
     reviews: 56,
     years: 6,
     compatibility: 92,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'OD',
@@ -436,6 +458,7 @@ const mentors = <Mentor>[
     years: 22,
     compatibility: 83,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FS',
@@ -452,6 +475,7 @@ const mentors = <Mentor>[
     reviews: 25,
     years: 15,
     compatibility: 77,
+    gender: Gender.female,
   ),
   // ─── Agro / Food / Gastronomie ───
   Mentor(
@@ -462,6 +486,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie'],
     companies: ['Casamance Agro', 'Riz du Sud SARL'],
     rating: 4.6, reviews: 28, years: 18, compatibility: 80,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'BF',
@@ -471,6 +496,7 @@ const mentors = <Mentor>[
     sectors: ['Avicole', 'Agriculture', 'Agro-industrie'],
     companies: ['Aviculteurs du Sénégal', 'Élevage Faye & Fils'],
     rating: 4.7, reviews: 32, years: 14, compatibility: 84,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'CS',
@@ -480,6 +506,7 @@ const mentors = <Mentor>[
     sectors: ['Gastronomie', 'Food', 'Hôtellerie'],
     companies: ['Téranga Cuisine', 'Restaurant Le Sénégalais', 'Catering Plus'],
     rating: 4.8, reviews: 41, years: 12, compatibility: 86,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'RN',
@@ -489,6 +516,7 @@ const mentors = <Mentor>[
     sectors: ['Gastronomie', 'Food'],
     companies: ['Bonne Cuisine Africaine', 'Académie Culinaire SN'],
     rating: 4.9, reviews: 36, years: 10, compatibility: 88,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'AD2',
@@ -498,6 +526,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Food', 'Agro-industrie', 'Avicole'],
     companies: ['Niayes Frais', 'Maraîchers du Nord'],
     rating: 4.5, reviews: 22, years: 16, compatibility: 79,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'KD',
@@ -507,6 +536,7 @@ const mentors = <Mentor>[
     sectors: ['Gastronomie', 'Food', 'Tourisme'],
     companies: ['Saveurs Téranga', 'Restaurant Atlantique'],
     rating: 4.7, reviews: 27, years: 9, compatibility: 82,
+    gender: Gender.female,
   ),
   // ─── Artisanat / Mode / Cosmétique / Beauté ───
   Mentor(
@@ -517,6 +547,7 @@ const mentors = <Mentor>[
     sectors: ['Artisanat', 'Mode & Textile'],
     companies: ['Bogolan Atelier', 'Tisseuses du Walo'],
     rating: 4.8, reviews: 29, years: 14, compatibility: 85,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'PS',
@@ -526,6 +557,7 @@ const mentors = <Mentor>[
     sectors: ['Cosmétique', 'Beauté'],
     companies: ['Penda Beauty', 'Beauté Naturelle SN'],
     rating: 4.7, reviews: 38, years: 8, compatibility: 86,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'SM',
@@ -535,6 +567,7 @@ const mentors = <Mentor>[
     sectors: ['Artisanat', 'Mode & Textile', 'Beauté'],
     companies: ['Sokhna Crafts', 'Boutique Touba Style'],
     rating: 4.6, reviews: 24, years: 11, compatibility: 81,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'YB',
@@ -544,6 +577,7 @@ const mentors = <Mentor>[
     sectors: ['Mode & Textile', 'Artisanat'],
     companies: ['Téranga Couture', 'Atelier Yacine Bâ'],
     rating: 4.8, reviews: 33, years: 13, compatibility: 88,
+    gender: Gender.female,
   ),
   // ─── Automobile / Transport / Logistique ───
   Mentor(
@@ -554,6 +588,7 @@ const mentors = <Mentor>[
     sectors: ['Automobile', 'Transport'],
     companies: ['Auto Plus Sénégal', 'Garage Auto Centre'],
     rating: 4.5, reviews: 21, years: 17, compatibility: 76,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AD3',
@@ -563,6 +598,7 @@ const mentors = <Mentor>[
     sectors: ['Logistique', 'Transport'],
     companies: ['Logistique Express', 'Transit Régional'],
     rating: 4.6, reviews: 26, years: 15, compatibility: 78,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'BC',
@@ -572,6 +608,7 @@ const mentors = <Mentor>[
     sectors: ['Automobile', 'Lifestyle'],
     companies: ['Cisco Automobile', 'Pièces Auto SN'],
     rating: 4.6, reviews: 19, years: 11, compatibility: 75,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'IN',
@@ -581,6 +618,7 @@ const mentors = <Mentor>[
     sectors: ['Transport', 'Logistique', 'Automobile'],
     companies: ['TransAfrica Logistics', 'Flotte Sénégalaise'],
     rating: 4.7, reviews: 30, years: 20, compatibility: 82,
+    gender: Gender.male,
   ),
   // ─── Énergie / Renouvelable ───
   Mentor(
@@ -591,6 +629,7 @@ const mentors = <Mentor>[
     sectors: ['Énergie', 'Renouvelable'],
     companies: ['Solar Power Sénégal', 'EcoSolaire Africa'],
     rating: 4.8, reviews: 34, years: 12, compatibility: 87,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'BK',
@@ -600,6 +639,7 @@ const mentors = <Mentor>[
     sectors: ['Énergie', 'Tech & Digital', 'Services'],
     companies: ['EnergyTech SN', 'Smart Grid Africa'],
     rating: 4.7, reviews: 28, years: 14, compatibility: 84,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'KH',
@@ -609,6 +649,7 @@ const mentors = <Mentor>[
     sectors: ['Renouvelable', 'Agriculture', 'Agro-industrie'],
     companies: ['EcoFarm', 'Bio-Énergie Niayes'],
     rating: 4.6, reviews: 23, years: 10, compatibility: 80,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'AS2',
@@ -618,6 +659,7 @@ const mentors = <Mentor>[
     sectors: ['Renouvelable', 'Tech & Digital', 'Énergie'],
     companies: ['GreenTech Sénégal', 'Climat Numérique'],
     rating: 4.8, reviews: 31, years: 9, compatibility: 88,
+    gender: Gender.female,
   ),
   // ─── Finance / FinTech / Mobile Money ───
   Mentor(
@@ -629,6 +671,7 @@ const mentors = <Mentor>[
     companies: ['Banque Privée Sénégal', 'Conseil Financier SN'],
     rating: 4.7, reviews: 39, years: 22, compatibility: 83,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'ASR',
@@ -638,6 +681,7 @@ const mentors = <Mentor>[
     sectors: ['FinTech', 'Mobile Money', 'Tech & Digital'],
     companies: ['PaySN', 'Wallet Plus'],
     rating: 4.8, reviews: 42, years: 8, compatibility: 89,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'CC',
@@ -647,6 +691,7 @@ const mentors = <Mentor>[
     sectors: ['Mobile Money', 'FinTech', 'Services'],
     companies: ['Wallet Africa', 'PayMobile SN'],
     rating: 4.6, reviews: 27, years: 7, compatibility: 81,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'NF',
@@ -656,6 +701,7 @@ const mentors = <Mentor>[
     sectors: ['Finance', 'Mobile Money'],
     companies: ['Microfinance Téranga', 'Caisse Régionale'],
     rating: 4.7, reviews: 35, years: 18, compatibility: 84,
+    gender: Gender.female,
   ),
   // ─── Hôtellerie / Tourisme / Lifestyle ───
   Mentor(
@@ -666,6 +712,7 @@ const mentors = <Mentor>[
     sectors: ['Hôtellerie', 'Tourisme'],
     companies: ['Cap Skirring Resort', 'Casamance Tours'],
     rating: 4.7, reviews: 29, years: 13, compatibility: 82,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'MK',
@@ -675,6 +722,7 @@ const mentors = <Mentor>[
     sectors: ['Tourisme', 'Lifestyle', 'Hôtellerie'],
     companies: ['Voyage Téranga', 'Téranga Travel Plus'],
     rating: 4.6, reviews: 25, years: 10, compatibility: 79,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'KF',
@@ -684,6 +732,7 @@ const mentors = <Mentor>[
     sectors: ['Lifestyle', 'Beauté', 'Médias'],
     companies: ['Lifestyle SN', 'Khady Faye Brand'],
     rating: 4.8, reviews: 51, years: 6, compatibility: 86,
+    gender: Gender.female,
   ),
   // ─── Santé / E-santé / Pharmacie ───
   Mentor(
@@ -694,6 +743,7 @@ const mentors = <Mentor>[
     sectors: ['Santé', 'E-santé'],
     companies: ['Cabinet Médical Plateau', 'Réseau Médecins SN'],
     rating: 4.9, reviews: 47, years: 25, compatibility: 90,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'PK',
@@ -703,6 +753,7 @@ const mentors = <Mentor>[
     sectors: ['Santé', 'Services'],
     companies: ['Réseau Pharmacies SN', 'Pharma Express'],
     rating: 4.7, reviews: 33, years: 16, compatibility: 83,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'CTK',
@@ -712,6 +763,7 @@ const mentors = <Mentor>[
     sectors: ['E-santé', 'Tech & Digital', 'Santé'],
     companies: ['TeleMed SN', 'Santé Connectée Africa'],
     rating: 4.8, reviews: 38, years: 11, compatibility: 87,
+    gender: Gender.male,
   ),
   // ─── Médias / EdTech / Tech ───
   Mentor(
@@ -722,6 +774,7 @@ const mentors = <Mentor>[
     sectors: ['Médias', 'Éducation / EdTech'],
     companies: ['Journal Numérique SN', 'Africa News Daily'],
     rating: 4.7, reviews: 29, years: 12, compatibility: 84,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'PN',
@@ -731,6 +784,7 @@ const mentors = <Mentor>[
     sectors: ['Éducation / EdTech', 'Tech & Digital'],
     companies: ['Coding Africa', 'École Numérique Dakar'],
     rating: 4.9, reviews: 44, years: 9, compatibility: 91,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MD2',
@@ -740,6 +794,7 @@ const mentors = <Mentor>[
     sectors: ['Médias', 'Lifestyle'],
     companies: ['Magazine Téranga', 'Édition Sahel'],
     rating: 4.6, reviews: 22, years: 14, compatibility: 78,
+    gender: Gender.female,
   ),
   // ─── Télécoms / Immobilier / BTP / Services ───
   Mentor(
@@ -751,6 +806,7 @@ const mentors = <Mentor>[
     companies: ['Sénégal Connect', 'Fibre Téranga'],
     rating: 4.7, reviews: 36, years: 18, compatibility: 85,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MSY',
@@ -760,6 +816,7 @@ const mentors = <Mentor>[
     sectors: ['Immobilier', 'BTP'],
     companies: ['Immo Plus Dakar', 'Promoteur Téranga'],
     rating: 4.6, reviews: 30, years: 15, compatibility: 80,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'CAF',
@@ -770,6 +827,7 @@ const mentors = <Mentor>[
     companies: ['Constructions Africaines', 'Bâtiment Plus SN'],
     rating: 4.7, reviews: 28, years: 21, compatibility: 82,
     cis: true,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AMN',
@@ -779,6 +837,7 @@ const mentors = <Mentor>[
     sectors: ['Télécoms', 'Services', 'Mobile Money'],
     companies: ['Mobile SN Pro', 'Téléphonie Africa'],
     rating: 4.6, reviews: 24, years: 11, compatibility: 78,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'OBA',
@@ -788,6 +847,7 @@ const mentors = <Mentor>[
     sectors: ['Immobilier', 'BTP', 'Services'],
     companies: ['Cabinet Bâ & Co', 'Architecture Sénégal'],
     rating: 4.8, reviews: 32, years: 19, compatibility: 86,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'SD',
@@ -797,6 +857,7 @@ const mentors = <Mentor>[
     sectors: ['Immobilier', 'Hôtellerie', 'BTP'],
     companies: ['Téranga Real Estate', 'Saly Properties'],
     rating: 4.7, reviews: 26, years: 17, compatibility: 81,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AT',
@@ -806,6 +867,7 @@ const mentors = <Mentor>[
     sectors: ['Télécoms', 'Tech & Digital', 'Services'],
     companies: ['Touré Telecom', 'Réseau Africa'],
     rating: 4.6, reviews: 23, years: 16, compatibility: 79,
+    gender: Gender.male,
   ),
   // ─── E-commerce ───
   Mentor(
@@ -816,6 +878,7 @@ const mentors = <Mentor>[
     sectors: ['E-commerce', 'Mode & Textile'],
     companies: ['FashionSN', 'Téranga Online Store'],
     rating: 4.7, reviews: 31, years: 7, compatibility: 84,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'MC',
@@ -825,6 +888,7 @@ const mentors = <Mentor>[
     sectors: ['E-commerce', 'Lifestyle', 'Tech & Digital'],
     companies: ['Marketplace Africa', 'Boutique en ligne SN'],
     rating: 4.6, reviews: 25, years: 9, compatibility: 80,
+    gender: Gender.male,
   ),
 
   // ─── Région Dakar (banlieue) ───
@@ -836,6 +900,7 @@ const mentors = <Mentor>[
     sectors: ['BTP', 'Immobilier', 'Services'],
     companies: ['Guèye Construction', 'Rufisque Bâtiment'],
     rating: 4.6, reviews: 22, years: 14, compatibility: 80,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FDi',
@@ -845,6 +910,7 @@ const mentors = <Mentor>[
     sectors: ['E-commerce', 'Commerce', 'Services'],
     companies: ['Pikine Commerce Digital', 'Boutique Banlieue SN'],
     rating: 4.5, reviews: 18, years: 7, compatibility: 78,
+    gender: Gender.female,
   ),
 
   // ─── Région Thiès (compléments) ───
@@ -856,6 +922,7 @@ const mentors = <Mentor>[
     sectors: ['Tourisme', 'Hôtellerie', 'Services'],
     companies: ['Mbour Tourisme Plus', 'Côte des Filets'],
     rating: 4.6, reviews: 24, years: 10, compatibility: 79,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AFa',
@@ -865,6 +932,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Services'],
     companies: ['Tivaouane Agri Services', 'Coopérative Niayes Centre'],
     rating: 4.5, reviews: 19, years: 12, compatibility: 77,
+    gender: Gender.female,
   ),
 
   // ─── Région Fatick ───
@@ -876,6 +944,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Finance'],
     companies: ['Fatick AgroFemmes', 'Microfinance Sine-Saloum'],
     rating: 4.7, reviews: 28, years: 11, compatibility: 83,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'MDg',
@@ -885,6 +954,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
     companies: ['Gossas Agri+', 'Élevage Sine Saloum'],
     rating: 4.5, reviews: 16, years: 13, compatibility: 76,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'BDi',
@@ -894,6 +964,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Food', 'Tourisme'],
     companies: ['Foundiougne Pêche Durable', 'Delta du Saloum Nature'],
     rating: 4.6, reviews: 20, years: 9, compatibility: 78,
+    gender: Gender.male,
   ),
 
   // ─── Région Kaffrine ───
@@ -905,6 +976,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
     companies: ['Kaffrine Élevage', 'Coopérative Pastorale Centre'],
     rating: 4.5, reviews: 17, years: 16, compatibility: 75,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MDl',
@@ -914,6 +986,7 @@ const mentors = <Mentor>[
     sectors: ['Finance', 'Services', 'Agriculture'],
     companies: ['Kaffrine Microfinance', 'Réseau Femmes Rurales'],
     rating: 4.6, reviews: 21, years: 12, compatibility: 80,
+    gender: Gender.female,
   ),
 
   // ─── Région Louga ───
@@ -925,6 +998,7 @@ const mentors = <Mentor>[
     sectors: ['Commerce', 'Transport', 'Logistique'],
     companies: ['Louga Commerce & Transit', 'Nord Transit SN'],
     rating: 4.6, reviews: 23, years: 17, compatibility: 79,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'NSa',
@@ -934,6 +1008,7 @@ const mentors = <Mentor>[
     sectors: ['Artisanat', 'Mode & Textile', 'Agriculture'],
     companies: ['Artisanat Louga', 'Tisseuses du Cayor'],
     rating: 4.7, reviews: 26, years: 10, compatibility: 81,
+    gender: Gender.female,
   ),
 
   // ─── Région Saint-Louis (compléments) ───
@@ -945,6 +1020,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Avicole'],
     companies: ['Podor Élevage Sahel', 'Fleuve Agri Services'],
     rating: 4.5, reviews: 18, years: 20, compatibility: 74,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'ABa',
@@ -954,6 +1030,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Food'],
     companies: ['Dagana Riz & Céréales', 'Vallée Agricole Nord'],
     rating: 4.6, reviews: 22, years: 14, compatibility: 78,
+    gender: Gender.female,
   ),
 
   // ─── Région Matam ───
@@ -965,6 +1042,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Services'],
     companies: ['Matam Agro-Pastoral', 'Sahel Bétail Export'],
     rating: 4.5, reviews: 15, years: 18, compatibility: 73,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'HSo',
@@ -974,6 +1052,7 @@ const mentors = <Mentor>[
     sectors: ['Finance', 'Services', 'Éducation / EdTech'],
     companies: ['Microfinance Fouta', 'Réseau Femmes Fouta'],
     rating: 4.6, reviews: 20, years: 13, compatibility: 77,
+    gender: Gender.female,
   ),
 
   // ─── Région Tambacounda ───
@@ -985,6 +1064,7 @@ const mentors = <Mentor>[
     sectors: ['Commerce', 'Agro-industrie', 'Transport'],
     companies: ['Tambacounda Commerce', 'Tamba Transit Est'],
     rating: 4.5, reviews: 19, years: 15, compatibility: 75,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'ADl',
@@ -994,6 +1074,7 @@ const mentors = <Mentor>[
     sectors: ['Éducation / EdTech', 'Services', 'Tech & Digital'],
     companies: ['EduTamba', 'Centre Numérique Est Sénégal'],
     rating: 4.7, reviews: 24, years: 8, compatibility: 82,
+    gender: Gender.female,
   ),
 
   // ─── Région Kédougou ───
@@ -1005,6 +1086,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Renouvelable', 'Services'],
     companies: ['Kédougou Resources', 'Or & Développement SN'],
     rating: 4.6, reviews: 17, years: 12, compatibility: 77,
+    gender: Gender.male,
   ),
 
   // ─── Région Kolda ───
@@ -1016,6 +1098,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Food'],
     companies: ['Kolda Agri Sud', 'Casamance Intérieure Agro'],
     rating: 4.5, reviews: 16, years: 17, compatibility: 74,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FBl',
@@ -1025,6 +1108,7 @@ const mentors = <Mentor>[
     sectors: ['Commerce', 'Artisanat', 'Services'],
     companies: ['Kolda Femmes Entrepreneurs', 'Marché Sud SARL'],
     rating: 4.6, reviews: 21, years: 9, compatibility: 78,
+    gender: Gender.female,
   ),
 
   // ─── Région Sédhiou ───
@@ -1036,6 +1120,7 @@ const mentors = <Mentor>[
     sectors: ['Artisanat', 'Agriculture', 'Tourisme'],
     companies: ['Sédhiou Artisanat Casamance', 'Forêts & Développement'],
     rating: 4.5, reviews: 14, years: 10, compatibility: 74,
+    gender: Gender.male,
   ),
 
   // ─── Région Ziguinchor (compléments) ───
@@ -1047,6 +1132,7 @@ const mentors = <Mentor>[
     sectors: ['Tourisme', 'Artisanat', 'Agriculture'],
     companies: ['Bignona Nature & Tourisme', 'Kassolol Artisanat'],
     rating: 4.7, reviews: 25, years: 11, compatibility: 81,
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'SDi',
@@ -1056,6 +1142,7 @@ const mentors = <Mentor>[
     sectors: ['Agriculture', 'Agro-industrie', 'Commerce'],
     companies: ['Nioro AgroExport', 'Saloum Sud Producteurs'],
     rating: 4.5, reviews: 17, years: 14, compatibility: 76,
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MDp',
@@ -1065,6 +1152,7 @@ const mentors = <Mentor>[
     sectors: ['Commerce', 'Services', 'Transport'],
     companies: ['Diourbel Négoce', 'Baol Transit'],
     rating: 4.5, reviews: 19, years: 16, compatibility: 75,
+    gender: Gender.male,
   ),
 
   // ─── Investisseurs régionaux ───
@@ -1077,6 +1165,7 @@ const mentors = <Mentor>[
     companies: ['Mbour Impact Invest', 'Petite Côte Ventures'],
     rating: 4.7, reviews: 28, years: 13, compatibility: 82,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'IBl',
@@ -1087,6 +1176,7 @@ const mentors = <Mentor>[
     companies: ['Sud Sénégal Capital', 'Kolda Angel Fund'],
     rating: 4.6, reviews: 20, years: 12, compatibility: 79,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FDn',
@@ -1097,6 +1187,7 @@ const mentors = <Mentor>[
     companies: ['Kaolack Invest', 'Bassin Arachidier Fund'],
     rating: 4.7, reviews: 25, years: 15, compatibility: 81,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'MSa',
@@ -1107,6 +1198,7 @@ const mentors = <Mentor>[
     companies: ['Louga Ventures', 'Nord Sénégal Angel Network'],
     rating: 4.6, reviews: 18, years: 11, compatibility: 78,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
 
   // ═══════════════════════════════════════════════
@@ -1127,6 +1219,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.9, reviews: 64, years: 16, compatibility: 95,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'NS',
@@ -1141,6 +1234,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 53, years: 14, compatibility: 92,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'HB',
@@ -1155,6 +1249,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 41, years: 12, compatibility: 89,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'CMT',
@@ -1169,6 +1264,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 48, years: 19, compatibility: 91,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'RN',
@@ -1183,6 +1279,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.9, reviews: 57, years: 21, compatibility: 94,
     cis: true, role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Agro-industrie / Agriculture ───
@@ -1199,6 +1296,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 39, years: 18, compatibility: 86,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'FMB',
@@ -1213,6 +1311,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 35, years: 13, compatibility: 84,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Immobilier / BTP ───
@@ -1229,6 +1328,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.6, reviews: 30, years: 22, compatibility: 82,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'KAN',
@@ -1243,6 +1343,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 26, years: 17, compatibility: 80,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Énergie / Renouvelable ───
@@ -1259,6 +1360,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 44, years: 15, compatibility: 88,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'MB2',
@@ -1273,6 +1375,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 32, years: 11, compatibility: 85,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Santé / E-santé ───
@@ -1289,6 +1392,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.9, reviews: 50, years: 20, compatibility: 91,
     cis: true, role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Tourisme / Hôtellerie ───
@@ -1305,6 +1409,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 36, years: 16, compatibility: 83,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
 
   // ─── Mode / Cosmétique / Artisanat ───
@@ -1321,6 +1426,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 42, years: 10, compatibility: 87,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Transport / Logistique ───
@@ -1337,6 +1443,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.6, reviews: 28, years: 14, compatibility: 81,
     role: 'Investisseur',
+    gender: Gender.male,
   ),
 
   // ─── Médias / Éducation ───
@@ -1353,6 +1460,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 33, years: 13, compatibility: 84,
     role: 'Investisseur',
+    gender: Gender.female,
   ),
 
   // ─── Multi-secteurs / Fonds généralistes ───
@@ -1369,6 +1477,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 61, years: 24, compatibility: 93,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'SM2',
@@ -1383,6 +1492,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.9, reviews: 72, years: 28, compatibility: 96,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
   Mentor(
     initials: 'AW',
@@ -1397,6 +1507,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.8, reviews: 49, years: 17, compatibility: 90,
     cis: true, role: 'Investisseur',
+    gender: Gender.female,
   ),
   Mentor(
     initials: 'OTh',
@@ -1411,6 +1522,7 @@ const mentors = <Mentor>[
     ],
     rating: 4.7, reviews: 45, years: 20, compatibility: 88,
     cis: true, role: 'Investisseur',
+    gender: Gender.male,
   ),
 ];
 
