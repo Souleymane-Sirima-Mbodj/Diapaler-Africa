@@ -34,8 +34,6 @@ class _AddProjectPageState extends State<AddProjectPage> {
         name: _name.text.trim(),
         description: _description.text.trim(),
         sector: _sector!,
-        step: 1,
-        totalSteps: 5,
       ),
     );
     if (!added) {

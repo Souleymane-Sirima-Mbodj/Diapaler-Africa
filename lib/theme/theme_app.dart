@@ -51,7 +51,6 @@ class AppTheme {
     return base.copyWith(
       colorScheme: const ColorScheme.light(
         primary: AppColors.navy,
-        onPrimary: Colors.white,
         secondary: AppColors.amber,
         onSecondary: AppColors.navyDeep,
         surface: AppColors.surface,
@@ -159,9 +158,7 @@ class AppTheme {
         primary: AppColors.amber,
         onPrimary: AppColors.navyDeep,
         secondary: AppColors.blue,
-        onSecondary: Colors.white,
         surface: AppColors.darkSurface,
-        onSurface: Colors.white,
         error: AppColors.red,
       ),
       scaffoldBackgroundColor: AppColors.darkSurface,

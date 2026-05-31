@@ -31,7 +31,6 @@ class DiapalerLogoTile extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(
                 color: AppColors.amber.withValues(alpha: onDark ? 0.4 : 0.3),
-                width: 1,
               ),
             ),
           ),

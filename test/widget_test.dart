@@ -119,7 +119,7 @@ void main() {
       id: '1234567890',
       mentorName: 'Anta Diama Kama',
       mentorInitials: 'AK',
-      scheduledAt: DateTime(2026, 6, 15, 14, 0),
+      scheduledAt: DateTime(2026, 6, 15, 14),
     );
 
     test('toJson contient tous les champs', () {
@@ -155,7 +155,6 @@ void main() {
       message: 'Ta demande à Anta Diama Kama a été transmise.',
       timestamp: DateTime(2026, 5, 23, 10, 30),
       type: 'mentor_request',
-      isRead: false,
     );
 
     test('toJson contient tous les champs', () {

@@ -160,7 +160,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+              background: DecoratedBox(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -672,7 +672,6 @@ class _CompaniesList extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: AppColors.amber.withValues(alpha: 0.4),
-              width: 1,
             ),
           ),
           child: Row(
