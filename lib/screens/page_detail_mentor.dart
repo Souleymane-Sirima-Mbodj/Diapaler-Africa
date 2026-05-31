@@ -342,8 +342,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Tape sur un créneau pour le sélectionner.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  'Créneaux indicatifs — la session est automatiquement planifiée à J+7, 14h00.',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
                 ),
               ),
               const SizedBox(height: 10),

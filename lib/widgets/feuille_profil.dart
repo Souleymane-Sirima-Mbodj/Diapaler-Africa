@@ -123,28 +123,73 @@ class _ProfileSheet extends StatelessWidget {
                       icon: Icons.workspace_premium_outlined,
                       label: 'Mes pitchs déposés',
                       trailing: '${p.projects.length}',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Consulte la section "Mes projets" sur ton profil.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                     ),
                     _Tile(
                       icon: Icons.bookmark_border_rounded,
                       label: 'Mentors favoris',
                       trailing: '${p.favoritesCount}',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Fonctionnalité favoris disponible prochainement.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 );
               },
             ),
-            const _Tile(
+            _Tile(
               icon: Icons.language_rounded,
               label: 'Langue',
               trailing: 'FR',
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Changement de langue disponible prochainement.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
             ),
-            const _Tile(
+            _Tile(
               icon: Icons.settings_outlined,
               label: 'Paramètres',
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Paramètres disponibles prochainement.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
             ),
-            const _Tile(
+            _Tile(
               icon: Icons.help_outline_rounded,
               label: 'Aide & support',
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Support disponible prochainement. Contact : support@diapaler.sn'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
             ),
             const Divider(height: 24),
             _LogoutTile(
@@ -194,7 +239,7 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: onTap ?? () {},
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
         child: Row(

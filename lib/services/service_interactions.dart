@@ -6,6 +6,24 @@ class InteractionsService {
 
   // ────── MENTOR REQUESTS ──────
 
+  /// Retourne `true` si une demande en attente existe déjà entre ces deux utilisateurs.
+  static Future<bool> hasPendingRequest({
+    required String fromUserId,
+    required String toUserId,
+  }) async {
+    final snap = await _db
+        .child('mentorRequests')
+        .orderByChild('fromUserId')
+        .equalTo(fromUserId)
+        .get();
+    if (!snap.exists || snap.value == null) return false;
+    final data = Map<String, dynamic>.from(snap.value as Map);
+    return data.values.any((v) {
+      final m = Map<String, dynamic>.from(v as Map);
+      return m['toUserId'] == toUserId && m['status'] == 'pending';
+    });
+  }
+
   static Future<void> sendMentorRequest({
     required String fromUserId,
     required String toUserId,

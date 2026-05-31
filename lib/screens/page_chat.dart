@@ -62,7 +62,7 @@ class _ChatPageState extends State<ChatPage> {
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted && _scrollCtrl.hasClients) {
           _scrollCtrl.animateTo(
-            _scrollCtrl.position.maxScrollExtent,
+            0,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );
@@ -148,10 +148,11 @@ class _ChatPageState extends State<ChatPage> {
 
                 return ListView.builder(
                   controller: _scrollCtrl,
+                  reverse: true,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
+                    final message = messages[messages.length - 1 - index];
                     final isMe = message.senderId == currentUid;
 
                     return Padding(
@@ -267,6 +268,6 @@ class _ChatPageState extends State<ChatPage> {
         now.day == dt.day) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    return '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }

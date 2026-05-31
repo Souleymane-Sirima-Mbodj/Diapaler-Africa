@@ -7,7 +7,7 @@ import '../theme/theme_app.dart';
 import '../widgets/logo_diapaler.dart';
 import '../widgets/bande_drapeau.dart';
 import 'coquille_principale.dart';
-import 'page_inscription.dart';
+import 'page_choix_role.dart';
 import 'page_mot_de_passe_oublie.dart';
 
 class LoginPage extends StatefulWidget {
@@ -337,7 +337,7 @@ class _LoginPageState extends State<LoginPage> {
                       GestureDetector(
                         onTap: () => Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                              builder: (_) => const SignUpPage()),
+                              builder: (_) => const RoleSelectionPage()),
                         ),
                         child: const Text(
                           "S'inscrire",

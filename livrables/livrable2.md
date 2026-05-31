@@ -126,7 +126,8 @@ import '../data/profil_utilisateur.dart';
 class DatabaseService {
   static FirebaseDatabase get _db => FirebaseDatabase.instance;
   static DatabaseReference _userRef(String uid) => _db.ref('users/$uid');
-  static DatabaseReference get _pitchesRef => _db.ref('pitches');
+  // Note : le getter _pitchesRef est simplifié ici pour illustrer la référence ;
+  // dans le code réel, les accès aux pitches se font directement via _db.ref('pitches/...')
 }
 ```
 
@@ -165,7 +166,7 @@ diapaler-africa-default-rtdb/
 │       │       ├── description → "Plateforme de mode africaine..."
 │       │       ├── sector      → "Mode & Textile"
 │       │       ├── step        → 2
-│       │       └── totalSteps  → 5
+│       │       └── totalSteps  → 3 (pitch) ou 5 (projet manuel)
 │       ├── mentorsActive      → 2
 │       ├── sessionsCount      → 8
 │       ├── favoritesCount     → 5
@@ -203,6 +204,7 @@ diapaler-africa-default-rtdb/
 │       ├── user2Name       → "Ibrahima Sall"
 │       ├── lastMessage     → "À bientôt !"
 │       ├── lastMessageTime → "2025-05-24T10:05:00.000"
+│       ├── lastSenderId    → "uid_expediteur"
 │       └── unreadCount     → 3
 │
 ├── mentorRequests/
@@ -213,16 +215,25 @@ diapaler-africa-default-rtdb/
 │       ├── fromName     → "Mariéme Tine"
 │       ├── toName       → "Ibrahima Sall"
 │       ├── message      → "Bonjour, je recherche un mentor..."
-│       ├── status       → "pending" | "accepted" | "rejected"
+│       ├── type         → "mentor" | "investment"   ← distingue demandes mentorat vs propositions investissement
+│       ├── status       → "pending" | "accepted" | "rejected" | "cancelled"
 │       ├── createdAt    → "2025-05-20T09:00:00.000"
 │       └── respondedAt  → "2025-05-21T14:30:00.000"
 │
 ├── availability/
 │   └── {userId}/
 │       ├── userId       → "uid_mentor"
-│       ├── slots/
-│       │   └── {index}/ → {"day": "Lundi", "startTime": "09:00", "endTime": "12:00"}
-│       └── updatedAt    → "2025-05-24T10:00:00.000"
+│       ├── schedule/
+│       │   └── {day}/   (Monday, Tuesday, ...)
+│       │       ├── day         → "Monday"
+│       │       ├── isAvailable → true
+│       │       └── timeSlots/
+│       │           └── {index}/
+│       │               ├── startHour   → 9
+│       │               ├── startMinute → 0
+│       │               ├── endHour     → 12
+│       │               └── endMinute   → 0
+│       └── lastUpdated  → "2025-05-24T10:00:00.000"
 │
 ├── bookedSessions/
 │   └── {uid}/
@@ -635,6 +646,19 @@ L'`InteractionsService` gère toutes les interactions entre utilisateurs : **dem
 
 ### 2.1 Demandes de mentorat (mentorRequests)
 
+**Modèle `MentorRequest`** — le champ `type` distingue les deux types de demandes :
+
+| Champ | Type | Valeurs |
+|---|---|---|
+| `id` | String | Timestamp ms |
+| `fromUserId` | String | UID de l'expéditeur |
+| `toUserId` | String | UID du destinataire |
+| `fromName` / `toName` | String | Noms affichés |
+| `message` | String | Message personnalisé |
+| `type` | String | `'mentor'` ou `'investment'` |
+| `status` | String | `'pending'` / `'accepted'` / `'rejected'` / `'cancelled'` |
+| `createdAt` / `respondedAt` | String (ISO) | Dates |
+
 ```dart
 // lib/services/service_interactions.dart
 import 'package:firebase_database/firebase_database.dart';
@@ -650,6 +674,7 @@ class InteractionsService {
     required String fromName,
     required String toName,
     required String message,
+    String type = 'mentor',
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final request = MentorRequest(
@@ -708,17 +733,41 @@ L'envoi d'un message écrit dans `messages/{conv}/{id}` puis met à jour le comp
 
 ```dart
 // ── CREATE : Envoyer un message
-static Future<void> sendMessage({...}) async {
+static Future<void> sendMessage({
+  required String conversationId,
+  required String senderId,
+  required String senderName,
+  required String recipientId,
+  required String recipientName,
+  required String text,
+}) async {
   final msgId = DateTime.now().millisecondsSinceEpoch.toString();
-  await _db.child('messages/$conversationId/$msgId').set(
-    ChatMessage(id: msgId, senderId: senderId, text: text,
-                timestamp: DateTime.now(), isRead: false).toJson());
-  // Mise à jour de la conversation (dernier message + compteur non lus)
-  await _db.child('conversations/$conversationId').update({
-    'lastMessage': text,
-    'lastMessageTime': DateTime.now().toIso8601String(),
-    'unreadCount': ServerValue.increment(1),
-  });
+  final now = DateTime.now();
+  final message = ChatMessage(
+    id: msgId, senderId: senderId, senderName: senderName,
+    recipientId: recipientId, text: text, timestamp: now, isRead: false,
+  );
+  await _db.child('messages/$conversationId/$msgId').set(message.toJson());
+
+  // Sync de la conversation avec createOrUpdateConversation (utilise .set())
+  final ids = [senderId, recipientId]..sort();
+  await createOrUpdateConversation(Conversation(
+    id: conversationId,
+    user1Id: ids[0],
+    user2Id: ids[1],
+    user1Name: ids[0] == senderId ? senderName : recipientName,
+    user2Name: ids[0] == senderId ? recipientName : senderName,
+    lastMessage: text,
+    lastMessageTime: now,
+    unreadCount: 1,
+    lastSenderId: senderId,
+  ));
+}
+
+static Future<void> createOrUpdateConversation(Conversation conversation) async {
+  // Utilise .set() (remplacement complet) plutôt que .update() pour garantir
+  // la cohérence de tous les champs à chaque message envoyé.
+  await _db.child('conversations/${conversation.id}').set(conversation.toJson());
 }
 
 // ── READ (stream) : Messages temps réel + conversations d'un utilisateur
@@ -761,31 +810,65 @@ static Future<void> updateAvailability(Availability a) =>
 
 ## 3. Service de découverte des membres (`service_utilisateurs.dart`)
 
-Le `UsersService` lit les membres DIAPALER inscrits (Mentor + Investisseur uniquement) depuis Firebase et les affiche dans la page Matching au-dessus des 100+ profils statiques, avec un badge "Membre DIAPALER" distinctif.
+Le `UsersService` lit les membres DIAPALER inscrits depuis Firebase et les affiche dans la page Matching avec un badge "Membre DIAPALER" distinctif. La logique est **adaptative** : un Entrepreneur voit les Mentors et Investisseurs, tandis qu'un Mentor ou Investisseur voit les Entrepreneurs.
 
 ```dart
 class UsersService {
+  static final _db = FirebaseDatabase.instance.ref();
+
+  /// Retourne la liste des membres filtrés selon le rôle de l'utilisateur courant :
+  /// - Entrepreneur → charge Mentors + Investisseurs
+  /// - Mentor ou Investisseur → charge uniquement les Entrepreneurs
   static Future<List<Mentor>> listMembers() async {
-    final snap = await FirebaseDatabase.instance.ref('users').get();
+    final snap = await _db.child('users').get();
     if (!snap.exists || snap.value == null) return [];
-    final map = Map<String, dynamic>.from(snap.value as Map);
+    final data = Map<String, dynamic>.from(snap.value as Map);
+
     final currentUid = AuthService.currentUid;
-    final members = <Mentor>[];
-    for (final entry in map.entries) {
-      if (entry.key == currentUid) continue;        // Exclure soi-même
+    final myRole = UserProfileController.profile.value.role;
+
+    // Rôles cibles selon mon propre rôle
+    final Set<String> targetRoles;
+    if (myRole == 'Mentor' || myRole == 'Investisseur') {
+      targetRoles = {'Entrepreneur', 'Entrepreneure'};
+    } else {
+      // Entrepreneur (et cas par défaut) → voir Mentors & Investisseurs
+      targetRoles = {'Mentor', 'Investisseur'};
+    }
+
+    final result = <Mentor>[];
+    for (final entry in data.entries) {
+      final uid = entry.key;
+      if (uid == currentUid) continue;              // Exclure soi-même
       final m = Map<String, dynamic>.from(entry.value as Map);
-      final role = m['role']?.toString() ?? '';
-      if (role != 'Mentor' && role != 'Investisseur') continue;
-      members.add(Mentor(
-        uid: entry.key,
-        name: '${m['firstName']} ${m['lastName']}'.trim(),
+      final role = (m['role']?.toString() ?? '').trim();
+      if (!targetRoles.contains(role)) continue;    // Filtrage adaptatif
+      // Parsing des secteurs (champ 'interests' ou 'sectors')
+      final rawSectors = m['interests'] ?? m['sectors'];
+      final sectors = <String>[];
+      if (rawSectors is List) {
+        for (final s in rawSectors) sectors.add(s.toString());
+      }
+      result.add(Mentor(
+        uid: uid,
+        initials: _initials(m['firstName']?.toString() ?? '',
+            m['lastName']?.toString() ?? ''),
+        name: '${m['firstName'] ?? ''} ${m['lastName'] ?? ''}'.trim(),
+        title: m['sector']?.toString() ?? '',
         city: m['city']?.toString() ?? 'Dakar',
+        sectors: sectors,
+        companies: const [],
+        rating: (m['score'] as num?)?.toDouble() ?? 0.0,
+        reviews: 0,
+        years: (m['yearsExperience'] as num?)?.toInt() ?? 0,
+        compatibility: 80,
+        gender: Gender.fromString(m['gender']?.toString()),
+        bio: m['bio']?.toString() ?? '',
         role: role,
-        sectors: _parseInterests(m['interests']),
         photoBase64: m['photoBase64']?.toString() ?? '',
       ));
     }
-    return members;
+    return result;
   }
 }
 ```
@@ -854,23 +937,25 @@ class ChatbotService {
     required String userCity,
   }) {
     return '''Tu es DIALI, l\'assistant IA de DIAPALER AFRICA — la plateforme
-qui connecte entrepreneurs, mentors et investisseurs au Sénégal.
+qui connecte entrepreneurs, mentors et investisseurs au Sénégal et en Afrique de l\'Ouest.
 
 Tu accompagnes $userName, $userRole dans le secteur $userSector basé(e) à $userCity.
 
 Tes domaines d\'expertise :
 • Stratégie entrepreneuriale et développement de projet au Sénégal
-• Financement : DER/FJ (100 000 à 30 000 000 FCFA), PAVIE 2, Be Yes (18-40 ans), ADPME, BNDE
-• Conditions DER/FJ : nationalité sénégalaise, 18-35 ans, CNI + plan d\'affaires + photos passeport
+• Financement sénégalais : DER/FJ (100 000 à 30 000 000 FCFA), PAVIE 2, Be Yes (18-40 ans), ADPME, BNDE
+• Conditions DER/FJ : nationalité sénégalaise, âge 18-35 ans, dossier complet (CNI, plan d\'affaires, photos passeport, relevé de compte)
 • Préparation de pitchs et dossiers investisseurs
-• Marketing digital, Made in Sénégal
+• Marketing digital, e-commerce, Made in Sénégal
 • Mise en relation mentors et investisseurs via DIAPALER
 
 Directives :
-- Réponds en français, bienveillant et adapté au contexte africain
-- Utilise ponctuellement des mots en wolof (Jërejëf, Baraka, Ndank ndank…)
-- Conseils actionnables, 3-4 paragraphes maximum
-- Pour le financement, cite les montants en FCFA et conditions précises''';
+- Réponds toujours en français, avec un ton bienveillant, concret et adapté au contexte africain
+- Utilise ponctuellement des mots en wolof (Ndank ndank, Baraka, Jërejëf, Yëgël...) pour créer du lien
+- Donne des conseils actionnables, pas des généralités
+- Pour le financement, cite les montants en FCFA et les conditions précises
+- Sois concis : 3-4 paragraphes maximum par réponse
+- Si l\'utilisateur demande de l\'aide pour un pitch, propose-lui un plan structuré''';
   }
 
   /// Envoie la conversation au proxy → Groq et retourne la réponse texte.
@@ -975,7 +1060,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **CREATE** message | `InteractionsService` | `messages/{conv}/{id}.set()` | Envoi chat |
 | **CREATE** conversation | `InteractionsService` | `conversations/{id}.set()` | 1er message |
 | **CREATE** session agenda | `AgendaController` | `bookedSessions/{uid}/{id}.set()` | Réservation RDV |
-| **CREATE** demande mentorat | `InteractionsService` | `mentorRequests/{id}.set()` | Envoi demande |
+| **CREATE** demande mentorat | `InteractionsService` | `mentorRequests/{id}.set()` type=`'mentor'` | Envoi demande de mentorat |
+| **CREATE** demande investissement | `InteractionsService` | `mentorRequests/{id}.set()` type=`'investment'` | Proposer un investissement |
 | **READ** profil (unique) | `DatabaseService` | `users/{uid}.get()` | Connexion / Démarrage |
 | **READ** membres inscrits | `UsersService` | `users.get()` | Chargement Matching |
 | **READ** pitchs (stream) | `DatabaseService` | `pitches.onValue` | Vue pitchs publiés |
@@ -1005,7 +1091,7 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 |---|---|---|
 | API REST intégrée | Firebase Realtime Database + Meta Llama 3.1 via Groq | ✅ |
 | Récupérer des données | `readUserProfile()`, `getPitches()`, `getMessages()`, `getConversations()` | ✅ |
-| Ajouter des données | `createUserProfile()`, `publishPitch()`, `sendMessage()`, `sendMentorRequest()` | ✅ |
+| Ajouter des données | `createUserProfile()`, `publishPitch()`, `sendMessage()`, `sendMentorRequest()`, `sendInvestmentProposal()` | ✅ |
 | Modifier des données | `updateUserProfile()`, `acceptRequest()`, `updateAvailability()` | ✅ |
 | Supprimer des données | `AgendaController.cancel()` → `bookedSessions/{uid}/{id}.remove()` (Firebase réel) + `signOut()` / cache | ✅ |
 | Backend supporté | Firebase (listé dans les consignes) | ✅ |
@@ -1013,3 +1099,5 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
 | Découverte membres | `UsersService.listMembers()` | ✅ (bonus) |
 | Chatbot IA | Llama 3.1 8B via Groq — HTTP REST + proxy Cloudflare | ✅ (bonus) |
+| Flux investisseur | `mentorRequests` type `'investment'` + notification + acceptation dans `RequestsPage` | ✅ (bonus) |
+| Fix path Firebase | `generateConversationId` sanitize les caractères interdits (`.#$[]/@` → `_`) | ✅ (bonus) |

@@ -114,6 +114,7 @@
 name: diapaler_africa
 description: "DIAPALER AFRICA — Plateforme mobile de mentorat et de mise en relation entrepreneuriale au Sénégal."
 version: 0.1.0+1
+publish_to: 'none'
 
 environment:
   sdk: ^3.5.0
@@ -156,7 +157,7 @@ diapaler_africa/
 │   ├── firebase_options.dart            # Clés Firebase (FlutterFire CLI)
 │   ├── data/                            # Modèles de données (UserProfile, ChatMessage…)
 │   │   ├── profil_utilisateur.dart
-│   │   ├── donnees_mentors.dart         # 100+ profils sénégalais (statiques)
+│   │   ├── donnees_mentors.dart         # 112 profils sénégalais (statiques)
 │   │   ├── pays.dart
 │   │   ├── citations.dart
 │   │   └── interactions.dart
@@ -206,6 +207,9 @@ void main() {
 class DiapalerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Note : le code réel enveloppe MaterialApp dans un CursorFollower (effet
+    // curseur personnalisé web) et configure également un pageTransitionsTheme
+    // global (_FadeThroughBuilder) dans AppTheme.light() / dark().
     return MaterialApp(
       title: 'DIAPALER AFRICA',
       debugShowCheckedModeBanner: false,
@@ -276,28 +280,43 @@ Toutes les interfaces partagent une **palette de couleurs commune** définie dan
 ```dart
 class AppColors {
   // Couleurs primaires
-  static const navyDeep  = Color(0xFF0F1C4D); // Textes, titres principaux
-  static const navy      = Color(0xFF1B2B6B); // Fonds navbars, boutons
-  static const blue      = Color(0xFF2563EB); // Investisseurs, liens actifs
-  static const amber     = Color(0xFFF5A623); // Or sénégalais — CTAs, FAB
-  static const amberSoft = Color(0xFFFFF3DC); // Fond chips amber
+  static const navyDeep   = Color(0xFF0F1729); // Textes, titres principaux
+  static const navy       = Color(0xFF0A234B); // Fonds navbars, boutons
+  static const blue       = Color(0xFF1E50A0); // Investisseurs, liens actifs
+  static const blueBright = Color(0xFF3B82F6); // Bleu vif (liens, accents)
+  static const blueTint   = Color(0xFFDCE6F5); // Fond chips par défaut
+  static const amber      = Color(0xFFF59E0B); // Or sénégalais — CTAs, FAB
+  static const amberSoft  = Color(0xFFFCD5A0); // Fond chips amber
 
   // Couleurs fonctionnelles
-  static const green     = Color(0xFF10B981); // Succès, validations, mentors
-  static const red       = Color(0xFFEF4444); // Erreurs, suppression
-  static const purple    = Color(0xFF7C3AED); // Distance GPS
+  static const green  = Color(0xFF10B981); // Succès, validations, mentors
+  static const red    = Color(0xFFEF4444); // Erreurs, suppression
+  static const purple = Color(0xFF8B5CF6); // Distance GPS
 
   // Neutres
-  static const surface   = Color(0xFFF8F9FB); // Fond général de l'appli
-  static const fieldBg   = Color(0xFFF1F3F7); // Fond des champs de saisie
-  static const border    = Color(0xFFE2E8F0); // Bordures légères
-  static const muted     = Color(0xFF94A3B8); // Textes secondaires
-  static const subtle    = Color(0xFFCBD5E1); // Icônes inactives
+  static const surface = Color(0xFFF8FAFC); // Fond général de l'appli
+  static const card    = Colors.white;       // Fond des cartes
+  static const fieldBg = Color(0xFFF3F4F6); // Fond des champs de saisie
+  static const border  = Color(0xFFE5E7EB); // Bordures légères
+  static const muted   = Color(0xFF6B7280); // Textes secondaires
+  static const subtle  = Color(0xFF9CA3AF); // Icônes inactives
+
+  // Couleurs des rôles (cercles d'avatar)
+  static const roleEntrepreneur = Color(0xFFFB7185);
+  static const roleMentor       = Color(0xFF22D3EE);
+  static const roleInvestor     = Color(0xFFF59E0B);
 
   // Drapeau sénégalais
   static const flagGreen  = Color(0xFF00853F);
-  static const flagYellow = Color(0xFFFCDD09);
+  static const flagYellow = Color(0xFFFDEF42);
   static const flagRed    = Color(0xFFE31B23);
+
+  // Mode sombre
+  static const darkSurface = Color(0xFF0B1220);
+  static const darkCard    = Color(0xFF111827);
+  static const darkBorder  = Color(0xFF1F2937);
+  static const darkFieldBg = Color(0xFF1F2937);
+  static const darkMuted   = Color(0xFF9CA3AF);
 }
 ```
 
@@ -322,7 +341,7 @@ class AppColors {
 - Wordmark "DIAPALER AFRICA" + slogan slide-up animé
 - Barre de progression linéaire amber (progression Firebase)
 - Bootstrap : vérifie l'auth Firebase, charge le cache local, route vers RootShell ou RoleSelectionPage
-- Durée : 1.2s minimum (animation) + attente Firebase
+- Durée : 1.1s minimum (animation) + attente Firebase
 
 > **📸 CAPTURE D'ÉCRAN — Écran de démarrage (Splash Screen)**
 > *(Insérer ici la capture d'écran)*
@@ -456,10 +475,14 @@ class AppColors {
 - Dropdown filtre par ville
 - Compteur de profils : "N profil(s)"
 - **Membres DIAPALER réels** (inscrits via l'app) affichés en tête de liste avec badge distinctif
-- 100+ profils sénégalais statiques en complément
-- Tri automatique : membres réels en priorité, puis par compatibilité
+- 112 profils sénégalais statiques en complément
+- Tri automatique : membres réels en priorité, puis par compatibilité dynamique (intérêts partagés)
 - État vide illustré si aucun résultat
 - Bouton "Réinitialiser" si filtres actifs
+- **Titre et contenu adaptés selon le rôle connecté** :
+  - Entrepreneur → voit Mentors + Investisseurs
+  - Mentor → titre "Mes Entrepreneurs", voit les Entrepreneurs
+  - Investisseur → titre "Entrepreneurs à financer", voit les Entrepreneurs
 
 > **📸 CAPTURE D'ÉCRAN — Écran Matching (liste de profils)**
 > *(Insérer ici la capture d'écran)*
@@ -471,11 +494,15 @@ class AppColors {
 **Fonctionnalités :**
 - Avatar grand format en en-tête
 - Nom, rôle, secteur, ville, distance GPS
-- Biographie complète
+- Biographie : utilise `mentor.bio` si non vide (membres Firebase), sinon génère une bio avec le bon pronom selon `mentor.gender`
 - Tags / domaines d'expertise (chips)
 - Score, statistiques
-- Bouton "Envoyer une demande" → `SendRequestPage` (demande de mentorat Firebase)
-- Bouton "Contacter" → `ChatPage` (messagerie Firebase)
+- **Bouton d'action adapté selon le rôle du profil consulté** :
+  - Si Mentor → "Envoyer une demande de mentorat" (type `'mentor'`)
+  - Si Investisseur → "Proposer un investissement" (type `'investment'`)
+  - Visible pour tous les mentors (pas seulement les membres Firebase)
+- Si relation déjà acceptée → bouton "Contacter" → `ChatPage`
+- Logique de communication stricte : chat disponible seulement après acceptation de la demande
 
 > **📸 CAPTURE D'ÉCRAN — Écran Détail d'un Profil**
 > *(Insérer ici la capture d'écran)*
@@ -485,7 +512,17 @@ class AppColors {
 ### 2.12 Messagerie — `page_messages.dart` + `page_chat.dart`
 
 **Fonctionnalités `page_messages.dart` :**
-- Liste de toutes les conversations (StreamBuilder Firebase temps réel)
+
+La page Messages est organisée en **2 onglets** :
+
+**Onglet "Contacts" :**
+- Liste des relations acceptées : mentor/mentoré ou investisseur/entrepreneur
+- Searchable par nom
+- Chip badge coloré indiquant le rôle du contact
+- Tap → ouvre le chat direct avec ce contact
+
+**Onglet "Messages" :**
+- Liste de toutes les conversations existantes (StreamBuilder Firebase temps réel)
 - Avatar, nom, dernier message, horodatage relatif
 - Badge rouge de messages non lus par conversation
 - Badge global sur l'onglet Messages (`unreadMessagesCount` ValueNotifier)
@@ -582,8 +619,13 @@ class AppColors {
 **Fonctionnalités (accessible Mentors + Investisseurs) :**
 - StreamBuilder Firebase (données temps réel)
 - Tri par date décroissante (plus récent en premier)
+- **Barre de recherche** : filtre en temps réel (titre, entrepreneur, secteur, description)
+- **Pills de secteur** générées dynamiquement depuis les pitchs Firebase
+- **Compteur** "X pitch(s)" mis à jour selon les filtres actifs
+- **Bouton "Réinitialiser"** visible si un filtre est actif
 - Chaque carte : avatar entrepreneur, nom, secteur (chip amber), titre, description (3 lignes max), montant FCFA
 - Bouton "Contacter →" → Messagerie
+- **Bouton "💰 Proposer un investissement"** visible uniquement pour les Investisseurs → crée un `MentorRequest` de type `'investment'` dans Firebase + notification automatique à l'entrepreneur
 - État vide illustré si aucun pitch publié
 
 > **📸 CAPTURE D'ÉCRAN — Liste des Pitchs Publiés**
@@ -604,6 +646,8 @@ class AppColors {
 - Titre et messages **adaptés selon le rôle** : "Mes sessions" (Entrepreneur) / "Mon agenda" (Mentor) / "Mes rendez-vous" (Investisseur)
 - Sessions à venir + passées depuis Firebase
 - Bouton "Mon Planning" dans l'AppBar (Mentor uniquement)
+- Sessions de démo avec des mentors Agro-industrie (Ibrahima Diop, Abdoulaye Fall, Fatou Diallo)
+- **Bouton "Annuler"** sur chaque session réservée : dialog de confirmation → `AgendaController.cancel()` bilatéral
 
 **Planning — `page_planning.dart`**
 - Gestion des disponibilités (Mentor)
@@ -770,7 +814,7 @@ class _FadeThroughBuilder extends PageTransitionsBuilder {
 |---|---|---|
 | Projet Flutter créé | Nom, version, 11 dépendances, structure complète | ✅ |
 | Écran d'accueil | Dashboard adaptatif selon le rôle (3 variantes) | ✅ |
-| Liste des éléments principaux | Matching (100+ profils), Pitchs publiés, Messages | ✅ |
+| Liste des éléments principaux | Matching (112 profils), Pitchs publiés, Messages | ✅ |
 | Détail d'un élément | `page_detail_mentor.dart` — profil complet + actions | ✅ |
 | Formulaire d'ajout/modification | Inscription (4 étapes), Pitch (3 étapes), Modifier profil | ✅ |
 | Profil utilisateur | `page_profil.dart` avec jauge de complétion | ✅ |
@@ -781,3 +825,8 @@ class _FadeThroughBuilder extends PageTransitionsBuilder {
 | Bonus — 26 écrans | Bien au-delà du minimum requis | ✅ |
 | Bonus — 12 services métier | Architecture professionnelle couche services | ✅ |
 | Bonus — 13 widgets réutilisables | Composants partagés dans toute l'app | ✅ |
+| Bonus — Matching rôle-adaptatif | Titre et contenu selon le rôle connecté | ✅ |
+| Bonus — Système de Contacts | Onglet Contacts dans Messages (relations acceptées) | ✅ |
+| Bonus — Flux investisseur | Proposer un investissement + acceptation + relation Contacts | ✅ |
+| Bonus — Filtres pitchs | Barre de recherche + pills secteur dynamiques dans Pitchs Publiés | ✅ |
+| Bonus — Annulation session | Bouton "Annuler" avec confirmation dans l'Agenda | ✅ |

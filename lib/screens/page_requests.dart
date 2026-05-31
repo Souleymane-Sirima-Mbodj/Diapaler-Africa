@@ -198,8 +198,8 @@ class _RequestCard extends StatelessWidget {
       : AppColors.amber;
 
   String get _typeSubtitle => request.type == 'investment'
-      ? 'propose un investissement'
-      : 'souhaite être ton mentor';
+      ? 'te propose un investissement'
+      : 'te demande du mentorat';
 
   @override
   Widget build(BuildContext context) {
@@ -316,42 +316,57 @@ class _RequestCard extends StatelessWidget {
   }
 
   Future<void> _acceptRequest(BuildContext context) async {
-    await InteractionsService.acceptRequest(request.id);
-    final label = request.type == 'investment'
-        ? 'proposition d\'investissement'
-        : 'demande de mentorat';
-    await NotificationService.notifyUser(
-      uid: request.fromUserId,
-      title: 'Demande acceptée',
-      message: '${request.toName} a accepté ta $label.',
-      type: 'mentor_request_accepted',
-    );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Demande acceptée — notification envoyée.')),
-    );
+    try {
+      await InteractionsService.acceptRequest(request.id);
+      final label = request.type == 'investment'
+          ? 'proposition d\'investissement'
+          : 'demande de mentorat';
+      await NotificationService.notifyUser(
+        uid: request.fromUserId,
+        title: 'Demande acceptée',
+        message: '${request.toName} a accepté ta $label.',
+        type: 'mentor_request_accepted',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demande acceptée — notification envoyée.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : impossible d\'accepter la demande. $e')),
+      );
+    }
   }
 
   Future<void> _rejectRequest(BuildContext context) async {
-    await InteractionsService.rejectRequest(request.id);
-    final label = request.type == 'investment'
-        ? 'proposition d\'investissement'
-        : 'demande de mentorat';
-    await NotificationService.notifyUser(
-      uid: request.fromUserId,
-      title: 'Demande refusée',
-      message: '${request.toName} a décliné ta $label.',
-      type: 'mentor_request_rejected',
-    );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Demande refusée — notification envoyée.')),
-    );
+    try {
+      await InteractionsService.rejectRequest(request.id);
+      final label = request.type == 'investment'
+          ? 'proposition d\'investissement'
+          : 'demande de mentorat';
+      await NotificationService.notifyUser(
+        uid: request.fromUserId,
+        title: 'Demande refusée',
+        message: '${request.toName} a décliné ta $label.',
+        type: 'mentor_request_rejected',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demande refusée — notification envoyée.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : impossible de refuser la demande. $e')),
+      );
+    }
   }
 
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return 'À l\'instant';
     if (diff.inMinutes < 60) return '${diff.inMinutes}min';
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}j';

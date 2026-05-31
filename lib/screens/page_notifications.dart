@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
+import 'page_requests.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -10,6 +12,29 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  /// Navigue vers l'écran pertinent selon le type de notification.
+  void _handleNotifTap(BuildContext ctx, NotificationItem notif) {
+    switch (notif.type) {
+      case 'message':
+        appTabIndex.value = 2; // onglet Messages
+        Navigator.of(ctx).pop();
+      case 'session_booked':
+      case 'rdv_booked':
+      case 'session_cancelled':
+        appTabIndex.value = 3; // onglet Agenda
+        Navigator.of(ctx).pop();
+      case 'mentor_request':
+      case 'mentor_request_accepted':
+      case 'mentor_request_rejected':
+      case 'investment_offer':
+        Navigator.of(ctx).push(
+          MaterialPageRoute(builder: (_) => const RequestsPage()),
+        );
+      default:
+        break; // juste marquer comme lu
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +56,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
             builder: (context, notifs, _) {
               if (notifs.isEmpty) return const SizedBox.shrink();
               return TextButton(
-                onPressed: () => NotificationService.clearAll(),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Effacer les notifications ?'),
+                      content: const Text(
+                        'Toutes les notifications seront supprimées.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Annuler'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Effacer'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) NotificationService.clearAll();
+                },
                 child: const Text(
                   'Effacer tout',
                   style: TextStyle(
@@ -90,8 +140,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
               final notif = notifications[index];
               return _NotificationTile(
                 notification: notif,
-                onTap: () =>
-                    NotificationService.markAsRead(notif.id),
+                onTap: () {
+                  NotificationService.markAsRead(notif.id);
+                  _handleNotifTap(context, notif);
+                },
               );
             },
           );
@@ -262,7 +314,7 @@ class _NotificationTile extends StatelessWidget {
     } else if (diff.inDays < 7) {
       return 'Il y a ${diff.inDays}j';
     } else {
-      return '${dt.day}/${dt.month}/${dt.year}';
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
     }
   }
 }

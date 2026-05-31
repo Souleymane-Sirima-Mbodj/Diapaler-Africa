@@ -237,7 +237,7 @@ class _MessagesPageState extends State<MessagesPage>
                     .contains(_msgSearch.toLowerCase());
               }).toList();
 
-        final currentUid = UserProfileController.profile.value.email;
+        final currentUid = AuthService.currentUid ?? '';
         final unreadTotal = all
             .where((c) => c.lastSenderId != currentUid)
             .fold<int>(0, (sum, c) => sum + c.unreadCount);

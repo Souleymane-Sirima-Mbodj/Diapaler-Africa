@@ -38,6 +38,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool get _isMentor => _initial.role == 'Mentor';
   bool get _isInvestor => _initial.role == 'Investisseur';
 
+  /// Vérifie si l'utilisateur a modifié au moins un champ.
+  bool get _hasChanges =>
+      _firstName.text.trim() != _initial.firstName ||
+      _lastName.text.trim() != _initial.lastName ||
+      _email.text.trim() != _initial.email ||
+      _phone.text.trim() != _initial.phone ||
+      _address.text.trim() != _initial.address ||
+      _linkedin.text.trim() != _initial.linkedin ||
+      _bio.text.trim() != _initial.bio ||
+      _city != _initial.city ||
+      _country != _initial.country ||
+      _sector != _initial.sector ||
+      _gender != _initial.gender ||
+      _birthDate != _initial.birthDate ||
+      _photoBase64 != _initial.photoBase64 ||
+      !_setEquals(_interests, _initial.interests.toSet());
+
+  bool _setEquals(Set<String> a, Set<String> b) =>
+      a.length == b.length && a.containsAll(b);
+
   @override
   void initState() {
     super.initState();
@@ -171,10 +191,48 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_hasChanges,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Abandonner les modifications ?'),
+            content: const Text(
+              'Tu as des modifications non enregistrées. Veux-tu les abandonner ?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Continuer'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Abandonner'),
+              ),
+            ],
+          ),
+        );
+        if (discard == true && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (_hasChanges) {
+              // Déclenche le PopScope guard
+              Navigator.of(context).maybePop();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
           icon: const Icon(Icons.close_rounded),
         ),
         title: const Text('Modifier le profil'),
@@ -375,6 +433,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
+    ),
     );
   }
 }
