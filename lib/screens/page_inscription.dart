@@ -56,7 +56,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _error;
 
   static final _emailRegex =
-      RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
 
   @override
@@ -126,7 +126,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
+      initialDate: _birthDate ?? DateTime(now.year - 22),
       firstDate: DateTime(1940),
       lastDate: DateTime(now.year - 13, 12, 31),
       helpText: 'Ta date de naissance',
@@ -216,7 +216,7 @@ class _SignUpPageState extends State<SignUpPage> {
       UserProfileController.update(profile);
 
       // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
-      TextInput.finishAutofillContext(shouldSave: true);
+      TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const OnboardingPage()),

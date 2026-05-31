@@ -143,7 +143,7 @@ class _MessagesPageState extends State<MessagesPage>
                   prefixIcon:
                       Icon(Icons.search_rounded, color: AppColors.subtle),
                   hintText: 'Rechercher un contact…',
-                  contentPadding: EdgeInsets.symmetric(vertical: 0),
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
@@ -253,7 +253,7 @@ class _MessagesPageState extends State<MessagesPage>
                     prefixIcon: Icon(Icons.search_rounded,
                         size: 20, color: AppColors.subtle),
                     hintText: 'Rechercher une conversation…',
-                    contentPadding: EdgeInsets.symmetric(vertical: 0),
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
@@ -525,7 +525,6 @@ class _ContactCard extends StatelessWidget {
           ),
         );
       },
-      padding: const EdgeInsets.all(14),
       child: Row(
         children: [
           Avatar(

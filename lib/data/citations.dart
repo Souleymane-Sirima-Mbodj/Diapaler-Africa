@@ -119,7 +119,7 @@ const quotes = <Quote>[
     emoji: '🇸🇳',
   ),
   Quote(
-    text: "Le travail acharné paye toujours.",
+    text: 'Le travail acharné paye toujours.',
     author: 'Patrice Motsepe',
     role: 'Entrepreneur · Afrique du Sud',
     emoji: '⚡',

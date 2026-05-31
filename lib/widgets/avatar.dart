@@ -145,7 +145,6 @@ class _PhotoViewer extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => Navigator.of(context).maybePop(),
                 child: InteractiveViewer(
-                  minScale: 0.8,
                   maxScale: 4.0,
                   child: Center(
                     child: Image.memory(

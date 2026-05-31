@@ -54,7 +54,7 @@ class _LoginPageState extends State<LoginPage> {
       }
       // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
       // les identifiants (Google Password Manager, Samsung Pass, iCloud Keychain…)
-      TextInput.finishAutofillContext(shouldSave: true);
+      TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const RootShell()),
@@ -263,7 +263,7 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                   const SizedBox(height: 14),
                   // Bouton SE CONNECTER avec gradient + glow
-                  Container(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [

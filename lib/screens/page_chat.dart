@@ -239,7 +239,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
+                DecoratedBox(
                   decoration: const BoxDecoration(
                     color: AppColors.blue,
                     shape: BoxShape.circle,

@@ -92,7 +92,6 @@ class _PitchPageState extends State<PitchPage> {
         name: title,
         description: description,
         sector: sector,
-        step: 1,
         totalSteps: 3, // 3 étapes : Idée → En cours → Lancé
       );
       final updated = profile.copyWith(
@@ -126,7 +125,6 @@ class _PitchPageState extends State<PitchPage> {
           ),
           backgroundColor: AppColors.green,
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 4),
         ),
       );
     } catch (e) {
@@ -270,7 +268,7 @@ class _PitchPageState extends State<PitchPage> {
 
   // ── ÉTAPE 1 — Titre + Elevator pitch ──────────────────────────
   List<Widget> _step1() => [
-        _FieldLabel('Titre du projet', required: true),
+        const _FieldLabel('Titre du projet', required: true),
         const SizedBox(height: 6),
         TextField(
           controller: _title,
@@ -290,7 +288,7 @@ class _PitchPageState extends State<PitchPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _FieldLabel('Mon élévator pitch', required: false),
+        const _FieldLabel('Mon élévator pitch'),
         const SizedBox(height: 4),
         const Text(
           'Décris ton projet en 1-2 phrases : ce que tu fais, pour qui, et pourquoi.',
@@ -308,7 +306,7 @@ class _PitchPageState extends State<PitchPage> {
 
   // ── ÉTAPE 2 — Secteur + Description détaillée ─────────────────
   List<Widget> _step2() => [
-        _FieldLabel('Secteur d\'activité', required: true),
+        const _FieldLabel('Secteur d\'activité', required: true),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           initialValue: _sector,
@@ -335,7 +333,7 @@ class _PitchPageState extends State<PitchPage> {
           onChanged: (v) => setState(() => _sector = v),
         ),
         const SizedBox(height: 16),
-        _FieldLabel('Description détaillée', required: true),
+        const _FieldLabel('Description détaillée', required: true),
         const SizedBox(height: 4),
         const Text(
           'Marché cible, équipe, traction, vision à 3 ans…',
@@ -354,7 +352,7 @@ class _PitchPageState extends State<PitchPage> {
 
   // ── ÉTAPE 3 — Financement ─────────────────────────────────────
   List<Widget> _step3() => [
-        _FieldLabel('Besoin de financement (FCFA)', required: false),
+        const _FieldLabel('Besoin de financement (FCFA)'),
         const SizedBox(height: 4),
         const Text(
           'Montant recherché pour développer ton projet (optionnel).',

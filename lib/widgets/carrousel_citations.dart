@@ -29,7 +29,7 @@ class _QuoteCarouselState extends State<QuoteCarousel> {
   @override
   void initState() {
     super.initState();
-    _ctrl = PageController(viewportFraction: 1.0);
+    _ctrl = PageController();
     _timer = Timer.periodic(widget.interval, (_) {
       if (!mounted) return;
       _index = (_index + 1) % quotes.length;

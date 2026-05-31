@@ -317,7 +317,7 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
                 label: const Text('Ajouter un créneau'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.blue,
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   minimumSize: const Size(0, 32),
                   textStyle: const TextStyle(
                     fontSize: 12.5,

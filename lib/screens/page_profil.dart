@@ -736,7 +736,6 @@ class _ProjectTile extends StatelessWidget {
     final accent = completed ? AppColors.green : AppColors.amber;
 
     return HoverGlowCard(
-      padding: const EdgeInsets.all(14),
       onTap: () => _showActions(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -870,7 +869,6 @@ class _EmptyProjects extends StatelessWidget {
           border: Border.all(
             color: AppColors.amber.withValues(alpha: 0.5),
             width: 1.5,
-            style: BorderStyle.solid,
           ),
         ),
         child: Column(
@@ -1094,7 +1092,7 @@ class _AboutCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      "Ajoute une bio pour te présenter aux mentors et investisseurs.",
+                      'Ajoute une bio pour te présenter aux mentors et investisseurs.',
                       style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.muted,
@@ -1142,7 +1140,7 @@ class _AboutCard extends StatelessWidget {
                             mode: LaunchMode.externalApplication);
                       }
                     },
-                    child: _ProChip(
+                    child: const _ProChip(
                       icon: Icons.link_rounded,
                       label: 'LinkedIn',
                       color: AppColors.blue,
