@@ -71,7 +71,29 @@ Directives :
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['content'][0]['text'] as String;
+
+      // Format Groq / OpenAI : { "choices": [{ "message": { "content": "..." } }] }
+      final choices = data['choices'];
+      if (choices is List && choices.isNotEmpty) {
+        final msg = choices[0]?['message'];
+        if (msg is Map) {
+          final text = msg['content'];
+          if (text is String && text.isNotEmpty) return text;
+        }
+      }
+
+      // Format Anthropic : { "content": [{ "text": "..." }] }
+      final content = data['content'];
+      if (content is List && content.isNotEmpty) {
+        final first = content[0];
+        if (first is Map) {
+          final text = first['text'];
+          if (text is String && text.isNotEmpty) return text;
+        }
+      }
+
+      // Fallback générique
+      throw Exception('Format de réponse inattendu du serveur.');
     } else if (response.statusCode == 429) {
       throw Exception(
         'Limite d\'utilisation atteinte. Réessaie dans quelques instants.',

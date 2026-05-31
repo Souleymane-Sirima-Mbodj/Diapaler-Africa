@@ -9,8 +9,16 @@ class MentorCard extends StatelessWidget {
   final Mentor mentor;
   final VoidCallback? onTap;
   final double? distanceKm;
+  /// Score de compatibilité calculé dynamiquement (prioritaire sur mentor.compatibility).
+  final int? compatibilityScore;
 
-  const MentorCard({super.key, required this.mentor, this.onTap, this.distanceKm});
+  const MentorCard({
+    super.key,
+    required this.mentor,
+    this.onTap,
+    this.distanceKm,
+    this.compatibilityScore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +128,7 @@ class MentorCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _CompatibilityPill(value: mentor.compatibility),
+                  _CompatibilityPill(value: compatibilityScore ?? mentor.compatibility),
                   if (distanceKm != null) ...[
                     const SizedBox(width: 8),
                     _DistancePill(km: distanceKm!),

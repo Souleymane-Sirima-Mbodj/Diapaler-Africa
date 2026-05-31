@@ -436,6 +436,7 @@ class _MatchingPageState extends State<MatchingPage> {
                     itemBuilder: (_, i) => MentorCard(
                       mentor: filtered[i],
                       distanceKm: _distanceFor(filtered[i]),
+                      compatibilityScore: _computeCompatibility(filtered[i]),
                     ),
                   ),
           ),
