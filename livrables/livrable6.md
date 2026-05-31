@@ -51,7 +51,7 @@
 
 ## Résumé exécutif
 
-**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
+**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée avec système de Contacts, un flux investisseur complet (propositions + acceptation), un matching rôle-adaptatif avec compatibilité dynamique, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
 
 ---
 
@@ -153,16 +153,19 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Sauvegarde MDP | `AutofillGroup` → Google/Samsung/iCloud Password Manager | Tous |
 | Persistance session | Cache offline-first + bootstrap Firebase | Tous |
 | Dashboards | **3 dashboards distincts** : Entrepreneur (amber) / Mentor (vert) / Investisseur (bleu) | Selon rôle |
-| Matching | 100+ profils + membres DIAPALER réels + 4 filtres + GPS | Tous |
-| Messagerie | Chat temps réel Firebase + badge non lus filtré (ne compte pas les messages envoyés) | Tous |
+| Matching | 112 profils + membres DIAPALER réels + 4 filtres + GPS + **rôle-adaptatif** | Tous |
+| Messagerie | Chat temps réel Firebase + badge non lus filtré + **onglet Contacts** | Tous |
 | Notifications | Centre + badge dynamique + "Effacer tout" | Tous |
 | Profil | Stats rôle-spécifiques + LinkedIn cliquable + coordonnées condensées + boutons adaptatifs | Tous |
 | Dépôt de pitch | Stepper 3 étapes avec **validation** + double sauvegarde + redirect Profil | Entrepreneur |
-| Pitchs publiés | StreamBuilder temps réel + bouton partage | Mentor, Investisseur |
+| Pitchs publiés | StreamBuilder temps réel + bouton partage + **filtres secteur + recherche** + bouton investissement | Mentor, Investisseur |
 | Projets | Création + suivi progression (Étape 1/3) + suppression | Entrepreneur |
-| Agenda | Titre/descriptions **rôle-spécifiques** + synchronisation Firebase | Tous |
+| Agenda | Titre/descriptions **rôle-spécifiques** + synchronisation Firebase + **bouton Annuler** | Tous |
 | Planning | Gestion créneaux disponibles + bouton dans AppBar Agenda | Mentor |
-| Demandes | Envoi + gestion (accepter/refuser) + bouton "Envoyer une demande" sur profil détail | Tous |
+| Demandes | Envoi + gestion (accepter/refuser) + 2 sections (mentorat / investissement) | Tous |
+| Flux investisseur | Proposer un investissement depuis les pitchs + acceptation + relation Contacts | Investisseur, Entrepreneur |
+| Système de Contacts | Relations acceptées (mentorat + investissement) dans onglet Contacts | Tous |
+| Compatibilité dynamique | Algorithme intérêts partagés — remplace valeurs hardcodées | Tous |
 | Chatbot DIALI | Llama 3.1 8B (Groq) + proxy Cloudflare + FAB pulsant + messages d'erreur clairs | Tous |
 | Géolocalisation | GPS + bouton "Près de moi" + distances km | Tous |
 | Cache offline | Profil disponible sans internet (SharedPreferences) | Tous |
@@ -664,6 +667,64 @@ padding: const EdgeInsets.fromLTRB(20, 4, 76, 90),
 
 ---
 
+### 4.15 Crash Firebase — path invalide dans `generateConversationId`
+
+**Problème :** L'app crashait lors de l'ouverture d'une conversation avec certains utilisateurs dont l'UID ou l'email contenait des caractères spéciaux.
+
+**Cause :** Firebase Realtime Database interdit les caractères `.`, `#`, `$`, `[`, `]`, `/` et `@` dans les clés de nœud. La fonction `generateConversationId` construisait la clé de conversation directement à partir des UIDs/emails sans sanitisation.
+
+```
+FirebaseException: Invalid path. Paths must not contain '.', '#', '$', '[', ']'.
+```
+
+**Solution :** Ajout d'une sanitisation des caractères interdits avant construction du path :
+```dart
+static String generateConversationId(String userId1, String userId2) {
+  final ids = [userId1, userId2]..sort();
+  return ids
+      .join('--')
+      .replaceAll(RegExp(r'[.#\$\[\]/\s@]'), '_');
+}
+```
+
+---
+
+### 4.16 Compatibilité hardcodée — algorithme dynamique
+
+**Problème :** Le score de compatibilité affiché sur les cartes de profil dans le Matching était une valeur aléatoire hardcodée, sans lien avec les intérêts réels de l'utilisateur.
+
+**Cause :** Les profils statiques utilisaient `Random().nextInt(40) + 60` pour simuler un pourcentage.
+
+**Solution :** Algorithme de compatibilité dynamique basé sur les intérêts partagés entre l'utilisateur connecté et le profil :
+
+| Situation | Compatibilité |
+|---|---|
+| Match exact (≥ 1 intérêt commun) | 65–99% |
+| Match partiel (1 correspondance partielle) | 60% |
+| Même secteur principal | 58% |
+| Aucun match | 20–40% |
+
+---
+
+### 4.17 Photo des membres Firebase — mauvais `BoxFit`
+
+**Problème :** Les photos de profil des membres Firebase inscrits (stockées en base64) s'affichaient déformées ou mal cadrées dans les cartes du Matching et de la messagerie.
+
+**Cause :** Le widget `Avatar` utilisait `BoxFit.fill` par défaut, étirant l'image pour remplir le cercle.
+
+**Solution :** `BoxFit.cover` systématique dans le widget `Avatar` :
+```dart
+ClipOval(
+  child: Image.memory(
+    bytes,
+    width: size, height: size,
+    fit: BoxFit.cover, // ← corrigé (était BoxFit.fill)
+  ),
+)
+```
+
+---
+
 ## 5. Solutions proposées et innovations
 
 ### 5.1 Réactivité globale sans state management externe
@@ -774,7 +835,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Indicateur | Valeur |
 |---|---|
 | Lignes de code Dart | ~10 500 lignes |
-| Fichiers Dart | 62 fichiers |
+| Fichiers Dart | ~57 fichiers |
 | Écrans | 26 écrans |
 | Widgets réutilisables | 13+ widgets |
 | Services | 12 services |
@@ -783,7 +844,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 | Commits git documentés | 12+ commits |
 | API externes | 2 (Firebase + Groq) |
 | Nœuds Firebase | 8 nœuds (users, pitches, messages, conversations, mentorRequests, availability, bookedSessions, notifications) |
-| Profils mentors pré-chargés | 100+ profils sénégalais |
+| Profils mentors pré-chargés | 112 profils sénégalais |
 | Villes sénégalaises (GPS) | 40+ villes avec coordonnées |
 | Secteurs d'activité | 10 secteurs porteurs |
 | Langues supportées | Français (compréhension wolof via DIALI) |
@@ -850,12 +911,12 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 
 | Livrable | Fonctionnalités minimales | Fonctionnalités bonus |
 |---|---|---|
-| L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique |
-| L2 | Firebase CRUD (4 ops) | 20+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId` |
+| L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique, matching rôle-adaptatif, système de Contacts, bouton Annuler session |
+| L2 | Firebase CRUD (4 ops) | 21+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId`, type `'investment'`, sanitize Firebase path |
 | L3 | Connexion + Inscription | 4 étapes rôle-adaptées, jauge MDP, `AutofillGroup` sauvegarde MDP, `_bootstrap()` offline-first |
-| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, projets Entrepreneur uniquement, boutons rôle-adaptatifs |
-| L5 | Notifs + Recherche + GPS | Filtres, DIALI IA, pitch validé (3 étapes), CIS informatif, Wave Premium, **sauvegarde MDP**, **déploiement APK** |
-| L6 | Rapport | 14+ bugs documentés, métriques complètes, qualité du code, **APK signé déployé et mis à jour** |
+| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, "Mes contacts" Entrepreneur, `BoxFit.cover` Avatar, projets + boutons rôle-adaptatifs |
+| L5 | Notifs + Recherche + GPS | Filtres pitchs dynamiques, DIALI IA, flux investisseur complet, système de Contacts, compatibilité dynamique, bouton Annuler agenda, CIS, Wave Premium, **déploiement APK** |
+| L6 | Rapport | 17 bugs documentés (+ 3 nouveaux), métriques complètes, qualité du code, **APK signé déployé et mis à jour** |
 
 Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur ajoutée** à l'écosystème entrepreneurial sénégalais, en connectant entrepreneurs, mentors et investisseurs dans une plateforme unifiée, moderne et accessible, avec :
 - Un **chatbot IA** (DIALI) contextuelisé à l'écosystème sénégalais
@@ -864,6 +925,8 @@ Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur 
 - Un système de **matching avancé** combinant membres réels et profils curatés
 
 Ce projet démontre qu'il est possible, avec Flutter, Firebase et l'API Groq, de concevoir en quelques semaines une application mobile de **qualité professionnelle**, complète, réactive et prête pour la mise sur le marché africain.
+
+Les dernières itérations ont enrichi la plateforme avec un **flux investisseur complet** (propositions d'investissement, acceptation, relation de Contacts), un **système de Contacts** centralisant toutes les relations acceptées, un **matching rôle-adaptatif** (Mentor/Investisseur voient les Entrepreneurs), une **compatibilité dynamique** basée sur les intérêts partagés, et des **filtres avancés** dans la page Pitchs Publiés. Ces évolutions confirment la maturité et l'extensibilité de l'architecture choisie.
 
 ---
 

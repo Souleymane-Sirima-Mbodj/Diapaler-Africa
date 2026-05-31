@@ -124,7 +124,15 @@ class _MatchingPageState extends State<MatchingPage> {
   }
 
   List<Mentor> get _filtered {
-    final all = [..._members, ...mentors];
+    // Dédupliquer : les membres Firebase en priorité sur les profils statiques
+    final seen = <String>{};
+    final all = <Mentor>[];
+    for (final m in _members) {
+      if (seen.add(m.uid.isNotEmpty ? m.uid : m.name)) all.add(m);
+    }
+    for (final m in mentors) {
+      if (seen.add(m.uid.isNotEmpty ? m.uid : m.name)) all.add(m);
+    }
     final list = all.where((m) {
       if (!m.matches(_query)) return false;
       if (_sector != 'Tous' &&
@@ -421,7 +429,7 @@ class _MatchingPageState extends State<MatchingPage> {
             child: filtered.isEmpty
                 ? const _EmptyState()
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 76, 90),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 90),
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 10),

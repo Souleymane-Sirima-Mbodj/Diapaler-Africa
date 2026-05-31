@@ -10,8 +10,9 @@ import '../widgets/logo_diapaler.dart';
 import 'page_choix_role.dart';
 import 'coquille_principale.dart';
 
-/// Splash 1.6s — le tile apparaît, les 3 orbites s'allument une à une,
-/// puis le wordmark monte. À la fin → navigation vers RoleSelectionPage.
+/// Splash ~1.3s (animation 1100ms + délai 200ms) — le tile apparaît,
+/// les 3 orbites s'allument une à une, puis le wordmark monte.
+/// À la fin → navigation vers RoleSelectionPage.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 

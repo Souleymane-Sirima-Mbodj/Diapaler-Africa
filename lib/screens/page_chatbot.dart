@@ -58,14 +58,14 @@ class _ChatbotPageState extends State<ChatbotPage>
   }
 
   Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _loading) return;
+    final userText = _ctrl.text.trim();
+    if (userText.isEmpty || _loading) return;
 
     final profile = UserProfileController.profile.value;
     _ctrl.clear();
 
     setState(() {
-      _messages.add(ChatbotMessage(role: 'user', content: text));
+      _messages.add(ChatbotMessage(role: 'user', content: userText));
       _loading = true;
     });
     _scrollToBottom();
@@ -89,7 +89,7 @@ class _ChatbotPageState extends State<ChatbotPage>
       // Message convivial pour les erreurs courantes
       final String msg;
       if (raw.toLowerCase().contains('credit') || raw.toLowerCase().contains('balance')) {
-        msg = 'Service DIALI temporairement indisponible — crédits IA épuisés. L\'administrateur doit recharger les crédits sur console.anthropic.com.';
+        msg = 'Service DIALI temporairement indisponible — crédits IA épuisés. Réessaie dans quelques instants.';
       } else if (raw.toLowerCase().contains('timeout') || raw.toLowerCase().contains('network')) {
         msg = 'Connexion internet instable. Vérifie ta connexion et réessaie.';
       } else {
@@ -103,8 +103,10 @@ class _ChatbotPageState extends State<ChatbotPage>
           duration: const Duration(seconds: 5),
         ),
       );
-      // On retire le message utilisateur si l'envoi a échoué
+      // On retire le message utilisateur si l'envoi a échoué, et on restaure
+      // le texte dans le champ pour que l'utilisateur puisse réessayer.
       setState(() => _messages.removeLast());
+      _ctrl.text = userText;
     } finally {
       if (mounted) setState(() => _loading = false);
     }

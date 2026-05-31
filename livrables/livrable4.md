@@ -261,7 +261,7 @@ class UserProfileController {
 
 | Rôle | Boutons |
 |---|---|
-| Entrepreneur | "Mes demandes" (envoyées) → RequestsPage |
+| Entrepreneur | "Mes contacts" (relations acceptées) → RequestsPage |
 | Mentor | "Planning" → SchedulePage + "Demandes reçues" → RequestsPage |
 | Investisseur | "Pitchs publiés" → PublicPitchesPage |
 
@@ -290,23 +290,17 @@ double _profileCompletion(UserProfile p) {
   return filled / fields.length;  // Ex: 10/12 = 0.833 = 83%
 }
 
-// Affichage dynamique avec couleur selon le taux
+// Affichage avec couleur fixe AppColors.amber (barre toujours amber dans le code réel)
 final completion = _profileCompletion(profile);
-final color = completion >= 0.8 ? AppColors.green
-    : completion >= 0.5 ? AppColors.amber
-    : AppColors.red;
 
-LinearProgressIndicator(
-  value: completion,
-  backgroundColor: AppColors.border,
-  valueColor: AlwaysStoppedAnimation<Color>(color),
-  minHeight: 6,
-  borderRadius: BorderRadius.circular(99),
-),
-const SizedBox(height: 4),
-Text(
-  '${(completion * 100).round()} % complété',
-  style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+ClipRRect(
+  borderRadius: BorderRadius.circular(999),
+  child: LinearProgressIndicator(
+    value: completion,
+    minHeight: 6,
+    backgroundColor: Colors.white.withValues(alpha: 0.15),
+    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.amber),
+  ),
 ),
 ```
 
@@ -330,7 +324,7 @@ ValueListenableBuilder<UserProfile>(
                   fullscreenDialog: true, builder: (_) => const EditProfilePage()))),
         ]),
       body: ListView(children: [
-        Avatar(initials: profile.initials, photoBase64: profile.photoBase64, size: 88),
+        Avatar(initials: profile.initials, photoBase64: profile.photoBase64, size: 64),
         Text(profile.fullName), _RoleBadge(role: profile.role),
         LinearProgressIndicator(value: _profileCompletion(profile)),
         // … infos, intérêts, projets, stats …
@@ -636,39 +630,51 @@ UserProfileController.deleteProject(project.id);
 
 **Affichage des projets avec barre de progression :**
 ```dart
-// _ProjectCard dans page_profil.dart
-class _ProjectCard extends StatelessWidget {
+// _ProjectTile dans page_profil.dart
+class _ProjectTile extends StatelessWidget {
   final Project project;
+  const _ProjectTile({required this.project});
 
   @override
   Widget build(BuildContext context) {
+    final completed = project.isCompleted;
+    final accent = completed ? AppColors.green : AppColors.amber;
+
     return HoverGlowCard(
+      padding: const EdgeInsets.all(14),
+      onTap: () => _showActions(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(project.name,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-          Text(project.sector,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: LinearProgressIndicator(
-                value: project.progress,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.amber),
-                borderRadius: BorderRadius.circular(99),
+          Row(
+            children: [
+              // Icône colorée selon l'état
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: accent, borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  completed ? Icons.check_circle_rounded : Icons.workspace_premium_rounded,
+                  color: Colors.white, size: 19,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text('Étape ${project.step}/${project.totalSteps}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-          ]),
-          if (project.isCompleted)
-            const Chip(
-              label: Text('Terminé ✓'),
-              backgroundColor: AppColors.greenLight,
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(project.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    Text(project.sector,
+                        style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+                  ],
+                ),
+              ),
+              _StatusBadge(completed: completed), // remplace Chip('Terminé')
+            ],
+          ),
+          // … barre de progression + étapes …
         ],
       ),
     );
@@ -676,7 +682,7 @@ class _ProjectCard extends StatelessWidget {
 }
 ```
 
-> **📸 CAPTURE D'ÉCRAN — Projet avec barre de progression (Étape 3/5)**
+> **📸 CAPTURE D'ÉCRAN — Projet avec barre de progression (Étape 2/3)**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -717,7 +723,7 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 |---|---|
 | Dashboard AppBar | 44px |
 | Bottom sheet profil | 64px |
-| Page Profil | 88px |
+| Page Profil | 64px |
 | Modification profil | 90px |
 | Matching (carte) | 48px |
 | Chat (messages) | 36px |
@@ -745,7 +751,7 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 | Réactivité UI | `ValueNotifier` → rebuild instantané sur tous les écrans | ✅ |
 | Photo dans toute l'app | Widget `Avatar` réutilisable partout | ✅ |
 | Gestion de projets | `addProject` / `updateProject` / `deleteProject` | ✅ (bonus) |
-| Jauge de complétion | Indicateur 0–100% coloré (vert/amber/rouge) | ✅ (bonus) |
+| Jauge de complétion | Indicateur 0–100%, barre toujours amber (`AppColors.amber`) | ✅ (bonus) |
 | Déconnexion sécurisée | `reset()` + cache + Firebase signOut → redirige vers LoginPage | ✅ |
 | Membres DIAPALER réels | `UsersService.listMembers()` + badge dans Matching | ✅ (bonus) |
 | Champs spécifiques rôle (inscription) | `yearsExperience` (Mentor), `investmentRange` (Investisseur) dès l'étape 3 | ✅ (bonus) |
@@ -753,3 +759,5 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 | LinkedIn cliquable | Chip dans carte "À propos" → url_launcher → profil LinkedIn | ✅ (bonus) |
 | Bouton partage profil | `ShareService.shareMyProfile()` dans AppBar — WhatsApp, Telegram… | ✅ (bonus) |
 | Badge ⭐ Premium | Affiché sous le nom si `isPremium = true` — activé via Wave (L5) | ✅ (bonus) |
+| "Mes contacts" (Entrepreneur) | Remplace "Mes demandes" — affiche les relations acceptées (mentorat + investissement) | ✅ (bonus) |
+| Photo membres Firebase | `BoxFit.cover` systématique dans le widget `Avatar` | ✅ (bonus) |

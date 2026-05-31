@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,7 +24,7 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   // Identité
   late final UserRole _role = widget.initialRole;
-  Gender _gender = Gender.female;
+  Gender _gender = Gender.undisclosed;
   DateTime? _birthDate;
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -87,8 +88,7 @@ class _SignUpPageState extends State<SignUpPage> {
       _name.text.trim().length >= 4;
   bool get _emailValid => _emailRegex.hasMatch(_email.text.trim());
   String get _phoneDigits => _phone.text.replaceAll(RegExp(r'\D'), '');
-  bool get _phoneValid =>
-      _phoneDigits.length >= 8 && _phoneDigits.length <= 9;
+  bool get _phoneValid => _phoneDigits.length == 9;
   bool get _passwordsMatch =>
       _password.text.isNotEmpty && _password.text == _confirm.text;
   int get _passwordStrength => _computeStrength(_password.text);
@@ -1255,7 +1255,7 @@ class _GenderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [Gender.female, Gender.male];
+    final items = [Gender.female, Gender.male, Gender.undisclosed];
     return Row(
       children: [
         for (var i = 0; i < items.length; i++) ...[
@@ -1295,15 +1295,63 @@ class _GenderRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 // Consent checkbox
 // ─────────────────────────────────────────────────────────────────
-class _ConsentCheckbox extends StatelessWidget {
+class _ConsentCheckbox extends StatefulWidget {
   final bool value;
   final ValueChanged<bool?> onChanged;
   const _ConsentCheckbox({required this.value, required this.onChanged});
 
   @override
+  State<_ConsentCheckbox> createState() => _ConsentCheckboxState();
+}
+
+class _ConsentCheckboxState extends State<_ConsentCheckbox> {
+  late final TapGestureRecognizer _cguRec;
+  late final TapGestureRecognizer _privacyRec;
+
+  @override
+  void initState() {
+    super.initState();
+    _cguRec = TapGestureRecognizer()
+      ..onTap = () => _showPlaceholderDialog(
+            context,
+            "Conditions d'utilisation",
+            "Les conditions d'utilisation seront disponibles prochainement.",
+          );
+    _privacyRec = TapGestureRecognizer()
+      ..onTap = () => _showPlaceholderDialog(
+            context,
+            'Politique de confidentialité',
+            'La politique de confidentialité sera disponible prochainement.',
+          );
+  }
+
+  @override
+  void dispose() {
+    _cguRec.dispose();
+    _privacyRec.dispose();
+    super.dispose();
+  }
+
+  void _showPlaceholderDialog(BuildContext ctx, String title, String message) {
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => onChanged(!value),
+      onTap: () => widget.onChanged(!widget.value),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1316,8 +1364,8 @@ class _ConsentCheckbox extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: Checkbox(
-                  value: value,
-                  onChanged: onChanged,
+                  value: widget.value,
+                  onChanged: widget.onChanged,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(5),
                   ),
@@ -1329,25 +1377,27 @@ class _ConsentCheckbox extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(
+                text: TextSpan(
+                  style: const TextStyle(
                     color: AppColors.muted,
                     fontSize: 12.5,
                     height: 1.4,
                   ),
                   children: [
-                    TextSpan(text: "J'accepte les "),
+                    const TextSpan(text: "J'accepte les "),
                     TextSpan(
                       text: "conditions d'utilisation",
-                      style: TextStyle(
+                      recognizer: _cguRec,
+                      style: const TextStyle(
                         color: AppColors.blue,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    TextSpan(text: ' et la '),
+                    const TextSpan(text: ' et la '),
                     TextSpan(
                       text: 'politique de confidentialité',
-                      style: TextStyle(
+                      recognizer: _privacyRec,
+                      style: const TextStyle(
                         color: AppColors.blue,
                         fontWeight: FontWeight.w700,
                       ),

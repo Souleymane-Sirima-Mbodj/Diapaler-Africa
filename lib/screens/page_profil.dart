@@ -304,7 +304,14 @@ class _StatsStrip extends StatelessWidget {
             icon: Icons.bookmark_rounded,
             color: AppColors.red,
             value: '${p.favoritesCount}',
-            label: 'Favoris'),
+            label: 'Favoris',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Fonctionnalité favoris disponible prochainement'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                )),
       ];
     } else if (p.role == 'Investisseur') {
       items = [
@@ -319,13 +326,23 @@ class _StatsStrip extends StatelessWidget {
         _MiniStat(
             icon: Icons.rocket_launch_rounded,
             color: AppColors.amber,
-            value: '${pitchsTotal}',
-            label: 'Pitchs vus'),
+            value: '${p.sessionsCount}',
+            label: 'Pitchs vus',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PublicPitchesPage()),
+                )),
         _MiniStat(
             icon: Icons.bookmark_rounded,
             color: AppColors.red,
             value: '${p.favoritesCount}',
-            label: 'Favoris'),
+            label: 'Favoris',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Fonctionnalité favoris disponible prochainement'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                )),
         _MiniStat(
             icon: Icons.calendar_today_rounded,
             color: AppColors.green,
@@ -342,12 +359,24 @@ class _StatsStrip extends StatelessWidget {
             icon: Icons.workspace_premium_rounded,
             color: AppColors.amber,
             value: '$pitchsTotal',
-            label: 'Projets'),
+            label: 'Projets',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Consulte la section "Mes projets" ci-dessous.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                )),
         _MiniStat(
             icon: Icons.check_circle_rounded,
             color: AppColors.green,
             value: '$completed',
-            label: 'Terminés'),
+            label: 'Terminés',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Consulte la section "Mes projets" ci-dessous.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                )),
         _MiniStat(
             icon: Icons.handshake_rounded,
             color: AppColors.blue,
@@ -360,7 +389,14 @@ class _StatsStrip extends StatelessWidget {
             icon: Icons.bookmark_rounded,
             color: AppColors.red,
             value: '${p.favoritesCount}',
-            label: 'Favoris'),
+            label: 'Favoris',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Fonctionnalité favoris disponible prochainement'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                )),
       ];
     }
     return SizedBox(

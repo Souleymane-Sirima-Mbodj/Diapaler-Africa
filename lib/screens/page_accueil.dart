@@ -871,9 +871,7 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -920,7 +918,6 @@ class _StatPill extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

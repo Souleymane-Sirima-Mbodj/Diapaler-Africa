@@ -34,21 +34,37 @@ class _SendRequestPageState extends State<SendRequestPage> {
       return;
     }
 
+    final uid = AuthService.currentUid;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connexion requise.')),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       final currentProfile = UserProfileController.profile.value;
-      final uid = AuthService.currentUid;
-      if (uid == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connexion requise.')),
-        );
-        return;
-      }
       // UID Firebase si le mentor est un membre inscrit, sinon nom (fallback demo).
       final toId = widget.mentor.uid.isNotEmpty
           ? widget.mentor.uid
           : widget.mentor.name;
+      // Vérification anti-doublon : ne pas envoyer si une demande est déjà en attente.
+      final alreadyPending = await InteractionsService.hasPendingRequest(
+        fromUserId: uid,
+        toUserId: toId,
+      );
+      if (alreadyPending) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tu as déjà une demande en attente avec ce profil.'),
+            backgroundColor: AppColors.amber,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
       final requestType = widget.mentor.isInvestor ? 'investment' : 'mentor';
       await InteractionsService.sendMentorRequest(
         fromUserId: uid,

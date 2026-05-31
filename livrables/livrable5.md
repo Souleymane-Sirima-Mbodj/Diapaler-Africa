@@ -104,19 +104,24 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | Fonctionnalité avancée (sujet) | Implémentation DIAPALER AFRICA | Statut |
 |---|---|---|
 | Notifications | `NotificationService` (Firebase) + badge dynamique + centre + "Effacer tout" | ✅ |
-| Recherche | Barre textuelle en temps réel (nom, secteur, ville) | ✅ |
-| Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
+| Recherche | Barre textuelle en temps réel (nom, secteur, ville) dans Matching + Pitchs Publiés | ✅ |
+| Filtres | Matching : pills rôle + pills secteur (10) + dropdown ville + reset | ✅ |
+| Filtres pitchs | Pitchs : barre recherche + pills secteur dynamiques + compteur + reset | ✅ (bonus) |
 | Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km | ✅ |
 | Chatbot IA | DIALI (Llama 3.1 8B via Groq) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge `unreadMessagesCount` global | ✅ (bonus) |
-| Agenda | `AgendaController.bookBilateral()` + annulation bilatérale | ✅ (bonus) |
+| Système de Contacts | Onglet "Contacts" dans Messages — relations acceptées + searchable + badge rôle | ✅ (bonus) |
+| Agenda | `AgendaController.bookBilateral()` + annulation bilatérale + bouton "Annuler" | ✅ (bonus) |
 | Planning | Gestion disponibilités mentor via Firebase | ✅ (bonus) |
 | Demandes mentorat | Envoi + accepter/refuser + notification croisée | ✅ (bonus) |
+| Flux investisseur | "Proposer un investissement" + `MentorRequest` type `'investment'` + acceptation dans `RequestsPage` | ✅ (bonus) |
+| Matching rôle-adaptatif | Titre + contenu adaptés selon rôle connecté (Mentor → Entrepreneurs, Investisseur → Entrepreneurs) | ✅ (bonus) |
+| Compatibilité dynamique | Algorithme basé intérêts partagés (65-99% / 60% / 58% / 20-40%) | ✅ (bonus) |
 | **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` global | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream Firebase temps réel | ✅ (bonus) |
 | **Dashboard Mentor** | `SliverAppBar` + stats + raccourcis | ✅ (bonus) |
-| **Dashboard Investisseur** | Header + accès Pitchs + Matching | ✅ (bonus) |
-| **Détail mentor** | Réservation session + favori + chat direct | ✅ (bonus) |
+| **Dashboard Investisseur** | Header + accès Pitchs + Matching "Entrepreneurs à financer" | ✅ (bonus) |
+| **Détail mentor** | Réservation session + favori + bouton adapté rôle (mentorat/investissement) | ✅ (bonus) |
 
 ---
 
@@ -379,9 +384,11 @@ class _NotificationTile extends StatelessWidget {
 
 ## 2. Recherche et Filtres avancés
 
+### 2.1 Matching — Filtres multicritères
+
 La page Matching intègre un système de filtres multicritères : **barre de recherche textuelle** (temps réel sur nom/secteur/ville), **pills de rôle** (Tous / Mentor / Investisseur), **pills de secteur** (10 secteurs sénégalais), **dropdown de ville**, et bouton **"Réinitialiser"** visible dès qu'un filtre est actif.
 
-Tous les filtres convergent dans le getter `_filtered` qui combine les membres Firebase réels (priorité) et les 100+ profils statiques :
+Tous les filtres convergent dans le getter `_filtered` qui combine les membres Firebase réels (priorité) et les 112 profils statiques :
 
 ```dart
 // États des filtres
@@ -410,6 +417,40 @@ List<Mentor> get _filtered {
 }
 
 bool get _hasFilter => _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
+```
+
+### 2.2 Pitchs Publiés — Filtres par secteur et recherche
+
+La page Pitchs Publiés intègre également un système de filtres :
+- **Barre de recherche** : filtre en temps réel sur titre, entrepreneur, secteur, description
+- **Pills de secteur** : générées dynamiquement depuis les pitchs Firebase (pas de liste hardcodée)
+- **Compteur** "X pitch(s)" mis à jour à chaque changement de filtre
+- **Bouton "Réinitialiser"** visible si un filtre est actif
+
+```dart
+// États des filtres pitchs
+String _query = '';
+String _selectedSector = 'Tous';
+
+// Getter principal
+List<Map<String, dynamic>> get _filtered {
+  return _pitches.where((p) {
+    final matchQuery = _query.isEmpty ||
+        p['title'].toString().toLowerCase().contains(_query.toLowerCase()) ||
+        p['userName'].toString().toLowerCase().contains(_query.toLowerCase()) ||
+        p['sector'].toString().toLowerCase().contains(_query.toLowerCase()) ||
+        p['description'].toString().toLowerCase().contains(_query.toLowerCase());
+    final matchSector = _selectedSector == 'Tous' ||
+        p['sector'] == _selectedSector;
+    return matchQuery && matchSector;
+  }).toList();
+}
+
+// Secteurs extraits dynamiquement depuis les pitchs Firebase
+Set<String> get _sectors => {
+  'Tous',
+  ..._pitches.map((p) => p['sector']?.toString() ?? '').where((s) => s.isNotEmpty),
+};
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Matching : barre de recherche + pills rôle + pills secteur**
@@ -623,11 +664,13 @@ if (distanceKm != null)
 
 | Caractéristique | Détail |
 |---|---|
-| API | Groq Chat Completions API |
+| API | Groq Chat Completions (via proxy Cloudflare Worker) |
 | Modèle | llama-3.1-8b-instant (rapide + haute qualité) |
 | Langue | Français (compréhension du wolof) |
 | Contexte système | DER/FJ, BNDE, FONGIP, FONSIS, secteurs porteurs |
 | Accès | FAB pulsant amber visible depuis tous les onglets |
+
+> **Note — format de requête :** Le code Flutter (`service_chatbot.dart`) envoie les requêtes au format **Anthropic** : champ `system` au premier niveau du corps JSON et lecture de la réponse via `data['content'][0]['text']`. Le **proxy Cloudflare Worker** (`diali-proxy.sirimambodj.workers.dev`) reçoit ces requêtes et les traduit au format Groq Chat Completions avant de les transmettre à l'API Groq. Aucune clé API n'est exposée côté client.
 
 ---
 
@@ -718,7 +761,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
 **Fonctionnalités :**
 - En-tête : avatar IA amber + "DIALI IA" + "Assistant entrepreneurial"
-- Message de bienvenue **personnalisé selon le rôle** de l'utilisateur
+- Message de bienvenue **commun à tous les rôles** (`static const _welcome`) — même accueil pour Entrepreneur, Mentor et Investisseur
 - Bulles de messages : utilisateur → droite (navy) / DIALI → gauche (blanc)
 - **Indicateur de frappe animé** (3 points) pendant la génération
 - Scroll automatique vers le dernier message
@@ -726,31 +769,31 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 - Historique conservé pendant toute la session
 
 ```dart
-class _ChatbotPageState extends State<ChatbotPage> {
-  // Liste typée ChatbotMessage (pas des Map brutes)
+class _ChatbotPageState extends State<ChatbotPage>
+    with TickerProviderStateMixin {
   final _messages = <ChatbotMessage>[];
-  final _ctrl       = TextEditingController();
-  final _scrollCtrl = ScrollController();
+  final _ctrl = TextEditingController();
+  final _scroll = ScrollController();
   bool _loading = false;
+  late AnimationController _dotCtrl;
+
+  // Message de bienvenue — identique pour tous les rôles
+  static const _welcome =
+      'Salut ! Je suis **DIALI**, ton assistant entrepreneurial IA de DIAPALER AFRICA. 🇸🇳\n\n'
+      'Je peux t\'aider avec :\n'
+      '• 💼 Ta stratégie business\n'
+      '• 💰 DER/FJ, PAVIE 2, Be Yes (financement)\n'
+      '• 🎯 La préparation de ton pitch\n'
+      '• 🤝 Trouver mentors et investisseurs\n\n'
+      '**Pose-moi ta question — *Jërejëf* !**';
 
   @override
   void initState() {
     super.initState();
-    // Message de bienvenue personnalisé selon le rôle
-    final profile = UserProfileController.profile.value;
-    final greeting = switch (profile.role) {
-      'Mentor' =>
-        'Bonjour ${profile.firstName} ! Je suis DIALI. Je peux t\'aider à '
-        'mieux accompagner tes mentorés ou structurer tes sessions.',
-      'Investisseur' =>
-        'Bonjour ${profile.firstName} ! Je suis DIALI. Je peux t\'aider à '
-        'identifier des opportunités d\'investissement au Sénégal.',
-      _ =>
-        'Bonjour ${profile.firstName} ! Je suis DIALI, ton assistant '
-        'entrepreneurial. Je t\'aide avec ton business plan, le financement, '
-        'ou l\'écosystème sénégalais (DER/FJ, BNDE, FONGIP…).',
-    };
-    _messages.add(ChatbotMessage(role: 'assistant', content: greeting));
+    _dotCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
   }
 
   Future<void> _send() async {
@@ -1393,6 +1436,8 @@ CustomScrollView(slivers: [
 
 Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets : accès rapide aux pitchs des entrepreneurs et à la page Matching.
 
+Dans l'onglet Matching, l'Investisseur voit les **Entrepreneurs à financer** (titre adapté) — le contenu du matching est filtré pour afficher les Entrepreneurs plutôt que les Mentors/Investisseurs.
+
 ```dart
 CustomScrollView(slivers: [
   SliverAppBar(pinned: true, title: Row(children: [
@@ -1402,7 +1447,7 @@ CustomScrollView(slivers: [
   ])),
   SliverToBoxAdapter(child: Column(children: [
     _ActionTile('Pitchs des entrepreneurs', onTap: () => push(PublicPitchesPage())),
-    _ActionTile('Matching entrepreneurs',   onTap: () => appTabIndex.value = 1),
+    _ActionTile('Entrepreneurs à financer', onTap: () => appTabIndex.value = 1),
   ])),
 ])
 ```
@@ -1416,16 +1461,30 @@ CustomScrollView(slivers: [
 
 La page affiche le profil complet (bio, secteurs, distance GPS) et propose trois actions : réserver une session, ajouter aux favoris, ouvrir un chat direct.
 
+> **Note :** La réservation utilise `AgendaController.add(profile.email, session)` — écriture dans l'agenda de l'utilisateur connecté uniquement. La méthode `bookBilateral` (écriture dans les deux agendas) existe dans `AgendaController` mais n'est pas encore appelée depuis cette page.
+
 ```dart
-// Réservation bilatérale : calcule le prochain créneau Lun–Ven et écrit dans Firebase
+// Réservation : incrémente sessionsCount et écrit la session dans l'agenda Firebase
 void _bookSession() {
   final profile = UserProfileController.profile.value;
-  final daysUntil = slotWeekdays[_selectedSlotIndex] - DateTime.now().weekday;
-  final scheduledAt = DateTime.now().add(Duration(days: daysUntil <= 0 ? daysUntil + 7 : daysUntil));
-  AgendaController.bookBilateral(
-    requesterUid: AuthService.currentUid!, requesterName: profile.fullName,
-    otherUid: widget.mentor.uid, otherName: widget.mentor.name,
-    scheduledAt: scheduledAt,
+  UserProfileController.update(
+    profile.copyWith(sessionsCount: profile.sessionsCount + 1),
+  );
+  // Session planifiée 7 jours plus tard à 14h
+  final sessionDate = DateTime.now().add(const Duration(days: 7));
+  final session = BookedSession(
+    id: DateTime.now().millisecondsSinceEpoch.toString(),
+    mentorName: widget.mentor.name,
+    mentorInitials: widget.mentor.initials,
+    scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
+  );
+  AgendaController.add(profile.email, session);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Session réservée avec ${widget.mentor.name.split(" ").first} !'),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppColors.green,
+    ),
   );
 }
 
@@ -1624,6 +1683,50 @@ connecte entrepreneurs, mentors et investisseurs au Sénégal.
 
 ---
 
+## 10.bis Système de Contacts
+
+### Description
+
+L'onglet "Contacts" dans `page_messages.dart` centralise toutes les **relations acceptées** entre utilisateurs. Une relation est créée dès qu'une demande de mentorat **ou** une proposition d'investissement est acceptée.
+
+**Fonctionnalités :**
+- Liste des contacts (relations acceptées : mentor/mentoré, investisseur/entrepreneur)
+- Searchable par nom en temps réel
+- Chip badge coloré indiquant le rôle du contact (Mentor : vert, Investisseur : bleu, Entrepreneur : amber)
+- Tap → ouvre directement le chat
+
+**Logique de communication stricte :**
+
+| Situation | Bouton affiché |
+|---|---|
+| Entrepreneur → Mentor (demande en attente) | "Envoyer une demande de mentorat" uniquement |
+| Entrepreneur → Mentor (demande acceptée) | "Contacter" (chat) |
+| Entrepreneur → Investisseur (proposition en attente) | "Proposer un investissement" uniquement |
+| Entrepreneur → Investisseur (acceptée) | "Contacter" (chat) |
+| Mentor / Investisseur → Entrepreneur | Accès libre au chat |
+
+---
+
+## 10.ter Flux Investisseur complet
+
+### Description du flux
+
+1. L'investisseur consulte les pitchs sur `page_pitches_publics.dart`
+2. Il clique "💰 Proposer un investissement" sur un pitch
+3. Un `MentorRequest` est créé dans Firebase avec `type: 'investment'`
+4. L'entrepreneur reçoit une notification automatique
+5. L'entrepreneur accepte ou refuse dans `page_requests.dart` (section "Propositions d'investissement")
+6. Après acceptation → relation ajoutée dans les Contacts, communication autorisée
+
+**Écran `page_requests.dart` — deux sections :**
+
+| Section | Description |
+|---|---|
+| "Demandes de mentorat" | `MentorRequest` avec `type: 'mentor'` |
+| "Propositions d'investissement" | `MentorRequest` avec `type: 'investment'` |
+
+---
+
 ## 11. Paiement Mobile — Wave Premium
 
 ### 11.1 Architecture simplifiée (lien marchand)
@@ -1742,9 +1845,9 @@ La bottom sheet s'affiche quand l'utilisateur souhaite passer en Premium. Elle a
 
 **État 2 — Après retour de Wave :** affiche un bandeau vert + bouton "Oui, j'ai payé — Activer Premium"
 
-**Badge ⭐ sur la page profil :** dès que `isPremium = true`, un badge amber apparaît sous le nom :
+**Badge ⭐ sur la page profil :** *(prévu en v2 — non affiché dans la version actuelle de `page_profil.dart`)* Le champ `isPremium` est bien sauvegardé dans Firebase et dans le modèle `UserProfile`, mais l'affichage visuel du badge n'est pas encore intégré dans la page profil. Il sera ajouté dans une prochaine version :
 ```dart
-// lib/screens/page_profil.dart
+// lib/screens/page_profil.dart — À IMPLÉMENTER (v2)
 if (profile.isPremium) Container(
   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
   decoration: BoxDecoration(
@@ -1826,8 +1929,9 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | Fonctionnalité (sujet) | Implémentation | Statut |
 |---|---|---|
 | Notifications | `NotificationService` (Firebase) + badge dynamique + centre + "Effacer tout" | ✅ |
-| Recherche | Filtre textuel temps réel (nom, secteur, ville) | ✅ |
-| Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset | ✅ |
+| Recherche | Filtre textuel temps réel (nom, secteur, ville) dans Matching + Pitchs Publiés | ✅ |
+| Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset (Matching) | ✅ |
+| Filtres pitchs | Recherche + pills secteur dynamiques + compteur + reset dans Pitchs Publiés | ✅ (bonus) |
 | Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km | ✅ |
 | Chatbot IA | DIALI (llama-3.1-8b-instant) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge global `unreadMessagesCount` | ✅ (bonus) |
@@ -1835,14 +1939,19 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | Bouton "Près de moi" | GPS + tri distance + animation couleur | ✅ (bonus) |
 | Membres DIAPALER réels | `UsersService.listMembers()` en tête de liste Matching | ✅ (bonus) |
 | Agenda Firebase | `AgendaController.bookBilateral()` + `cancel()` bilatéral | ✅ (bonus) |
+| Bouton "Annuler" session | Dialog confirmation + suppression bilatérale Firebase | ✅ (bonus) |
 | Planning mentor | Gestion disponibilités via `InteractionsService` | ✅ (bonus) |
 | Demandes de mentorat | Envoi + accepter/refuser + notification automatique | ✅ (bonus) |
+| **Flux investisseur** | "Proposer un investissement" + `type: 'investment'` + 2 sections dans `RequestsPage` | ✅ (bonus) |
+| **Système de Contacts** | Onglet "Contacts" dans Messages — relations acceptées, searchable, badge rôle, tap → chat | ✅ (bonus) |
+| **Matching rôle-adaptatif** | Mentor → "Mes Entrepreneurs", Investisseur → "Entrepreneurs à financer" | ✅ (bonus) |
+| **Compatibilité dynamique** | Algorithme intérêts partagés — remplace valeurs hardcodées | ✅ (bonus) |
 | **Pitch (stepper 3 étapes)** | `PitchPage` → validation par étape + double sauvegarde (`totalSteps: 3`) + redirect Profil | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream temps réel `DatabaseService.getPitches()` | ✅ (bonus) |
 | **Dashboard Mentor** | SliverAppBar + stats + raccourcis Pitchs/Planning/Demandes | ✅ (bonus) |
-| **Dashboard Investisseur** | SliverAppBar + ticket investissement + accès Pitchs + Matching | ✅ (bonus) |
+| **Dashboard Investisseur** | SliverAppBar + ticket investissement + "Entrepreneurs à financer" | ✅ (bonus) |
 | **Agenda rôle-spécifique** | Titre/description adaptés : "Mes sessions" / "Mon agenda" / "Mes rendez-vous" | ✅ (bonus) |
-| **Détail mentor** | Bio Firebase réelle + pronom genre + bouton "Envoyer une demande" (Entrepreneur) | ✅ (bonus) |
+| **Détail mentor** | Bio Firebase réelle + pronom genre + bouton adapté rôle (mentorat/investissement) | ✅ (bonus) |
 | **Bouton CIS informatif** | Bottom sheet expliquant le Club des Investisseurs du Sénégal | ✅ (bonus) |
 | **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |

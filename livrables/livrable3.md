@@ -236,15 +236,23 @@ class CacheService {
 
 ### 2.2 Bootstrap au démarrage (`page_demarrage.dart` — SplashPage)
 
-Au lieu d'un simple `StreamBuilder<User?>` sur `authStateChanges()` (qui ne peut pas afficher le profil en cache ni gérer le timeout réseau), DIAPALER AFRICA utilise une méthode `_bootstrap()` asynchrone dans la `SplashPage` :
+Au lieu d'un simple `StreamBuilder<User?>` sur `authStateChanges()` (qui ne peut pas afficher le profil en cache ni gérer le timeout réseau), DIAPALER AFRICA utilise une méthode `_bootstrap()` asynchrone dans la `SplashPage`.
+
+**Écran de démarrage :** fond `AppColors.navyDeep` avec un pattern de points subtil en arrière-plan. Au centre : le logo DIAPALER (tile circulaire navy→blue avec bordure amber) entouré de **3 orbites animées** aux couleurs du drapeau sénégalais (vert, jaune, rouge), qui s'allument une à une. Le wordmark apparaît en `fontSize: 36` suivi du sous-titre *« Connecte ton idée à ton succès »* en italique, et d'une `LinearProgressIndicator` amber. L'`AnimationController` dure **1 100 ms** au total.
 
 ```dart
 // lib/screens/page_demarrage.dart
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage>
+    with TickerProviderStateMixin {
+  late final AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward();
     _bootstrap();
   }
 
@@ -258,12 +266,9 @@ class _SplashPageState extends State<SplashPage> {
 
     try {
       // ── Étape 2 : Attente de l'initialisation de Firebase (max 5s)
-      // Firebase Realtime Database doit être prêt avant toute lecture
       await firebaseReady.timeout(const Duration(seconds: 5));
 
       // ── Étape 3 : Vérification synchrone de l'état d'authentification
-      // AuthService.currentUid lit FirebaseAuth.instance.currentUser?.uid
-      // Si Firebase Auth a restauré la session, currentUid est non-null
       final uid = AuthService.currentUid;
       if (uid != null) {
         // ── Étape 4 : Chargement du profil depuis Firebase (max 4s)
@@ -276,18 +281,16 @@ class _SplashPageState extends State<SplashPage> {
       }
     } catch (_) {
       // Timeout réseau ou Firebase non disponible :
-      // → Si un cache exist, l'utilisateur voit son profil hors-ligne
+      // → Si un cache existe, l'utilisateur voit son profil hors-ligne
       // → Sinon, redirection vers RoleSelectionPage
     }
 
-    // ── Étape 5 : Animation de 200ms puis navigation
+    // ── Étape 5 : 200ms d'attente puis navigation avec FadeTransition
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => next,
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: next),
         transitionDuration: const Duration(milliseconds: 350),
       ),
     );
@@ -295,19 +298,50 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Écran de démarrage : logo DIAPALER animé + bande drapeau sénégalais
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DiapalerLogoTile(size: 80),
-            SizedBox(height: 16),
-            DiapalerWordmark(fontSize: 32),
-            SizedBox(height: 8),
-            SenegalFlagStrip(height: 4),
-          ],
-        ),
+    // Fond navy profond + pattern de points + logo animé avec 3 orbites drapeau
+    return Scaffold(
+      backgroundColor: AppColors.navyDeep,
+      body: Stack(
+        children: [
+          Positioned.fill(child: CustomPaint(painter: _DotsBg())),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _Logo(anim: _ctrl), // tile + 3 orbites flagGreen/flagYellow/flagRed
+                const SizedBox(height: 22),
+                _slideUp(
+                  anim: _at(0.55, 0.85),
+                  child: const DiapalerWordmark(fontSize: 36, onDark: true),
+                ),
+                const SizedBox(height: 12),
+                _slideUp(
+                  anim: _at(0.7, 1.0),
+                  child: const Text(
+                    '« Connecte ton idée à ton succès »',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13.5,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 50),
+                FadeTransition(
+                  opacity: _at(0.9, 1.0),
+                  child: const SizedBox(
+                    width: 120,
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Colors.white12,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.amber),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -470,7 +504,7 @@ class _LoginPageState extends State<LoginPage> {
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
                           labelText: 'Email',
-                          hintText: 'nom@email.sn',
+                          hintText: 'nom@téki.sn',
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
                       ),
@@ -593,7 +627,7 @@ class _LoginPageState extends State<LoginPage> {
 **Champs :**
 - Nom complet (prénom + nom obligatoires, min 4 caractères)
 - Adresse email (validation regex)
-- Sexe (Homme / Femme / Autre — pills animés)
+- Sexe (Femme / Homme — 2 pills animés)
 - Date de naissance (DatePicker natif Flutter — `helpText: 'Date de naissance'`)
 - Badge confirmation du rôle choisi (lecture seule)
 
@@ -608,13 +642,15 @@ bool get _emailValid =>
     RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     .hasMatch(_email.text.trim());
 
-// DatePicker avec texte d'aide court pour éviter la troncature
+// DatePicker avec contrainte d'âge minimum 13 ans
+// initialDate : 22 ans en arrière par défaut (ou la date déjà saisie)
+// lastDate    : 13 ans en arrière (âge minimum requis)
 await showDatePicker(
   context: context,
-  initialDate: _birthDate ?? DateTime(2000),
+  initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
   firstDate: DateTime(1940),
-  lastDate: DateTime.now(),
-  helpText: 'Date de naissance',  // ← 16 chars, pas de troncature
+  lastDate: DateTime(now.year - 13, 12, 31),
+  helpText: 'Ta date de naissance',
 );
 ```
 
@@ -662,7 +698,7 @@ _InlineDropdown(
 **Champs (communs à tous les rôles) :**
 - Secteur d'activité (dropdown obligatoire — libellé adapté : "Secteur d'activité" / "Secteur principal" / "Secteur d'investissement")
 - Photo de profil (tap → galerie → `image_picker` → redimensionnement 512×512 → encodage base64)
-- Biographie (textarea, 240 caractères max avec compteur)
+- Biographie "À propos de moi" (`hintText: 'Présente-toi en quelques lignes...'`, 240 caractères max, compteur natif)
 - LinkedIn (URL, optionnel)
 - Centres d'intérêt / domaines d'expertise (chips multi-sélection — au moins 1 obligatoire)
 
@@ -688,14 +724,13 @@ Future<void> _pickProfilePhoto() async {
   }
 }
 
-// Compteur de caractères temps réel dans la biographie
+// Biographie : hintText invite à se présenter, compteur natif Flutter (maxLength)
 TextField(
   controller: _bio,
   maxLength: 240,
   maxLines: 4,
-  decoration: InputDecoration(
-    labelText: 'Biographie',
-    counterText: '${_bio.text.length}/240',
+  decoration: const InputDecoration(
+    hintText: 'Présente-toi en quelques lignes...',
   ),
 ),
 ```
@@ -755,21 +790,26 @@ Future<void> _submit() async {
     // ── 2. Construction du profil complet
     final parts = _name.text.trim().split(RegExp(r'\s+'));
     final profile = UserProfile(
-      firstName:   parts.first,
-      lastName:    parts.length > 1 ? parts.sublist(1).join(' ') : '',
-      email:       _email.text.trim(),
-      phone:       '+221 ${_phone.text.trim()}',
-      gender:      _gender,
-      birthDate:   _birthDate,
-      city:        _city,
-      country:     _country,
-      role:        _roleLabel(_role),   // Entrepreneur / Mentor / Investisseur
-      sector:      _sector,
-      bio:         _bio.text.trim(),
-      linkedin:    _linkedin.text.trim(),
-      photoBase64: _photoBase64,
-      interests:   _interests.toList()..sort(),
-      projects:    const [],
+      firstName:       parts.first,
+      lastName:        parts.length > 1 ? parts.sublist(1).join(' ') : '',
+      email:           _email.text.trim(),
+      phone:           '+221 ${_phone.text.trim()}',
+      gender:          _gender,
+      birthDate:       _birthDate,
+      address:         _address.text.trim(),
+      city:            _city,
+      country:         _country,
+      role:            _roleLabel(_role),   // Entrepreneur / Mentor / Investisseur
+      sector:          _sector,
+      yearsExperience: _role == UserRole.mentor
+                         ? (int.tryParse(_yearsExp.text.trim()) ?? 0) : 0,
+      investmentRange: _role == UserRole.investor
+                         ? _investmentRange.text.trim() : '',
+      bio:             _bio.text.trim(),
+      linkedin:        _linkedin.text.trim(),
+      photoBase64:     _photoBase64,
+      interests:       _interests.toList()..sort(),
+      projects:        const [],
     );
 
     // ── 3. Sauvegarde dans Firebase Database (CREATE)
@@ -927,7 +967,7 @@ Future<void> _signOut(BuildContext context) async {
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Se déconnecter ?'),
-      content: const Text('Tu devras te reconnecter pour accéder à ton compte.'),
+      content: const Text('Tu devras te reconnecter pour accéder à ton tableau de bord.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
@@ -953,10 +993,13 @@ Future<void> _signOut(BuildContext context) async {
   appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
   await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
-  // ── Redirection vers la page de connexion (pile vidée)
+  // ── Redirection vers la page de connexion (pile vidée, FadeTransition)
   if (!mounted) return;
   Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginPage()),
+    PageRouteBuilder(
+      pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: const LoginPage()),
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
     (_) => false,
   );
 }

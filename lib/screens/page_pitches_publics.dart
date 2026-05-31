@@ -311,6 +311,19 @@ class _PitchCard extends StatelessWidget {
   final Map<String, dynamic> pitch;
   const _PitchCard({required this.pitch});
 
+  /// Formate un montant avec des espaces (ex: 5000000 → 5 000 000).
+  String _formatAmount(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.isEmpty) return raw;
+    final buf = StringBuffer();
+    final len = digits.length;
+    for (var i = 0; i < len; i++) {
+      if (i > 0 && (len - i) % 3 == 0) buf.write(' ');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
+
   String _initials(String name) {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
@@ -486,7 +499,7 @@ class _PitchCard extends StatelessWidget {
                       size: 13, color: AppColors.green),
                   const SizedBox(width: 4),
                   Text(
-                    '$amount FCFA',
+                    '${_formatAmount(amount)} FCFA',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

@@ -113,7 +113,27 @@ class _SchedulePageState extends State<SchedulePage> {
       schedule: {...current.schedule, day: newSchedule},
       lastUpdated: DateTime.now(),
     );
-    await InteractionsService.updateAvailability(updated);
+    try {
+      await InteractionsService.updateAvailability(updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Planning mis à jour ✓'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur : impossible de sauvegarder. $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
   }
 }
 
