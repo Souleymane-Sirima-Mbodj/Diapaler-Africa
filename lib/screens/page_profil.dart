@@ -272,6 +272,13 @@ class _StatsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: pendingRequestsCount,
+      builder: (context, pending, _) => _buildContent(context, pending),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, int pending) {
     final p = UserProfileController.profile.value;
     final pitchsTotal = p.projects.length;
     final completed = p.projects.where((x) => x.isCompleted).length;
@@ -286,6 +293,7 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.roleMentor,
             value: '${p.mentorsActive}',
             label: 'Mentorés',
+            badge: pending,
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const RequestsPage()),
                 )),
@@ -322,6 +330,7 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.blue,
             value: '${p.mentorsActive}',
             label: 'Contacts',
+            badge: pending,
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const RequestsPage()),
                 )),
@@ -384,6 +393,7 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.blue,
             value: '${p.mentorsActive}',
             label: 'Mentors',
+            badge: pending,
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const RequestsPage()),
                 )),
@@ -423,52 +433,84 @@ class _MiniStat extends StatelessWidget {
   final String value;
   final String label;
   final VoidCallback? onTap;
+  final int badge;
   const _MiniStat({
     required this.icon,
     required this.color,
     required this.value,
     required this.label,
     this.onTap,
+    this.badge = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: onTap != null ? AppColors.blue.withValues(alpha: 0.35) : AppColors.border,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: onTap != null
+                    ? AppColors.blue.withValues(alpha: 0.35)
+                    : AppColors.border,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    height: 1.2,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: AppColors.navyDeep,
-                height: 1.1,
+          if (badge > 0)
+            Positioned(
+              top: -5,
+              right: -5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: const BoxDecoration(
+                  color: AppColors.red,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Center(
+                  child: Text(
+                    badge > 9 ? '9+' : '$badge',
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                height: 1.2,
-                color: AppColors.muted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

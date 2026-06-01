@@ -18,11 +18,13 @@ class SendRequestPage extends StatefulWidget {
 
 class _SendRequestPageState extends State<SendRequestPage> {
   final _messageCtrl = TextEditingController();
+  final _budgetCtrl = TextEditingController();
   bool _loading = false;
 
   @override
   void dispose() {
     _messageCtrl.dispose();
+    _budgetCtrl.dispose();
     super.dispose();
   }
 
@@ -30,6 +32,16 @@ class _SendRequestPageState extends State<SendRequestPage> {
     if (_messageCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Écris un message.')),
+      );
+      return;
+    }
+    if (widget.mentor.isInvestor && _budgetCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indique le montant que tu recherches.'),
+          backgroundColor: AppColors.amber,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -66,12 +78,19 @@ class _SendRequestPageState extends State<SendRequestPage> {
         return;
       }
       final requestType = widget.mentor.isInvestor ? 'investment' : 'mentor';
+
+      // Compose le message final avec la fourchette de budget si investisseur
+      final budget = _budgetCtrl.text.trim();
+      final fullMessage = widget.mentor.isInvestor && budget.isNotEmpty
+          ? '${_messageCtrl.text}\n\nMontant recherché : $budget FCFA.'
+          : _messageCtrl.text;
+
       final reqId = await InteractionsService.sendMentorRequest(
         fromUserId: uid,
         toUserId: toId,
         fromName: currentProfile.fullName,
         toName: widget.mentor.name,
-        message: _messageCtrl.text,
+        message: fullMessage,
         type: requestType,
       );
       final notifLabel = widget.mentor.isInvestor
@@ -82,18 +101,17 @@ class _SendRequestPageState extends State<SendRequestPage> {
         message: 'Ta $notifLabel à ${widget.mentor.name} a bien été transmise.',
         type: 'mentor_request',
       );
-      // Notif côté destinataire si c'est un vrai membre.
+      // Notif côté destinataire (mentor ou investisseur).
+      // Type 'mentor_request' → redirige vers RequestsPage pour accepter/refuser.
       if (widget.mentor.uid.isNotEmpty) {
         final notifTitle = widget.mentor.isInvestor
-            ? 'Nouvelle proposition d\'investissement'
-            : 'Nouvelle demande de mentorat';
-        // investment_offer → déclenche les boutons inline Accept/Decline côté entrepreneur
-        final notifType = widget.mentor.isInvestor ? 'investment_offer' : 'mentor_request';
+            ? 'Nouvelle demande d\'investissement 💰'
+            : 'Nouvelle demande de mentorat 🤝';
         await NotificationService.notifyUser(
           uid: widget.mentor.uid,
           title: notifTitle,
-          message: '${currentProfile.fullName} souhaite te contacter — "${_messageCtrl.text}"',
-          type: notifType,
+          message: '${currentProfile.fullName} te contacte — "$fullMessage"',
+          type: 'mentor_request',
           requestId: reqId,
           fromUserId: uid,
           fromName: currentProfile.fullName,
@@ -194,6 +212,41 @@ class _SendRequestPageState extends State<SendRequestPage> {
             ),
           ),
           const SizedBox(height: 24),
+
+          // ── Champ montant recherché (investisseur uniquement) ──
+          if (widget.mentor.isInvestor) ...[
+            const Text(
+              'Montant recherché (FCFA) *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _budgetCtrl,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                hintText: 'Ex. 500 000 – 2 000 000',
+                prefixIcon: const Icon(Icons.payments_rounded,
+                    color: AppColors.subtle, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: AppColors.fieldBg,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Indique une fourchette ou un montant précis.',
+              style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+            ),
+            const SizedBox(height: 18),
+          ],
+
+          // ── Message ──
           const Text(
             'Ta demande',
             style: TextStyle(
@@ -209,7 +262,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
             maxLength: 500,
             decoration: InputDecoration(
               hintText: widget.mentor.isInvestor
-                  ? 'Présente ton projet et le type d\'investissement que tu recherches…'
+                  ? 'Présente ton projet et pourquoi tu cherches cet investissement…'
                   : 'Explique pourquoi tu cherches du mentorat, tes objectifs...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

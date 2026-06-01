@@ -12,3 +12,8 @@ final ValueNotifier<int> appTabIndex = ValueNotifier<int>(0);
 /// le stream Firebase émet de nouvelles données, même si l'onglet est inactif.
 /// Utilisé par la barre de navigation pour afficher le badge sur l'onglet Messages.
 final ValueNotifier<int> unreadMessagesCount = ValueNotifier<int>(0);
+
+/// Nombre de demandes en attente (pending) reçues par l'utilisateur courant.
+/// Mis à jour en temps réel depuis Firebase. Utilisé pour les badges sur les
+/// boutons "Demandes" dans les dashboards Mentor, Investisseur et Profil.
+final ValueNotifier<int> pendingRequestsCount = ValueNotifier<int>(0);

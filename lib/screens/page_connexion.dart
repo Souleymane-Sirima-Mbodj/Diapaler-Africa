@@ -47,9 +47,13 @@ class _LoginPageState extends State<LoginPage> {
       );
       final uid = cred.user?.uid;
       if (uid != null) {
-        final remote = await DatabaseService.readUserProfile(uid);
-        if (remote != null) {
-          UserProfileController.update(remote);
+        try {
+          final remote = await DatabaseService.readUserProfile(uid);
+          if (remote != null) {
+            UserProfileController.update(remote);
+          }
+        } catch (_) {
+          // Le profil sera rechargé au démarrage — ne pas bloquer la connexion
         }
       }
       // Demande au gestionnaire de mots de passe du téléphone de sauvegarder

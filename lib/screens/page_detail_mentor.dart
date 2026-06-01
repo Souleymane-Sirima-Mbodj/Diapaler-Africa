@@ -354,148 +354,178 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   child: _CompaniesList(companies: mentor.companies),
                 ),
               ],
-              const SizedBox(height: 22),
-              const _SectionTitle('Disponibilités'),
-              const SizedBox(height: 4),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Appuie sur "Réserver une session" pour choisir un créneau et envoyer ta demande.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
-                ),
-              ),
-              const SizedBox(height: 10),
-              _AvailabilityPreview(mentor: mentor),
-              const SizedBox(height: 28),
+              // Disponibilités : masquées tant que la demande n'est pas acceptée
+              // (uniquement pour Entrepreneur et Investisseur).
+              Builder(builder: (context) {
+                final myRole = UserProfileController.profile.value.role;
+                final needsAcceptance =
+                    myRole == 'Entrepreneur' || myRole == 'Investisseur';
+                final canSee = !needsAcceptance || _requestAccepted == true;
+
+                if (!canSee) {
+                  // Bloqué : afficher un encart discret
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.fieldBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lock_outline_rounded,
+                              size: 18, color: AppColors.subtle),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              myRole == 'Investisseur'
+                                  ? 'Les disponibilités seront visibles après acceptation de ta proposition.'
+                                  : 'Les disponibilités seront visibles après acceptation de ta demande.',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.muted,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 22),
+                    const _SectionTitle('Disponibilités'),
+                    const SizedBox(height: 4),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Appuie sur "Réserver une session" pour choisir un créneau et envoyer ta demande.',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.muted, height: 1.4),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _AvailabilityPreview(mentor: mentor),
+                    const SizedBox(height: 28),
+                  ],
+                );
+              }),
               Builder(
                 builder: (context) {
                   final myRole = UserProfileController.profile.value.role;
-                  if (myRole == 'Entrepreneur') {
-                    // Bouton adapté selon le type de profil visité
-                    final isInvestor = mentor.isInvestor;
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => SendRequestPage(mentor: mentor),
-                            ),
-                          ),
-                          icon: Icon(
-                            isInvestor
-                                ? Icons.monetization_on_rounded
-                                : Icons.handshake_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            isInvestor
-                                ? 'Proposer un investissement'
-                                : 'Envoyer une demande de mentorat',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            foregroundColor: AppColors.green,
-                            side: const BorderSide(color: AppColors.green),
-                          ),
-                        ),
-                      ),
-                    );
+                  // Affiché uniquement pour Entrepreneur et Investisseur
+                  if (myRole != 'Entrepreneur' && myRole != 'Investisseur') {
+                    return const SizedBox.shrink();
                   }
-                  return const SizedBox.shrink();
-                },
-              ),
-              Builder(
-                builder: (context) {
-                  // Pendant le chargement de la vérification, on affiche un indicateur.
+                  // Un investisseur ne voit ce bloc que sur le profil d'un Entrepreneur
+                  if (myRole == 'Investisseur' && mentor.isInvestor) {
+                    return const SizedBox.shrink();
+                  }
+
+                  // Chargement en cours → spinner
                   if (_requestAccepted == null) {
                     return const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
 
-                  final myRole = UserProfileController.profile.value.role;
-                  // Si la demande n'a pas encore été acceptée (et que l'utilisateur
-                  // est un Entrepreneur visitant un membre Firebase), on masque
-                  // les boutons Message et Réserver.
-                  if (!_requestAccepted! && myRole == 'Entrepreneur' &&
-                      mentor.uid.isNotEmpty) {
-                    final isInvestor = mentor.isInvestor;
+                  // Demande ACCEPTÉE → Message + Réserver une session
+                  if (_requestAccepted!) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.blueTint,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          isInvestor
-                              ? 'Envoie une proposition d\'investissement pour pouvoir contacter cet investisseur et réserver une session.'
-                              : 'Envoie une demande de mentorat pour pouvoir contacter ce mentor et réserver une session.',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.muted,
-                            height: 1.4,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final myUid = AuthService.currentUid ??
+                                    UserProfileController.profile.value.email;
+                                final convId =
+                                    InteractionsService.generateConversationId(
+                                  myUid,
+                                  mentor.uid.isNotEmpty
+                                      ? mentor.uid
+                                      : mentor.name,
+                                );
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ChatPage(
+                                      conversationId: convId,
+                                      otherUserName: mentor.name,
+                                      otherUserId: mentor.uid.isNotEmpty
+                                          ? mentor.uid
+                                          : mentor.name,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 18),
+                              label: const Text('Message'),
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showBookingSheet(context),
+                              icon: const Icon(Icons.calendar_month_rounded,
+                                  size: 18),
+                              label: const Text('Réserver une session'),
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
 
+                  // Demande PAS encore acceptée → bouton d'action uniquement
+                  final isInvestorViewing = myRole == 'Investisseur';
+                  final isInvestorProfile = mentor.isInvestor;
+                  final IconData actionIcon = isInvestorViewing || isInvestorProfile
+                      ? Icons.monetization_on_rounded
+                      : Icons.handshake_rounded;
+                  final String actionLabel = isInvestorViewing
+                      ? 'Proposer un investissement'
+                      : isInvestorProfile
+                          ? 'Proposer un investissement'
+                          : 'Envoyer une demande de mentorat';
+
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              // Utilise le UID Firebase (et non l'email) pour garantir
-                              // la cohérence avec l'ID de conversation côté notifications.
-                              final myUid = AuthService.currentUid ??
-                                  UserProfileController.profile.value.email;
-                              final convId = InteractionsService.generateConversationId(
-                                myUid,
-                                mentor.uid.isNotEmpty ? mentor.uid : mentor.name,
-                              );
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ChatPage(
-                                    conversationId: convId,
-                                    otherUserName: mentor.name,
-                                    otherUserId: mentor.uid.isNotEmpty
-                                        ? mentor.uid
-                                        : mentor.name,
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.chat_bubble_outline_rounded,
-                                size: 18),
-                            label: const Text('Message'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SendRequestPage(mentor: mentor),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showBookingSheet(context),
-                            icon: const Icon(Icons.calendar_month_rounded,
-                                size: 18),
-                            label: const Text('Réserver une session'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
+                        icon: Icon(actionIcon, size: 18),
+                        label: Text(actionLabel),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          foregroundColor: AppColors.green,
+                          side: const BorderSide(color: AppColors.green),
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },

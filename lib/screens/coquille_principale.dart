@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 import '../services/service_agenda.dart';
@@ -93,19 +95,40 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   int _index = 0;
+  StreamSubscription? _pendingRequestsSub;
 
   @override
   void initState() {
     super.initState();
-    // Charge sessions et notifications avec l'UID Firebase Auth (alphanumérique).
-    // L'email contient des points, interdits dans les chemins Realtime Database.
     final uid = AuthService.currentUid;
     if (uid != null && uid.isNotEmpty) {
       AgendaController.load(uid);
       NotificationService.init(uid);
+      _listenPendingRequests(uid);
     }
-    // Écoute le notifier global pour changer d'onglet depuis les dashboards.
     appTabIndex.addListener(_onTabIndexChanged);
+  }
+
+  /// Écoute en temps réel les demandes en attente reçues par l'utilisateur.
+  void _listenPendingRequests(String uid) {
+    _pendingRequestsSub?.cancel();
+    _pendingRequestsSub = FirebaseDatabase.instance
+        .ref('mentorRequests')
+        .orderByChild('toUserId')
+        .equalTo(uid)
+        .onValue
+        .listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) {
+        pendingRequestsCount.value = 0;
+        return;
+      }
+      final count = data.values.where((v) {
+        if (v is! Map) return false;
+        return v['status']?.toString() == 'pending';
+      }).length;
+      pendingRequestsCount.value = count;
+    }, onError: (_) => pendingRequestsCount.value = 0);
   }
 
   void _onTabIndexChanged() {
@@ -115,6 +138,8 @@ class _RootShellState extends State<RootShell> {
   @override
   void dispose() {
     appTabIndex.removeListener(_onTabIndexChanged);
+    _pendingRequestsSub?.cancel();
+    pendingRequestsCount.value = 0;
     super.dispose();
   }
 
