@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
@@ -230,20 +231,55 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const RequestsPage()),
-                          ),
-                          icon: const Icon(Icons.mail_rounded, size: 18),
-                          label: const Text(
-                            'Demandes',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.roleMentor,
-                            side: const BorderSide(color: AppColors.roleMentor),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: pendingRequestsCount,
+                          builder: (context, pending, _) => Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const RequestsPage()),
+                                ),
+                                icon: const Icon(Icons.mail_rounded, size: 18),
+                                label: const Text(
+                                  'Demandes',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.roleMentor,
+                                  side: const BorderSide(
+                                      color: AppColors.roleMentor),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                ),
+                              ),
+                              if (pending > 0)
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 2),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 18, minHeight: 18),
+                                    child: Center(
+                                      child: Text(
+                                        pending > 9 ? '9+' : '$pending',
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),

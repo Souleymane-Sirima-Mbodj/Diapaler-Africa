@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
@@ -318,6 +320,58 @@ class _RequestCard extends StatelessWidget {
   Future<void> _acceptRequest(BuildContext context) async {
     try {
       await InteractionsService.acceptRequest(request.id);
+
+      // ── Incrémenter les compteurs selon le type de demande ──
+      if (request.type == 'mentor') {
+        final myUid = AuthService.currentUid;
+        if (myUid != null) {
+          // Mentor : +1 entrepreneur mentoré
+          final profile = UserProfileController.profile.value;
+          final updatedMentor = profile.copyWith(
+            mentorsActive: profile.mentorsActive + 1,
+          );
+          UserProfileController.update(updatedMentor);
+          await DatabaseService.updateUserProfile(myUid, updatedMentor);
+
+          // Entrepreneur : +1 mentor actif
+          try {
+            final entrSnap = await DatabaseService.readUserProfile(
+                request.fromUserId);
+            if (entrSnap != null) {
+              final updatedEntr = entrSnap.copyWith(
+                mentorsActive: entrSnap.mentorsActive + 1,
+              );
+              await DatabaseService.updateUserProfile(
+                  request.fromUserId, updatedEntr);
+            }
+          } catch (_) {}
+        }
+      } else if (request.type == 'investment') {
+        // Investisseur : +1 opportunité active (mentorsActive = "Opportunités")
+        try {
+          final investorSnap =
+              await DatabaseService.readUserProfile(request.fromUserId);
+          if (investorSnap != null) {
+            final updatedInvestor = investorSnap.copyWith(
+              mentorsActive: investorSnap.mentorsActive + 1,
+            );
+            await DatabaseService.updateUserProfile(
+                request.fromUserId, updatedInvestor);
+          }
+        } catch (_) {}
+
+        // Entrepreneur : +1 investisseur actif
+        final myUid = AuthService.currentUid;
+        if (myUid != null) {
+          final profile = UserProfileController.profile.value;
+          final updatedEntr = profile.copyWith(
+            mentorsActive: profile.mentorsActive + 1,
+          );
+          UserProfileController.update(updatedEntr);
+          await DatabaseService.updateUserProfile(myUid, updatedEntr);
+        }
+      }
+
       final label = request.type == 'investment'
           ? 'proposition d\'investissement'
           : 'demande de mentorat';

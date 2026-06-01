@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
@@ -43,6 +45,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (notif.requestId.isEmpty) return;
     try {
       await InteractionsService.acceptRequest(notif.requestId);
+
+      // Investisseur : +1 opportunité active
+      if (notif.fromUserId.isNotEmpty) {
+        try {
+          final investorSnap =
+              await DatabaseService.readUserProfile(notif.fromUserId);
+          if (investorSnap != null) {
+            final updated = investorSnap.copyWith(
+              mentorsActive: investorSnap.mentorsActive + 1,
+            );
+            await DatabaseService.updateUserProfile(notif.fromUserId, updated);
+          }
+        } catch (_) {}
+      }
+
+      // Entrepreneur (moi) : +1 investisseur actif
+      final myUid = AuthService.currentUid;
+      if (myUid != null) {
+        final profile = UserProfileController.profile.value;
+        final updated = profile.copyWith(
+          mentorsActive: profile.mentorsActive + 1,
+        );
+        UserProfileController.update(updated);
+        await DatabaseService.updateUserProfile(myUid, updated);
+      }
+
       // Notifier l'investisseur
       if (notif.fromUserId.isNotEmpty) {
         await NotificationService.notifyUser(

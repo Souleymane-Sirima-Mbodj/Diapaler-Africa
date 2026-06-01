@@ -333,7 +333,8 @@ class _PitchCard extends StatelessWidget {
   }
 
   Future<void> _sendInvestmentRequest(
-      BuildContext context, Map<String, dynamic> pitch) async {
+      BuildContext context, Map<String, dynamic> pitch,
+      {required String budget, required String message}) async {
     final currentUid = AuthService.currentUid;
     final profile = UserProfileController.profile.value;
     final toUserId = pitch['userId']?.toString() ?? '';
@@ -349,21 +350,28 @@ class _PitchCard extends StatelessWidget {
       return;
     }
 
+    final fullMessage = [
+      message.isNotEmpty
+          ? message
+          : 'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+      if (budget.isNotEmpty) 'Budget proposé : $budget FCFA.',
+    ].join('\n');
+
     try {
       final reqId = await InteractionsService.sendMentorRequest(
         fromUserId: currentUid,
         toUserId: toUserId,
         fromName: profile.fullName,
         toName: toName,
-        message:
-            'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+        message: fullMessage,
         type: 'investment',
       );
       // Notifier l'entrepreneur avec requestId pour l'accept/decline inline
       await NotificationService.notifyUser(
         uid: toUserId,
         title: 'Proposition d\'investissement 💰',
-        message: '${profile.fullName} souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+        message:
+            '${profile.fullName} souhaite investir${budget.isNotEmpty ? " (budget : $budget FCFA)" : ""} dans votre projet "${pitch['title'] ?? ''}".',
         type: 'investment_offer',
         requestId: reqId,
         fromUserId: currentUid,
@@ -398,7 +406,8 @@ class _PitchCard extends StatelessWidget {
       ),
       builder: (_) => _PitchDetailSheet(
         pitch: pitch,
-        onInvest: () => _sendInvestmentRequest(context, pitch),
+        onInvest: (budget, message) =>
+            _sendInvestmentRequest(context, pitch, budget: budget, message: message),
       ),
     );
   }
@@ -639,7 +648,7 @@ class _PitchCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 class _PitchDetailSheet extends StatelessWidget {
   final Map<String, dynamic> pitch;
-  final VoidCallback onInvest;
+  final void Function(String budget, String message) onInvest;
 
   const _PitchDetailSheet({required this.pitch, required this.onInvest});
 
@@ -858,9 +867,19 @@ class _PitchDetailSheet extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  final result = await showDialog<Map<String, String>>(
+                    context: context,
+                    barrierDismissible: true,
+                    builder: (_) => _InvestmentProposalDialog(
+                      pitchTitle: title,
+                      defaultRange:
+                          UserProfileController.profile.value.investmentRange,
+                    ),
+                  );
+                  if (result == null || !context.mounted) return;
                   Navigator.of(context).pop();
-                  onInvest();
+                  onInvest(result['budget'] ?? '', result['message'] ?? '');
                 },
                 icon: const Icon(Icons.monetization_on_rounded),
                 label: const Text(
@@ -877,6 +896,181 @@ class _PitchDetailSheet extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Dialogue de proposition d'investissement
+// ─────────────────────────────────────────────────────────────────
+class _InvestmentProposalDialog extends StatefulWidget {
+  final String pitchTitle;
+  final String defaultRange;
+
+  const _InvestmentProposalDialog({
+    required this.pitchTitle,
+    required this.defaultRange,
+  });
+
+  @override
+  State<_InvestmentProposalDialog> createState() =>
+      _InvestmentProposalDialogState();
+}
+
+class _InvestmentProposalDialogState
+    extends State<_InvestmentProposalDialog> {
+  late final TextEditingController _budgetCtrl;
+  final _messageCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _budgetCtrl = TextEditingController(text: widget.defaultRange);
+    _budgetCtrl.addListener(() => setState(() {}));
+    _messageCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _budgetCtrl.dispose();
+    _messageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSend = _budgetCtrl.text.trim().isNotEmpty;
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.monetization_on_rounded,
+                color: AppColors.green, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Proposition d\'investissement',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pitch ciblé
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.fieldBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Pitch : ${widget.pitchTitle}',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navyDeep,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Fourchette budget
+            const Text(
+              'Budget proposé (FCFA) *',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _budgetCtrl,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                hintText: 'Ex. 500 000 – 2 000 000',
+                prefixIcon:
+                    Icon(Icons.payments_rounded, color: AppColors.subtle, size: 18),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Indique une fourchette ou un montant précis.',
+              style: TextStyle(fontSize: 11, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
+            // Message optionnel
+            const Text(
+              'Message (optionnel)',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _messageCtrl,
+              maxLines: 3,
+              maxLength: 300,
+              decoration: const InputDecoration(
+                hintText: 'Présente-toi ou précise les conditions…',
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text(
+            'Annuler',
+            style: TextStyle(
+                color: AppColors.muted, fontWeight: FontWeight.w700),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: canSend
+              ? () => Navigator.of(context).pop({
+                    'budget': _budgetCtrl.text.trim(),
+                    'message': _messageCtrl.text.trim(),
+                  })
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.green,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor:
+                AppColors.green.withValues(alpha: 0.35),
+            disabledForegroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text(
+            'Envoyer',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
     );
   }
 }
