@@ -102,9 +102,11 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(height: 16),
                 _ProjectsSection(profile: p),
               ],
-              // 5. Boutons d'actions rapides (rôle-dépendant)
-              const SizedBox(height: 16),
-              const _InteractionsSection(),
+              // 5. Boutons d'actions rapides (Entrepreneur uniquement)
+              if (p.role == 'Entrepreneur' || p.role == 'Entrepreneure') ...[
+                const SizedBox(height: 16),
+                const _InteractionsSection(),
+              ],
             ],
           ),
         );
@@ -641,6 +643,32 @@ class _ProjectTile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
+            // Modifier
+            ListTile(
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.blue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_rounded,
+                    color: AppColors.blue, size: 20),
+              ),
+              title: const Text(
+                'Modifier le projet',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    fullscreenDialog: true,
+                    builder: (_) => AddProjectPage(existingProject: project),
+                  ),
+                );
+              },
+            ),
             if (!project.isCompleted)
               ListTile(
                 leading: Container(

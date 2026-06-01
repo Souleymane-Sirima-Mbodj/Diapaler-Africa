@@ -4,7 +4,9 @@ import '../data/profil_utilisateur.dart';
 import '../theme/theme_app.dart';
 
 class AddProjectPage extends StatefulWidget {
-  const AddProjectPage({super.key});
+  /// Si renseigné, la page est en mode édition (pré-remplit les champs).
+  final Project? existingProject;
+  const AddProjectPage({super.key, this.existingProject});
 
   @override
   State<AddProjectPage> createState() => _AddProjectPageState();
@@ -14,6 +16,19 @@ class _AddProjectPageState extends State<AddProjectPage> {
   final _name = TextEditingController();
   final _description = TextEditingController();
   String? _sector;
+
+  bool get _isEditing => widget.existingProject != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.existingProject;
+    if (p != null) {
+      _name.text = p.name;
+      _description.text = p.description;
+      _sector = p.sector;
+    }
+  }
 
   @override
   void dispose() {
@@ -25,36 +40,57 @@ class _AddProjectPageState extends State<AddProjectPage> {
   bool get _valid =>
       _name.text.trim().isNotEmpty && _sector != null;
 
-  void _create() {
+  void _save() {
     if (!_valid) return;
-    final id = _name.text.trim().toLowerCase().replaceAll(' ', '-');
-    final added = UserProfileController.addProject(
-      Project(
-        id: '$id-${DateTime.now().millisecondsSinceEpoch}',
-        name: _name.text.trim(),
-        description: _description.text.trim(),
-        sector: _sector!,
-      ),
-    );
-    if (!added) {
+    if (_isEditing) {
+      // Mode édition : conserver l'id et les étapes existantes
+      final existing = widget.existingProject!;
+      UserProfileController.updateProject(
+        existing.copyWith(
+          name: _name.text.trim(),
+          description: _description.text.trim(),
+          sector: _sector!,
+        ),
+      );
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              '⚠️  Termine ton projet en cours avant d\'en démarrer un nouveau.'),
-          backgroundColor: AppColors.red,
+        SnackBar(
+          content: Text('✏️ Projet modifié : ${_name.text.trim()}'),
+          backgroundColor: AppColors.blue,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      return;
+    } else {
+      // Mode création
+      final id = _name.text.trim().toLowerCase().replaceAll(' ', '-');
+      final added = UserProfileController.addProject(
+        Project(
+          id: '$id-${DateTime.now().millisecondsSinceEpoch}',
+          name: _name.text.trim(),
+          description: _description.text.trim(),
+          sector: _sector!,
+        ),
+      );
+      if (!added) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                '⚠️  Termine ton projet en cours avant d\'en démarrer un nouveau.'),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🎉 Nouveau projet ajouté : ${_name.text.trim()}'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('🎉 Nouveau projet ajouté : ${_name.text.trim()}'),
-        backgroundColor: AppColors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -65,24 +101,25 @@ class _AddProjectPageState extends State<AddProjectPage> {
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.close_rounded),
         ),
-        title: const Text('Nouveau projet'),
+        title: Text(_isEditing ? 'Modifier le projet' : 'Nouveau projet'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
-          const Text(
-            'Démarre ton aventure',
-            style: TextStyle(
+          Text(
+            _isEditing ? 'Modifie ton projet' : 'Démarre ton aventure',
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: AppColors.navyDeep,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Décris ton nouveau projet en quelques mots — '
-            'tu pourras le compléter plus tard.',
-            style: TextStyle(fontSize: 13, color: AppColors.muted),
+          Text(
+            _isEditing
+                ? 'Mets à jour les informations de ton projet.'
+                : 'Décris ton nouveau projet en quelques mots — tu pourras le compléter plus tard.',
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 24),
           const _Label('Nom du projet'),
@@ -128,11 +165,11 @@ class _AddProjectPageState extends State<AddProjectPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: _valid ? _create : null,
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text(
-                'CRÉER LE PROJET',
-                style: TextStyle(
+              onPressed: _valid ? _save : null,
+              icon: Icon(_isEditing ? Icons.check_rounded : Icons.add_rounded, size: 20),
+              label: Text(
+                _isEditing ? 'ENREGISTRER LES MODIFICATIONS' : 'CRÉER LE PROJET',
+                style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.4,
                   fontSize: 13,

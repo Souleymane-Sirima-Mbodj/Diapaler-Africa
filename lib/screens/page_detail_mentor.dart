@@ -1,10 +1,12 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
+import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
+import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_chat.dart';
@@ -57,23 +59,24 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
   Future<void> _checkRequestStatus() async {
     final mentor = widget.mentor;
-    final myRole = UserProfileController.profile.value.role;
 
-    // Seul un Entrepreneur visitant un membre Firebase a besoin de la vérification.
-    // Pour les mentors statiques (uid vide) ou d'autres rôles : accès libre.
-    if (mentor.uid.isEmpty || myRole != 'Entrepreneur') {
+    // Profils statiques (uid vide) : accès libre (données démo)
+    if (mentor.uid.isEmpty) {
       setState(() => _requestAccepted = true);
       return;
     }
 
-    final uid = AuthService.currentUid;
-    if (uid == null) {
+    final myUid = AuthService.currentUid;
+    if (myUid == null) {
       setState(() => _requestAccepted = false);
       return;
     }
 
-    // Type attendu selon le profil visité
-    final expectedType = mentor.isInvestor ? 'investment' : 'mentor';
+    // Même utilisateur qui regarde son propre profil
+    if (myUid == mentor.uid) {
+      setState(() => _requestAccepted = true);
+      return;
+    }
 
     try {
       final snap = await FirebaseDatabase.instance.ref('mentorRequests').get();
@@ -82,13 +85,14 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         setState(() => _requestAccepted = false);
         return;
       }
+      // Vérification bidirectionnelle : une demande acceptée dans n'importe quel sens
       final accepted = data.values.any((v) {
         if (v is! Map) return false;
-        final reqType = v['type']?.toString() ?? 'mentor';
-        return v['fromUserId'] == uid &&
-            v['toUserId'] == mentor.uid &&
-            v['status'] == 'accepted' &&
-            reqType == expectedType;
+        if (v['status'] != 'accepted') return false;
+        final from = v['fromUserId']?.toString() ?? '';
+        final to = v['toUserId']?.toString() ?? '';
+        return (from == myUid && to == mentor.uid) ||
+               (from == mentor.uid && to == myUid);
       });
       setState(() => _requestAccepted = accepted);
     } catch (_) {
@@ -107,12 +111,28 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     setState(() => _isFavorite = !_isFavorite);
   }
 
-  void _bookSession() {
+  Future<void> _showBookingSheet(BuildContext ctx) async {
+    if (widget.mentor.uid.isEmpty) {
+      // Profil statique : booking direct J+7 14h (démo)
+      _bookSessionLegacy();
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _BookingSheet(mentor: widget.mentor),
+    );
+  }
+
+  void _bookSessionLegacy() {
     final profile = UserProfileController.profile.value;
     UserProfileController.update(
       profile.copyWith(sessionsCount: profile.sessionsCount + 1),
     );
-    // Ajoute la session dans l'agenda (Firebase), planifiée 7 jours plus tard à 14h.
     final sessionDate = DateTime.now().add(const Duration(days: 7));
     final session = BookedSession(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -123,9 +143,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     AgendaController.add(profile.email, session);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Session réservée avec ${widget.mentor.name.split(" ").first} !',
-        ),
+        content: Text('Session réservée avec ${widget.mentor.name.split(" ").first} !'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.green,
       ),
@@ -342,7 +360,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Créneaux indicatifs — la session est automatiquement planifiée à J+7, 14h00.',
+                  'Appuie sur "Réserver une session" pour voir les disponibilités réelles et envoyer une demande.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
                 ),
               ),
@@ -465,7 +483,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         Expanded(
                           flex: 2,
                           child: ElevatedButton.icon(
-                            onPressed: _bookSession,
+                            onPressed: () => _showBookingSheet(context),
                             icon: const Icon(Icons.calendar_month_rounded,
                                 size: 18),
                             label: const Text('Réserver une session'),
@@ -692,6 +710,256 @@ class _CompaniesList extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Feuille de réservation avec disponibilités réelles du mentor
+// ─────────────────────────────────────────────────────────────────
+class _BookingSheet extends StatefulWidget {
+  final Mentor mentor;
+  const _BookingSheet({required this.mentor});
+
+  @override
+  State<_BookingSheet> createState() => _BookingSheetState();
+}
+
+class _BookingSheetState extends State<_BookingSheet> {
+  static const _dayNames = {
+    'Monday': 'Lundi',
+    'Tuesday': 'Mardi',
+    'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi',
+    'Friday': 'Vendredi',
+    'Saturday': 'Samedi',
+    'Sunday': 'Dimanche',
+  };
+
+  String? _selectedDay;
+  String? _selectedTime;
+  bool _sending = false;
+
+  /// Retourne les prochains jours (14 jours) correspondant au jour de semaine donné.
+  List<DateTime> _nextDates(String dayName) {
+    const weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    final targetWd = weekdays.indexOf(dayName) + 1; // DateTime.weekday: 1=Mon
+    final dates = <DateTime>[];
+    var d = DateTime.now().add(const Duration(days: 1));
+    while (dates.length < 3) {
+      if (d.weekday == targetWd) dates.add(d);
+      d = d.add(const Duration(days: 1));
+    }
+    return dates;
+  }
+
+  String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';
+
+  Future<void> _confirm(Availability? avail) async {
+    if (_selectedDay == null || _selectedTime == null) return;
+    setState(() => _sending = true);
+
+    final profile = UserProfileController.profile.value;
+    final myUid = AuthService.currentUid ?? '';
+    // Trouver la date sélectionnée
+    final parts = _selectedDay!.split('|'); // format: "Monday|2026-06-08"
+    final dateStr = parts.length > 1 ? parts[1] : _selectedDay!;
+
+    try {
+      final reqId = await InteractionsService.sendSessionRequest(
+        fromUserId: myUid,
+        toUserId: widget.mentor.uid,
+        fromName: profile.fullName,
+        toName: widget.mentor.name,
+        message: 'Demande de session le $dateStr à $_selectedTime.',
+        proposedDate: dateStr,
+        proposedTime: _selectedTime!,
+      );
+      // Notifier le mentor
+      await NotificationService.notifyUser(
+        uid: widget.mentor.uid,
+        title: 'Nouvelle demande de session',
+        message: '${profile.fullName} souhaite réserver une session le $dateStr à $_selectedTime.',
+        type: 'session_request',
+        requestId: reqId,
+        fromUserId: myUid,
+        fromName: profile.fullName,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Demande envoyée à ${widget.mentor.name.split(" ").first} ✅'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de l\'envoi.'), behavior: SnackBarBehavior.floating),
+      );
+    }
+    if (mounted) setState(() => _sending = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Availability?>(
+      stream: InteractionsService.getAvailability(widget.mentor.uid),
+      builder: (ctx, snap) {
+        final avail = snap.data;
+        final availDays = avail?.schedule.entries
+            .where((e) => e.value.isAvailable)
+            .toList() ?? [];
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (_, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
+                ),
+              ),
+              Text(
+                'Réserver avec ${widget.mentor.name.split(" ").first}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.navyDeep),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Sélectionne un créneau disponible. Le mentor sera notifié et pourra accepter ou proposer un autre horaire.',
+                style: TextStyle(fontSize: 12.5, color: AppColors.muted, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              if (snap.connectionState == ConnectionState.waiting)
+                const Center(child: CircularProgressIndicator())
+              else if (availDays.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.fieldBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Text(
+                    'Ce mentor n\'a pas encore configuré ses disponibilités.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                )
+              else ...[
+                const Text('Jours disponibles',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+                const SizedBox(height: 10),
+                ...availDays.map((entry) {
+                  final dayKey = entry.key;
+                  final schedule = entry.value;
+                  final dates = _nextDates(dayKey);
+                  final dayLabel = _dayNames[dayKey] ?? dayKey;
+                  final slots = schedule.timeSlots;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(dayLabel,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                      const SizedBox(height: 6),
+                      ...dates.map((date) {
+                        final dateStr = '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
+                        final dateDisplay = _formatDate(date);
+
+                        if (slots.isEmpty) {
+                          // Dispo toute la journée — proposer quelques créneaux standards
+                          return Wrap(
+                            spacing: 8, runSpacing: 8,
+                            children: ['09:00','11:00','14:00','16:00'].map((t) {
+                              final key = '$dayKey|$dateStr';
+                              final selected = _selectedDay == key && _selectedTime == t;
+                              return GestureDetector(
+                                onTap: () => setState(() { _selectedDay = key; _selectedTime = t; }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: selected ? AppColors.navy : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: selected ? AppColors.navy : AppColors.border),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(dateDisplay, style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.muted, fontWeight: FontWeight.w700)),
+                                      Text(t, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: selected ? Colors.white : AppColors.navyDeep)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        } else {
+                          return Wrap(
+                            spacing: 8, runSpacing: 8,
+                            children: slots.map((slot) {
+                              final t = slot.startTime;
+                              final key = '$dayKey|$dateStr';
+                              final selected = _selectedDay == key && _selectedTime == t;
+                              return GestureDetector(
+                                onTap: () => setState(() { _selectedDay = key; _selectedTime = t; }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: selected ? AppColors.navy : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: selected ? AppColors.navy : AppColors.border),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(dateDisplay, style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.muted, fontWeight: FontWeight.w700)),
+                                      Text('$t – ${slot.endTime}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: selected ? Colors.white : AppColors.navyDeep)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        }
+                      }),
+                      const SizedBox(height: 14),
+                    ],
+                  );
+                }),
+              ],
+              if (_selectedDay != null && _selectedTime != null) ...[
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _sending ? null : () => _confirm(avail),
+                    icon: _sending
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.send_rounded),
+                    label: const Text('ENVOYER LA DEMANDE',
+                        style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

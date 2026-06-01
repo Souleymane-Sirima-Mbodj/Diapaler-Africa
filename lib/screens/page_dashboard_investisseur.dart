@@ -288,51 +288,21 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const PublicPitchesPage()),
-                          ),
-                          icon: const Icon(Icons.inbox_rounded, size: 18),
-                          label: const Text('Pitchs reçus'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.blue,
-                            side: const BorderSide(color: AppColors.blue),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => appTabIndex.value = 2,
-                          icon: const Icon(Icons.message_rounded, size: 18),
-                          label: const Text('Messages'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.navy,
-                            side: const BorderSide(color: AppColors.border),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => appTabIndex.value = 3,
-                      icon: const Icon(Icons.event_rounded, size: 18),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PublicPitchesPage()),
+                      ),
+                      icon: const Icon(Icons.inbox_rounded, size: 18),
                       label: const Text(
-                        'Mon Agenda',
+                        'Pitchs reçus',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.navyDeep,
-                        side: const BorderSide(color: AppColors.border),
+                        foregroundColor: AppColors.blue,
+                        side: const BorderSide(color: AppColors.blue),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),

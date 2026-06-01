@@ -21,7 +21,10 @@ String _matchingTitle(String role) {
 
 /// Retourne les pills de filtre rôle selon le rôle de l'utilisateur courant.
 List<String> _rolePills(String role) {
-  if (role == 'Mentor' || role == 'Investisseur') {
+  if (role == 'Investisseur') {
+    return ['Entrepreneur']; // Investisseur ne voit QUE les entrepreneurs
+  }
+  if (role == 'Mentor') {
     return ['Tous', 'Entrepreneur'];
   }
   return ['Tous', 'Mentor', 'Investisseur'];
@@ -68,39 +71,41 @@ class _MatchingPageState extends State<MatchingPage> {
     _searchCtrl.addListener(() {
       setState(() => _query = _searchCtrl.text);
     });
+    // Investisseur : forcer le filtre sur Entrepreneur dès le départ
+    final myRole = UserProfileController.profile.value.role;
+    if (myRole == 'Investisseur') _role = 'Entrepreneur';
     _loadMembers();
   }
 
   int _computeCompatibility(Mentor m) {
     final profile = UserProfileController.profile.value;
-    final userInterests = profile.interests
-        .map((s) => s.toLowerCase().trim())
-        .toSet();
-    final mentorSectors = m.sectors
-        .map((s) => s.toLowerCase().trim())
-        .toSet();
-
-    if (userInterests.isEmpty || mentorSectors.isEmpty) return 50;
-
+    final userInterests = profile.interests.map((s) => s.toLowerCase().trim()).toSet();
+    final mentorSectors = m.sectors.map((s) => s.toLowerCase().trim()).toSet();
+    // Score de base : légèrement supérieur pour les membres Firebase réels
+    int score = m.uid.isNotEmpty ? 30 : 22;
+    if (userInterests.isEmpty) return score.clamp(10, 40);
+    if (mentorSectors.isEmpty) return score.clamp(10, 40);
     // Correspondance exacte
     final exact = userInterests.intersection(mentorSectors);
     if (exact.isNotEmpty) {
-      final pct = (65 + (exact.length / mentorSectors.length) * 34).round();
-      return pct.clamp(65, 99);
+      final depth = (exact.length / mentorSectors.length * 45).round();
+      score += 25 + depth;
+      return score.clamp(60, 97);
     }
-
-    // Correspondance partielle (ex: "Agriculture" dans "Agro-industrie")
+    // Correspondance partielle (ex: "Agriculture" ↔ "Agro-industrie")
     final partial = userInterests.any((ui) =>
         mentorSectors.any((ms) => ms.contains(ui) || ui.contains(ms)));
-    if (partial) return 60;
-
-    // Même secteur principal
+    if (partial) {
+      score += 20;
+      return score.clamp(45, 72);
+    }
+    // Secteur principal commun
     final userSector = profile.sector.toLowerCase().trim();
     if (mentorSectors.any((ms) => ms.contains(userSector) || userSector.contains(ms))) {
-      return 58;
+      score += 12;
+      return score.clamp(35, 55);
     }
-
-    return (20 + (userInterests.length * 2)).clamp(20, 40).toInt();
+    return score.clamp(10, 35);
   }
 
   Future<void> _loadMembers() async {
@@ -133,6 +138,10 @@ class _MatchingPageState extends State<MatchingPage> {
     for (final m in mentors) {
       if (seen.add(m.uid.isNotEmpty ? m.uid : m.name)) all.add(m);
     }
+    // Pour les Investisseurs : afficher uniquement les Entrepreneurs (règle métier)
+    final myRole = UserProfileController.profile.value.role;
+    final effectiveRole = myRole == 'Investisseur' ? 'Entrepreneur' : _role;
+
     final list = all.where((m) {
       if (!m.matches(_query)) return false;
       if (_sector != 'Tous' &&
@@ -140,7 +149,7 @@ class _MatchingPageState extends State<MatchingPage> {
         return false;
       }
       if (_city != 'Toutes' && m.city != _city) return false;
-      if (_role != 'Tous' && m.role != _role) return false;
+      if (effectiveRole != 'Tous' && m.role != effectiveRole) return false;
       return true;
     }).toList();
 
@@ -169,12 +178,13 @@ class _MatchingPageState extends State<MatchingPage> {
   }
 
   void _resetFilters() {
+    final myRole = UserProfileController.profile.value.role;
     setState(() {
       _searchCtrl.clear();
       _query = '';
       _sector = 'Tous';
       _city = 'Toutes';
-      _role = 'Tous';
+      _role = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
       _nearMe = false;
       _userPosition = null;
     });
