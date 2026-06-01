@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
@@ -53,8 +54,9 @@ class _PublicPitchesPageState extends State<PublicPitchesPage> {
         return false;
       }
 
-      // Filtre secteur
-      if (_selectedSector != 'Tous' && sector != _selectedSector) {
+      // Filtre secteur (insensible à la casse)
+      if (_selectedSector != 'Tous' &&
+          sector.toLowerCase().trim() != _selectedSector.toLowerCase().trim()) {
         return false;
       }
 
@@ -348,7 +350,7 @@ class _PitchCard extends StatelessWidget {
     }
 
     try {
-      await InteractionsService.sendMentorRequest(
+      final reqId = await InteractionsService.sendMentorRequest(
         fromUserId: currentUid,
         toUserId: toUserId,
         fromName: profile.fullName,
@@ -357,12 +359,15 @@ class _PitchCard extends StatelessWidget {
             'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
         type: 'investment',
       );
-      // Notifier l'entrepreneur
+      // Notifier l'entrepreneur avec requestId pour l'accept/decline inline
       await NotificationService.notifyUser(
         uid: toUserId,
-        title: 'Proposition d\'investissement',
+        title: 'Proposition d\'investissement 💰',
         message: '${profile.fullName} souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
-        type: 'investment',
+        type: 'investment_offer',
+        requestId: reqId,
+        fromUserId: currentUid,
+        fromName: profile.fullName,
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -383,6 +388,21 @@ class _PitchCard extends StatelessWidget {
     }
   }
 
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _PitchDetailSheet(
+        pitch: pitch,
+        onInvest: () => _sendInvestmentRequest(context, pitch),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = pitch['title']?.toString() ?? 'Pitch sans titre';
@@ -393,7 +413,9 @@ class _PitchCard extends StatelessWidget {
     final isInvestor =
         UserProfileController.profile.value.role == 'Investisseur';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -589,16 +611,16 @@ class _PitchCard extends StatelessWidget {
                 ],
               ),
 
-              // Bouton investissement (Investisseur uniquement)
+              // Investisseur : voir le détail complet avant d'investir
               if (isInvestor) ...[
                 const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _sendInvestmentRequest(context, pitch),
-                  icon: const Icon(Icons.monetization_on_rounded, size: 16),
-                  label: const Text('Proposer un investissement'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: Colors.white,
+                OutlinedButton.icon(
+                  onPressed: () => _showDetail(context),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                  label: const Text('Voir le pitch complet'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.green,
+                    side: const BorderSide(color: AppColors.green),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                   ),
@@ -606,6 +628,253 @@ class _PitchCard extends StatelessWidget {
               ],
             ],
           ),
+        ],
+      ),
+    ));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Fiche détail pitch (bottom sheet)
+// ─────────────────────────────────────────────────────────────────
+class _PitchDetailSheet extends StatelessWidget {
+  final Map<String, dynamic> pitch;
+  final VoidCallback onInvest;
+
+  const _PitchDetailSheet({required this.pitch, required this.onInvest});
+
+  String _formatAmount(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.isEmpty) return raw;
+    final buf = StringBuffer();
+    final len = digits.length;
+    for (var i = 0; i < len; i++) {
+      if (i > 0 && (len - i) % 3 == 0) buf.write(' ');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = pitch['title']?.toString() ?? 'Pitch sans titre';
+    final userName = pitch['userName']?.toString() ?? 'Entrepreneur';
+    final sector = pitch['sector']?.toString() ?? '';
+    final description = pitch['description']?.toString() ?? '';
+    final amount = pitch['amount']?.toString() ?? '';
+    final pdfUrl = pitch['pdfUrl']?.toString() ?? '';
+    final videoUrl = pitch['videoUrl']?.toString() ?? '';
+    final isInvestor = UserProfileController.profile.value.role == 'Investisseur';
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          // En-tête entrepreneur
+          Row(
+            children: [
+              Avatar(
+                initials: _initials(userName),
+                size: 46,
+                background: AppColors.amber,
+                foreground: AppColors.navyDeep,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userName,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+                    const Text('Entrepreneur',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              if (sector.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(sector,
+                      style: const TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.amber)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Titre
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.navyDeep)),
+          // Montant
+          if (amount.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.green.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.payments_rounded, size: 14, color: AppColors.green),
+                  const SizedBox(width: 6),
+                  Text('${_formatAmount(amount)} FCFA recherchés',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.green)),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 16),
+          // Description complète
+          if (description.isNotEmpty) ...[
+            const Text('Description',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+            const SizedBox(height: 8),
+            Text(description,
+                style: const TextStyle(fontSize: 13.5, color: AppColors.muted, height: 1.6)),
+            const SizedBox(height: 20),
+          ],
+          // PDF
+          if (pdfUrl.isNotEmpty) ...[
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 12),
+            const Text('Documents',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+            const SizedBox(height: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () async {
+                final uri = Uri.tryParse(pdfUrl);
+                if (uri != null) {
+                  try {
+                    // ignore: deprecated_member_use
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (_) {}
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.fieldBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf_rounded, color: AppColors.red, size: 22),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text('Voir le PDF du pitch',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, color: AppColors.navyDeep, fontSize: 13)),
+                    ),
+                    Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.muted),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          // Vidéo
+          if (videoUrl.isNotEmpty) ...[
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 12),
+            const Text('Vidéo de présentation',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
+            const SizedBox(height: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () async {
+                final uri = Uri.tryParse(videoUrl);
+                if (uri != null) {
+                  try {
+                    // ignore: deprecated_member_use
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (_) {}
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.fieldBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.play_circle_outline_rounded, color: AppColors.blue, size: 22),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text('Regarder la vidéo',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, color: AppColors.navyDeep, fontSize: 13)),
+                    ),
+                    Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.muted),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          // Bouton investissement (investisseur uniquement)
+          if (isInvestor) ...[
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onInvest();
+                },
+                icon: const Icon(Icons.monetization_on_rounded),
+                label: const Text(
+                  'PROPOSER UN INVESTISSEMENT',
+                  style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -66,7 +66,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
         return;
       }
       final requestType = widget.mentor.isInvestor ? 'investment' : 'mentor';
-      await InteractionsService.sendMentorRequest(
+      final reqId = await InteractionsService.sendMentorRequest(
         fromUserId: uid,
         toUserId: toId,
         fromName: currentProfile.fullName,
@@ -87,11 +87,16 @@ class _SendRequestPageState extends State<SendRequestPage> {
         final notifTitle = widget.mentor.isInvestor
             ? 'Nouvelle proposition d\'investissement'
             : 'Nouvelle demande de mentorat';
+        // investment_offer → déclenche les boutons inline Accept/Decline côté entrepreneur
+        final notifType = widget.mentor.isInvestor ? 'investment_offer' : 'mentor_request';
         await NotificationService.notifyUser(
           uid: widget.mentor.uid,
           title: notifTitle,
           message: '${currentProfile.fullName} souhaite te contacter — "${_messageCtrl.text}"',
-          type: 'mentor_request',
+          type: notifType,
+          requestId: reqId,
+          fromUserId: uid,
+          fromName: currentProfile.fullName,
         );
       }
 

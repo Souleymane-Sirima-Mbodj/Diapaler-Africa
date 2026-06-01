@@ -24,7 +24,8 @@ class InteractionsService {
     });
   }
 
-  static Future<void> sendMentorRequest({
+  /// Envoie une demande et retourne son ID Firebase.
+  static Future<String> sendMentorRequest({
     required String fromUserId,
     required String toUserId,
     required String fromName,
@@ -45,6 +46,7 @@ class InteractionsService {
       type: type,
     );
     await _db.child('mentorRequests/$id').set(request.toJson());
+    return id;
   }
 
   static Stream<List<MentorRequest>> getReceivedRequests(String userId) {
@@ -66,11 +68,40 @@ class InteractionsService {
     });
   }
 
-  static Future<void> rejectRequest(String requestId) async {
+  static Future<void> rejectRequest(String requestId, {String? reason}) async {
     await _db.child('mentorRequests/$requestId').update({
       'status': RequestStatus.rejected.name,
       'respondedAt': DateTime.now().toIso8601String(),
+      if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
+  }
+
+  /// Envoie une demande de session au mentor/investisseur avec date et heure proposées.
+  static Future<String> sendSessionRequest({
+    required String fromUserId,
+    required String toUserId,
+    required String fromName,
+    required String toName,
+    required String message,
+    required String proposedDate,
+    required String proposedTime,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final request = MentorRequest(
+      id: id,
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      fromName: fromName,
+      toName: toName,
+      message: message,
+      createdAt: DateTime.now(),
+      status: RequestStatus.pending,
+      type: 'session',
+      proposedDate: proposedDate,
+      proposedTime: proposedTime,
+    );
+    await _db.child('mentorRequests/$id').set(request.toJson());
+    return id;
   }
 
   // ────── AVAILABILITY ──────

@@ -9,6 +9,12 @@ class NotificationItem {
   final DateTime timestamp;
   final String type;
   bool isRead;
+  /// Identifiant de la demande associée (investment_offer, session_request…).
+  final String requestId;
+  /// UID de l'expéditeur (pour ouvrir un chat ou retrouver le profil).
+  final String fromUserId;
+  /// Nom affiché de l'expéditeur.
+  final String fromName;
 
   NotificationItem({
     required this.id,
@@ -17,6 +23,9 @@ class NotificationItem {
     required this.timestamp,
     required this.type,
     this.isRead = false,
+    this.requestId = '',
+    this.fromUserId = '',
+    this.fromName = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -26,6 +35,9 @@ class NotificationItem {
     'timestamp': timestamp.toIso8601String(),
     'type': type,
     'isRead': isRead,
+    'requestId': requestId,
+    'fromUserId': fromUserId,
+    'fromName': fromName,
   };
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) =>
@@ -36,6 +48,9 @@ class NotificationItem {
         timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now(),
         type: json['type']?.toString() ?? 'info',
         isRead: json['isRead'] as bool? ?? false,
+        requestId: json['requestId']?.toString() ?? '',
+        fromUserId: json['fromUserId']?.toString() ?? '',
+        fromName: json['fromName']?.toString() ?? '',
       );
 }
 
@@ -74,6 +89,9 @@ class NotificationService {
     required String title,
     required String message,
     required String type,
+    String requestId = '',
+    String fromUserId = '',
+    String fromName = '',
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final item = NotificationItem(
@@ -82,6 +100,9 @@ class NotificationService {
       message: message,
       timestamp: DateTime.now(),
       type: type,
+      requestId: requestId,
+      fromUserId: fromUserId,
+      fromName: fromName,
     );
     if (_userId != null) {
       await _db.child('notifications/$_userId/$id').set(item.toJson());
@@ -100,6 +121,9 @@ class NotificationService {
     required String title,
     required String message,
     required String type,
+    String requestId = '',
+    String fromUserId = '',
+    String fromName = '',
   }) async {
     if (uid.isEmpty) return;
     final id = DateTime.now().millisecondsSinceEpoch.toString();
@@ -109,6 +133,9 @@ class NotificationService {
       message: message,
       timestamp: DateTime.now(),
       type: type,
+      requestId: requestId,
+      fromUserId: fromUserId,
+      fromName: fromName,
     );
     try {
       await _db.child('notifications/$uid/$id').set(item.toJson());

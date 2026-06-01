@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/service_authentification.dart';
+import '../services/service_interactions.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
+import 'page_chat.dart';
 import 'page_requests.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -26,13 +29,252 @@ class _NotificationsPageState extends State<NotificationsPage> {
       case 'mentor_request':
       case 'mentor_request_accepted':
       case 'mentor_request_rejected':
-      case 'investment_offer':
         Navigator.of(ctx).push(
           MaterialPageRoute(builder: (_) => const RequestsPage()),
         );
+      // investment_offer et session_request sont gérés inline — pas de navigation ici
       default:
-        break; // juste marquer comme lu
+        break;
     }
+  }
+
+  /// Accept une proposition d'investissement depuis la notification.
+  Future<void> _acceptInvestment(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    try {
+      await InteractionsService.acceptRequest(notif.requestId);
+      // Notifier l'investisseur
+      if (notif.fromUserId.isNotEmpty) {
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Proposition acceptée 🎉',
+          message: 'Votre proposition d\'investissement a été acceptée.',
+          type: 'mentor_request_accepted',
+          fromUserId: AuthService.currentUid ?? '',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      // Ouvrir le chat avec l'investisseur
+      if (notif.fromUserId.isNotEmpty) {
+        final myUid = AuthService.currentUid ?? '';
+        final convId = InteractionsService.generateConversationId(myUid, notif.fromUserId);
+        Navigator.of(ctx).push(MaterialPageRoute(
+          builder: (_) => ChatPage(
+            conversationId: convId,
+            otherUserName: notif.fromName.isNotEmpty ? notif.fromName : 'Investisseur',
+            otherUserId: notif.fromUserId,
+          ),
+        ));
+      }
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Proposition acceptée — conversation ouverte.'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de l\'acceptation.'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  /// Refuse une proposition d'investissement depuis la notification.
+  Future<void> _rejectInvestment(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    // Dialog pour saisir une raison
+    String? reason;
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Refuser la proposition'),
+          content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(hintText: 'Raison (optionnelle)'),
+            maxLines: 2,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dCtx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                reason = ctrl.text.trim();
+                Navigator.of(dCtx).pop(true);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+              child: const Text('Refuser'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !ctx.mounted) return;
+    try {
+      await InteractionsService.rejectRequest(notif.requestId, reason: reason);
+      if (notif.fromUserId.isNotEmpty) {
+        final msg = reason != null && reason!.isNotEmpty
+            ? 'Votre proposition a été refusée. Motif : $reason'
+            : 'Votre proposition d\'investissement a été refusée.';
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Proposition refusée',
+          message: msg,
+          type: 'mentor_request_rejected',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Proposition refusée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('Erreur lors du refus.'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  /// Accept une demande de session (côté mentor).
+  Future<void> _acceptSession(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    try {
+      await InteractionsService.acceptRequest(notif.requestId);
+      if (notif.fromUserId.isNotEmpty) {
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Session confirmée ✅',
+          message: 'Votre demande de session a été acceptée.',
+          type: 'session_booked',
+          fromUserId: AuthService.currentUid ?? '',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Session acceptée — l\'entrepreneur a été notifié.'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de l\'acceptation.'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  /// Refuse une demande de session (côté mentor) avec raison.
+  Future<void> _rejectSession(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    String? reason;
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Refuser la session'),
+          content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(hintText: 'Raison du refus'),
+            maxLines: 2,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dCtx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                reason = ctrl.text.trim();
+                Navigator.of(dCtx).pop(true);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+              child: const Text('Refuser'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !ctx.mounted) return;
+    try {
+      await InteractionsService.rejectRequest(notif.requestId, reason: reason);
+      if (notif.fromUserId.isNotEmpty) {
+        final msg = reason != null && reason!.isNotEmpty
+            ? 'Votre demande de session a été refusée. Motif : $reason'
+            : 'Votre demande de session a été refusée.';
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Session refusée',
+          message: msg,
+          type: 'session_cancelled',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('Session refusée.'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('Erreur lors du refus.'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  Widget _buildInlineActions(BuildContext ctx, NotificationItem notif) {
+    final isInvestment = notif.type == 'investment_offer';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => isInvestment
+                  ? _rejectInvestment(ctx, notif)
+                  : _rejectSession(ctx, notif),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.red,
+                side: const BorderSide(color: AppColors.red),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: const Text('Refuser', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: () => isInvestment
+                  ? _acceptInvestment(ctx, notif)
+                  : _acceptSession(ctx, notif),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: Text(
+                isInvestment ? 'Accepter & Contacter' : 'Accepter',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -138,12 +380,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final notif = notifications[index];
+              final showInlineActions =
+                  notif.requestId.isNotEmpty &&
+                  !notif.isRead &&
+                  (notif.type == 'investment_offer' || notif.type == 'session_request');
               return _NotificationTile(
                 notification: notif,
                 onTap: () {
                   NotificationService.markAsRead(notif.id);
                   _handleNotifTap(context, notif);
                 },
+                inlineActions: showInlineActions
+                    ? _buildInlineActions(context, notif)
+                    : null,
               );
             },
           );
@@ -156,10 +405,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
 class _NotificationTile extends StatelessWidget {
   final NotificationItem notification;
   final VoidCallback onTap;
+  final Widget? inlineActions;
 
   const _NotificationTile({
     required this.notification,
     required this.onTap,
+    this.inlineActions,
   });
 
   Color _getTypeColor() {
@@ -292,6 +543,7 @@ class _NotificationTile extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  if (inlineActions != null) inlineActions!,
                 ],
               ),
             ),

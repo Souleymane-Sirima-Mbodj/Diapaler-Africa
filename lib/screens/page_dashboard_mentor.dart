@@ -231,36 +231,6 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => appTabIndex.value = 2,
-                          icon: const Icon(Icons.message_rounded),
-                          label: const Text('Messages'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.roleMentor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => appTabIndex.value = 3,
-                          icon: const Icon(Icons.calendar_today_rounded),
-                          label: const Text('Agenda'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.blue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(

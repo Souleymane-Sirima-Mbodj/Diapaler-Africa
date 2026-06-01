@@ -114,8 +114,14 @@ class MentorRequest {
   final DateTime createdAt;
   final RequestStatus status;
   final String? respondedAt;
-  /// Type de la demande : 'mentor' (mentorat) ou 'investment' (investissement).
+  /// Type de la demande : 'mentor', 'investment' ou 'session'.
   final String type;
+  /// Date proposée pour une session (format 'YYYY-MM-DD').
+  final String? proposedDate;
+  /// Heure proposée pour une session (format 'HH:mm').
+  final String? proposedTime;
+  /// Raison de refus (optionnelle, renseignée lors d'un rejet).
+  final String? rejectionReason;
 
   const MentorRequest({
     required this.id,
@@ -128,6 +134,9 @@ class MentorRequest {
     required this.status,
     this.respondedAt,
     this.type = 'mentor',
+    this.proposedDate,
+    this.proposedTime,
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toJson() => {
@@ -141,6 +150,9 @@ class MentorRequest {
     'status': status.name,
     'respondedAt': respondedAt,
     'type': type,
+    if (proposedDate != null) 'proposedDate': proposedDate,
+    if (proposedTime != null) 'proposedTime': proposedTime,
+    if (rejectionReason != null) 'rejectionReason': rejectionReason,
   };
 
   factory MentorRequest.fromJson(Map<String, dynamic> json) => MentorRequest(
@@ -154,6 +166,9 @@ class MentorRequest {
     status: RequestStatus.values.byName(json['status']?.toString() ?? 'pending'),
     respondedAt: json['respondedAt']?.toString(),
     type: json['type']?.toString() ?? 'mentor',
+    proposedDate: json['proposedDate']?.toString(),
+    proposedTime: json['proposedTime']?.toString(),
+    rejectionReason: json['rejectionReason']?.toString(),
   );
 }
 
