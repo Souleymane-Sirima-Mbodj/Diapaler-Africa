@@ -1231,68 +1231,13 @@ class _ProChip extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 // Interactions Section
 // ─────────────────────────────────────────────────────────────────
+/// Boutons d'actions rapides — visibles pour les Entrepreneurs uniquement
+/// (la section est conditionnée dans ProfilePage).
 class _InteractionsSection extends StatelessWidget {
   const _InteractionsSection();
 
   @override
   Widget build(BuildContext context) {
-    final p = UserProfileController.profile.value;
-    final role = p.role;
-
-    // Boutons affichés selon le rôle :
-    // • Entrepreneur  → "Mes demandes" seulement
-    // • Mentor        → "Planning" + "Demandes reçues"
-    // • Investisseur  → "Pitchs publiés" seulement
-    List<Widget> buttons;
-    if (role == 'Mentor') {
-      buttons = [
-        Expanded(
-          child: _InteractionButton(
-            icon: Icons.calendar_today_rounded,
-            label: 'Planning',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SchedulePage()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _InteractionButton(
-            icon: Icons.mail_rounded,
-            label: 'Demandes reçues',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RequestsPage()),
-            ),
-          ),
-        ),
-      ];
-    } else if (role == 'Investisseur') {
-      buttons = [
-        Expanded(
-          child: _InteractionButton(
-            icon: Icons.bar_chart_rounded,
-            label: 'Pitchs publiés',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PublicPitchesPage()),
-            ),
-          ),
-        ),
-      ];
-    } else {
-      // Entrepreneur / Entrepreneure
-      buttons = [
-        Expanded(
-          child: _InteractionButton(
-            icon: Icons.people_rounded,
-            label: 'Mes contacts',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RequestsPage()),
-            ),
-          ),
-        ),
-      ];
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1305,7 +1250,19 @@ class _InteractionsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Row(children: buttons),
+        Row(
+          children: [
+            Expanded(
+              child: _InteractionButton(
+                icon: Icons.people_rounded,
+                label: 'Mes contacts',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
