@@ -116,7 +116,9 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | Demandes mentorat | Envoi + accepter/refuser + notification croisée | ✅ (bonus) |
 | Flux investisseur | "Proposer un investissement" + `MentorRequest` type `'investment'` + acceptation dans `RequestsPage` | ✅ (bonus) |
 | Matching rôle-adaptatif | Titre + contenu adaptés selon rôle connecté (Mentor → Entrepreneurs, Investisseur → Entrepreneurs) | ✅ (bonus) |
-| Compatibilité dynamique | Algorithme basé intérêts partagés (65-99% / 60% / 58% / 20-40%) | ✅ (bonus) |
+| Compatibilité dynamique | Algorithme intérêts partagés — affiché ET trié de façon cohérente | ✅ (bonus) |
+| **Navigation notifications** | Tap → onglet Messages / Agenda / `RequestsPage` selon le type | ✅ (bonus) |
+| **Anti-doublon demandes** | `hasPendingRequest()` Firebase — bloque l'envoi si demande en attente | ✅ (bonus) |
 | **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` global | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream Firebase temps réel | ✅ (bonus) |
 | **Dashboard Mentor** | `SliverAppBar` + stats + raccourcis | ✅ (bonus) |
@@ -140,8 +142,13 @@ class NotificationItem {
   final String   title;
   final String   message;    // contenu de la notification
   final DateTime timestamp;  // horodatage de création
-  final String   type;       // ex: 'message', 'request', 'session_booked'…
+  final String   type;       // ex: 'message', 'investment_offer', 'session_request', 'session_booked'…
   bool           isRead;
+  // Champs pour les actions inline (Accept/Decline dans NotificationsPage)
+  // Non-nullables avec valeur par défaut '' — évite les null-checks partout
+  final String requestId;    // ID du mentorRequest Firebase associé
+  final String fromUserId;   // UID de l'expéditeur (pour ouvrir le chat après acceptation)
+  final String fromName;     // Nom affiché dans la notification
 
   NotificationItem({
     required this.id,
@@ -150,26 +157,35 @@ class NotificationItem {
     required this.timestamp,
     required this.type,
     this.isRead = false,
+    this.requestId = '',
+    this.fromUserId = '',
+    this.fromName = '',
   });
 
   Map<String, dynamic> toJson() => {
-    'id':        id,
-    'title':     title,
-    'message':   message,
-    'timestamp': timestamp.toIso8601String(),
-    'type':      type,
-    'isRead':    isRead,
+    'id':          id,
+    'title':       title,
+    'message':     message,
+    'timestamp':   timestamp.toIso8601String(),
+    'type':        type,
+    'isRead':      isRead,
+    'requestId':   requestId,
+    'fromUserId':  fromUserId,
+    'fromName':    fromName,
   };
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) =>
       NotificationItem(
-        id:        json['id']?.toString() ?? '',
-        title:     json['title']?.toString() ?? '',
-        message:   json['message']?.toString() ?? '',
-        timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '')
-                   ?? DateTime.now(),
-        type:      json['type']?.toString() ?? 'info',
-        isRead:    json['isRead'] as bool? ?? false,
+        id:          json['id']?.toString() ?? '',
+        title:       json['title']?.toString() ?? '',
+        message:     json['message']?.toString() ?? '',
+        timestamp:   DateTime.tryParse(json['timestamp']?.toString() ?? '')
+                     ?? DateTime.now(),
+        type:        json['type']?.toString() ?? 'info',
+        isRead:      json['isRead'] as bool? ?? false,
+        requestId:   json['requestId']?.toString() ?? '',
+        fromUserId:  json['fromUserId']?.toString() ?? '',
+        fromName:    json['fromName']?.toString() ?? '',
       );
 }
 ```
@@ -338,7 +354,9 @@ ValueListenableBuilder<List<NotificationItem>>(
 - Bouton **"Effacer tout"** → `NotificationService.clearAll()` — supprime le nœud Firebase
 - État vide illustré si aucune notification
 
-La page utilise un `ValueListenableBuilder` sur `NotificationService.notifications` et affiche soit un état vide illustré, soit une `ListView` de tuiles. Chaque tuile (`_NotificationTile`) déduit icône et couleur du champ `type` (String : `mentor_request`, `session_booked`, `session_cancelled`, `message`…). Tap → `markAsRead()`, bouton "Effacer tout" → `clearAll()`.
+La page utilise un `ValueListenableBuilder` sur `NotificationService.notifications` et affiche soit un état vide illustré, soit une `ListView` de tuiles. Chaque tuile (`_NotificationTile`) déduit icône et couleur du champ `type` (String : `mentor_request`, `session_booked`, `session_cancelled`, `message`, `investment_offer`, `session_request`…). Tap → `markAsRead()` + navigation contextuelle, bouton "Effacer tout" → `clearAll()`.
+
+**Actions inline Accept/Decline :** pour les types `investment_offer` et `session_request`, deux boutons "Accepter" / "Refuser" s'affichent directement dans la tuile. L'acceptation appelle `InteractionsService.acceptRequest(requestId)` et ouvre le chat avec `fromUserId`. Le refus ouvre un dialog pour saisir une raison, puis appelle `InteractionsService.rejectRequest(requestId, reason: raison)`.
 
 ```dart
 // Tuile — couleur et icône selon le type de notification
@@ -408,15 +426,24 @@ List<Mentor> get _filtered {
   if (_nearMe && _userPosition != null) {
     list.sort((a, b) => (_distanceFor(a) ?? 9999).compareTo(_distanceFor(b) ?? 9999));
   } else {
-    // Membres DIAPALER réels (uid non vide) en tête, puis par compatibilité
-    list.sort((a, b) => b.uid.isNotEmpty == a.uid.isNotEmpty
-        ? b.compatibility.compareTo(a.compatibility)
-        : (b.uid.isNotEmpty ? 1 : -1));
+    // Membres DIAPALER réels (uid non vide) en tête, puis par compatibilité DYNAMIQUE
+    // _computeCompatibility() calcule le score basé sur les intérêts partagés —
+    // même valeur que celle affichée sur la _CompatibilityPill (cohérence tri/affichage)
+    list.sort((a, b) {
+      if (b.uid.isNotEmpty != a.uid.isNotEmpty) {
+        return b.uid.isNotEmpty ? 1 : -1;
+      }
+      return _computeCompatibility(b).compareTo(_computeCompatibility(a));
+    });
   }
   return list;
 }
 
-bool get _hasFilter => _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
+// defaultRole = 'Entrepreneur' pour un Investisseur (son filtre par défaut), 'Tous' pour les autres
+// Évite que "Réinitialiser" soit toujours visible pour un Investisseur
+final myRole = UserProfileController.profile.value.role;
+final defaultRole = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
+bool get _hasFilter => _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != defaultRole;
 ```
 
 ### 2.2 Pitchs Publiés — Filtres par secteur et recherche
@@ -670,7 +697,7 @@ if (distanceKm != null)
 | Contexte système | DER/FJ, BNDE, FONGIP, FONSIS, secteurs porteurs |
 | Accès | FAB pulsant amber visible depuis tous les onglets |
 
-> **Note — format de requête :** Le code Flutter (`service_chatbot.dart`) envoie les requêtes au format **Anthropic** : champ `system` au premier niveau du corps JSON et lecture de la réponse via `data['content'][0]['text']`. Le **proxy Cloudflare Worker** (`diali-proxy.sirimambodj.workers.dev`) reçoit ces requêtes et les traduit au format Groq Chat Completions avant de les transmettre à l'API Groq. Aucune clé API n'est exposée côté client.
+> **Note — parser de réponse robuste :** Le code Flutter (`service_chatbot.dart`) envoie les requêtes au proxy Cloudflare Worker avec le champ `system` au premier niveau du corps JSON. Le **parser de réponse** détecte automatiquement le format retourné : d'abord **Groq/OpenAI** (`choices[0].message.content`), puis **Anthropic** (`content[0].text`) en fallback. Si aucun des deux formats n'est reconnu, une `Exception('Format de réponse inattendu du serveur.')` est levée. Cette détection en cascade rend le client résilient à tout changement de format côté proxy. Aucune clé API n'est exposée côté client.
 
 ---
 
@@ -1201,18 +1228,23 @@ class AgendaPage extends StatelessWidget {
       ),
       body: ValueListenableBuilder<List<BookedSession>>(
         valueListenable: AgendaController.sessions,
-        builder: (context, sessions, _) {
-          final now      = DateTime.now();
-          final upcoming = sessions.where((s) => s.scheduledAt.isAfter(now)).toList();
-          final past     = sessions.where((s) => !s.scheduledAt.isAfter(now)).toList();
+        builder: (context, bookedSessions, _) {
+          // Pas de section "Passées" : Firebase ne stocke pas de flag d'achèvement.
+          // Toutes les sessions affichées sont considérées "à venir".
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
             children: [
-              _SummaryCard(upcomingCount: upcoming.length),
-              const _SectionLabel('À VENIR'),
-              ...upcoming.map((s) => _BookedSessionCard(session: s)),
-              const _SectionLabel('PASSÉES'),
-              ...past.map((s) => _BookedSessionCard(session: s, isPast: true)),
+              _SummaryCard(upcomingCount: bookedSessions.length, subtitle: summarySubtitle),
+              const SizedBox(height: 20),
+              const _SectionLabel('À venir'),
+              const SizedBox(height: 10),
+              if (bookedSessions.isEmpty)
+                _EmptyHint(emptyUpcoming)
+              else
+                for (final s in bookedSessions) ...[
+                  _BookedSessionCard(session: s),
+                  const SizedBox(height: 10),
+                ],
             ],
           );
         },
@@ -1252,8 +1284,24 @@ StreamBuilder<Availability?>(
 ### 6.3 Demandes de mentorat
 
 ```dart
-// page_send_request.dart — Envoi d'une demande
+// page_send_request.dart — Envoi d'une demande avec vérification anti-doublon
 Future<void> _sendRequest() async {
+  // ── Anti-doublon : bloque si une demande est déjà en attente
+  final alreadyPending = await InteractionsService.hasPendingRequest(
+    fromUserId: currentUid,
+    toUserId: mentor.uid,
+  );
+  if (alreadyPending) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Tu as déjà une demande en attente avec ce profil.'),
+        backgroundColor: AppColors.amber,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
   await InteractionsService.sendMentorRequest(
     fromUserId: currentUid,
     toUserId: mentor.uid,
@@ -1278,7 +1326,8 @@ StreamBuilder<List<MentorRequest>>(
       itemBuilder: (_, i) => _RequestCard(
         request: requests[i],
         onAccept: () => InteractionsService.acceptRequest(requests[i].id),
-        onReject: () => InteractionsService.rejectRequest(requests[i].id),
+        // Le paramètre reason est optionnel — un dialog est affiché pour saisir la raison
+        onReject: (String reason) => InteractionsService.rejectRequest(requests[i].id, reason: reason),
       ),
     );
   },
@@ -1315,10 +1364,11 @@ bool get _step1Valid =>
 bool get _step2Valid => true; // Montant optionnel
 
 // Projet créé avec totalSteps: 3 (Idée → En cours → Lancé)
+// step est omis car sa valeur par défaut est déjà 1
 final project = Project(
   id: DateTime.now().millisecondsSinceEpoch.toString(),
   name: title, description: description, sector: sector,
-  step: 1, totalSteps: 3,
+  totalSteps: 3,
 );
 
 // Après publication : navigation vers onglet Profil
@@ -1338,66 +1388,27 @@ Navigator.of(context).pop();
 
 Les mentors et investisseurs voient tous les pitchs en **temps réel** grâce à `DatabaseService.getPitches()` (stream Firebase WebSocket).
 
-```dart
-// lib/screens/page_pitches_publics.dart
-class PublicPitchesPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Pitchs publiés')),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: DatabaseService.getPitches(), // Stream WebSocket Firebase
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final pitches = snapshot.data ?? [];
-          if (pitches.isEmpty) {
-            return const Center(
-              child: Text('Aucun pitch publié pour le moment.'),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-            itemCount: pitches.length,
-            itemBuilder: (_, i) => _PitchCard(pitch: pitches[i]),
-          );
-        },
-      ),
-    );
-  }
-}
+**Fonctionnalités complètes de `page_pitches_publics.dart` :**
+- StreamBuilder Firebase — pitchs triés par date décroissante
+- Barre de recherche textuelle : filtre sur titre, entrepreneur, secteur, description (insensible à la casse)
+- Pills de secteur générées dynamiquement depuis les pitchs Firebase
+- Compteur "X pitch(s)" et bouton "Réinitialiser" si filtre actif
+- Chaque carte : avatar, nom entrepreneur, secteur (chip amber), titre, description (3 lignes max), montant FCFA
+- **Tap sur une carte → `_PitchDetailSheet`** : bottom sheet `DraggableScrollableSheet` avec tous les détails du pitch + bouton "Contacter" + bouton "💰 Proposer un investissement" (Investisseurs uniquement)
+- **Gating** : "Contacter" vérifie `_checkRequestStatus()` — chat autorisé seulement si une demande acceptée existe entre les deux utilisateurs
+- **Bouton "💰 Proposer un investissement"** : visible uniquement pour les Investisseurs → crée un `MentorRequest` de type `'investment'` dans Firebase + notification automatique à l'entrepreneur
+- Bouton "Partager" (icône) sur chaque carte → `ShareService.sharePitch(...)`
 
-class _PitchCard extends StatelessWidget {
-  final Map<String, dynamic> pitch;
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: Avatar(initials: pitch['userName']?.toString().substring(0,1) ?? '?'),
-        title: Text(pitch['title'] ?? ''),
-        subtitle: Text('${pitch['sector']} · ${pitch['userName']}'),
-        trailing: pitch['amount']?.toString().isNotEmpty == true
-            ? Chip(label: Text(pitch['amount']))
-            : null,
-        onTap: () {
-          // generateConversationId est SYNCHRONE (retourne String, pas Future)
-          final convId = InteractionsService.generateConversationId(
-            AuthService.currentUid ?? '',
-            pitch['userId'] ?? '',
-          );
-          Navigator.push(context, MaterialPageRoute(
-            builder: (_) => ChatPage(
-              conversationId: convId,
-              otherUserId:    pitch['userId'] ?? '',
-              otherUserName:  pitch['userName'] ?? '',
-            ),
-          ));
-        },
-      ),
-    );
-  }
-}
+```dart
+// Filtre insensible à la casse — correction d'un bug de filtrage
+final matchSector = _selectedSector == 'Tous' ||
+    p['sector'].toString().toLowerCase() == _selectedSector.toLowerCase();
+
+// ID de conversation généré avec les UIDs Firebase (jamais les emails)
+final convId = InteractionsService.generateConversationId(
+  AuthService.currentUid ?? '',  // UID Firebase
+  pitch['userId'] ?? '',          // UID Firebase de l'entrepreneur
+);
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Fil des pitchs publics (liste temps réel)**
@@ -1409,7 +1420,9 @@ class _PitchCard extends StatelessWidget {
 
 ### 8.1 Dashboard Mentor (`page_dashboard_mentor.dart`)
 
-`CustomScrollView` + `SliverAppBar` épinglée. Contient : header avec avatar vert + badge notifications, grille de 3 statistiques, et tuiles d'actions rapides (Pitchs publiés, Mon Planning, Demandes reçues). Le tout est enveloppé dans un `ValueListenableBuilder<UserProfile>` pour rester synchronisé.
+`CustomScrollView` + `SliverAppBar` épinglée. Contient : header avec avatar vert + badge notifications, grille de 3 statistiques, domaines d'expertise (chips), bio, et boutons d'accès rapide. Le tout est enveloppé dans un `ValueListenableBuilder<UserProfile>` pour rester synchronisé.
+
+**Accès rapides (boutons OutlinedButton)** : Demandes, Mon Planning, Voir les pitchs publiés. Messages et Agenda sont accessibles via les onglets de la barre de navigation principale — les boutons doublons ont été supprimés.
 
 ```dart
 CustomScrollView(slivers: [
@@ -1418,12 +1431,16 @@ CustomScrollView(slivers: [
     Text('Bienvenue ${profile.firstName} 👋'),
     _NotificationBadge(), // ValueListenableBuilder sur NotificationService
   ])),
-  SliverToBoxAdapter(child: _StatsGrid(profile: profile)),
-  SliverToBoxAdapter(child: Column(children: [
-    _ActionTile('Voir les Pitchs', onTap: () => push(PublicPitchesPage())),
-    _ActionTile('Mon Planning',    onTap: () => push(PlanningPage())),
-    _ActionTile('Demandes reçues', onTap: () => push(RequestsPage())),
-  ])),
+  SliverPadding(sliver: SliverList(delegate: SliverChildListDelegate([
+    _StatsGrid(profile: profile),
+    // Domaines d'expertise (chips vert clair)
+    // Bio complète
+    Row(children: [
+      OutlinedButton.icon(label: Text('Demandes'),    onPressed: () => push(RequestsPage())),
+      OutlinedButton.icon(label: Text('Mon Planning'), onPressed: () => push(SchedulePage())),
+    ]),
+    OutlinedButton.icon(label: Text('Voir les pitchs publiés'), onPressed: () => push(PublicPitchesPage())),
+  ]))),
 ])
 ```
 
@@ -1434,9 +1451,9 @@ CustomScrollView(slivers: [
 
 ### 8.2 Dashboard Investisseur (`page_dashboard_investisseur.dart`)
 
-Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets : accès rapide aux pitchs des entrepreneurs et à la page Matching.
+Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets. Contient : header avec avatar bleu + badge notifications, 3 stats (Opportunités / Entrepreneurs / Favoris), ticket d'investissement (si renseigné), secteurs d'intérêt (chips), bio, et deux boutons d'action principaux. Messages et Agenda sont accessibles via les onglets de la barre de navigation principale — les boutons doublons ont été supprimés.
 
-Dans l'onglet Matching, l'Investisseur voit les **Entrepreneurs à financer** (titre adapté) — le contenu du matching est filtré pour afficher les Entrepreneurs plutôt que les Mentors/Investisseurs.
+Dans l'onglet Matching, l'Investisseur voit les **Entrepreneurs à financer** (titre adapté) — le contenu du matching est filtré pour afficher les Entrepreneurs uniquement (pas les Mentors/Investisseurs).
 
 ```dart
 CustomScrollView(slivers: [
@@ -1445,10 +1462,14 @@ CustomScrollView(slivers: [
     Text('Bienvenue ${profile.firstName} 👋'),
     _NotificationBadge(),
   ])),
-  SliverToBoxAdapter(child: Column(children: [
-    _ActionTile('Pitchs des entrepreneurs', onTap: () => push(PublicPitchesPage())),
-    _ActionTile('Entrepreneurs à financer', onTap: () => appTabIndex.value = 1),
-  ])),
+  SliverPadding(sliver: SliverList(delegate: SliverChildListDelegate([
+    _StatsGrid(profile: profile),
+    // Ticket d'investissement (visible si profile.investmentRange.isNotEmpty)
+    // Secteurs d'intérêt (chips bleu clair)
+    // Bio complète
+    ElevatedButton.icon(label: Text('Explorer la communauté'), onPressed: () => push(MatchingPage())),
+    OutlinedButton.icon(label: Text('Pitchs reçus'),           onPressed: () => push(PublicPitchesPage())),
+  ]))),
 ])
 ```
 
@@ -1459,39 +1480,34 @@ CustomScrollView(slivers: [
 
 ## 9. Page Détail Mentor (`page_detail_mentor.dart`)
 
-La page affiche le profil complet (bio, secteurs, distance GPS) et propose trois actions : réserver une session, ajouter aux favoris, ouvrir un chat direct.
+La page affiche le profil complet (bio, secteurs, distance GPS) et propose les actions selon la relation entre les deux utilisateurs.
 
-> **Note :** La réservation utilise `AgendaController.add(profile.email, session)` — écriture dans l'agenda de l'utilisateur connecté uniquement. La méthode `bookBilateral` (écriture dans les deux agendas) existe dans `AgendaController` mais n'est pas encore appelée depuis cette page.
+**Section "Disponibilités" — `_AvailabilityPreview` :**
+- Profils démo (uid vide) → 5 créneaux illustratifs avec badge "Exemple" (point gris)
+- Membres Firebase → vraies disponibilités lues via `InteractionsService.getAvailability(mentor.uid)` (StreamBuilder)
+- Si aucun créneau configuré → message "Disponibilités non encore configurées."
+
+**Bouton principal adapté selon le rôle du profil :**
+- Mentor → `_BookingSheet` (calendrier Firebase réel) : `DraggableScrollableSheet` avec StreamBuilder sur les disponibilités du mentor, sélection de créneau, puis `AgendaController.bookBilateral()` (écriture dans les deux agendas)
+- Investisseur → "Proposer un investissement" (type `'investment'`)
+
+**Bouton "Message" :**
+L'ID de conversation est généré avec `AuthService.currentUid` (UID Firebase) — jamais l'email — pour garantir la cohérence avec `page_notifications.dart` qui utilise également les UIDs.
 
 ```dart
-// Réservation : incrémente sessionsCount et écrit la session dans l'agenda Firebase
-void _bookSession() {
-  final profile = UserProfileController.profile.value;
-  UserProfileController.update(
-    profile.copyWith(sessionsCount: profile.sessionsCount + 1),
-  );
-  // Session planifiée 7 jours plus tard à 14h
-  final sessionDate = DateTime.now().add(const Duration(days: 7));
-  final session = BookedSession(
-    id: DateTime.now().millisecondsSinceEpoch.toString(),
-    mentorName: widget.mentor.name,
-    mentorInitials: widget.mentor.initials,
-    scheduledAt: DateTime(sessionDate.year, sessionDate.month, sessionDate.day, 14),
-  );
-  AgendaController.add(profile.email, session);
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Session réservée avec ${widget.mentor.name.split(" ").first} !'),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: AppColors.green,
-    ),
-  );
-}
+// Conversation ID avec UID Firebase (cohérence cross-écrans)
+final myUid = AuthService.currentUid ?? UserProfileController.profile.value.email;
+final convId = InteractionsService.generateConversationId(
+  myUid,
+  mentor.uid.isNotEmpty ? mentor.uid : mentor.name,
+);
 
 // Favori : incrémente/décrémente favoritesCount dans le profil
 void _toggleFavorite() => UserProfileController.update(
   profile.copyWith(favoritesCount: profile.favoritesCount + (_isFavorite ? -1 : 1)));
 ```
+
+**Gating :** Le bouton "Message" n'est visible que si `_checkRequestStatus()` confirme une demande acceptée (vérification bidirectionnelle dans Firebase — `fromUserId == moi` OU `toUserId == moi` avec `status == 'accepted'`).
 
 > **📸 CAPTURE D'ÉCRAN — Profil détail mentor (bio + secteurs + créneaux disponibles)**
 > *(Insérer ici la capture d'écran)*
@@ -1892,17 +1908,17 @@ L'application a été compilée en **APK release signé** prêt à l'installatio
 
 ```
 flutter build apk --release
-✓ Built build\app\outputs\flutter-apk\app-release.apk (57.9MB)
+✓ Built build\app\outputs\flutter-apk\app-release.apk (58.2MB)
 ```
 
 | Paramètre | Valeur |
 |---|---|
 | Type | APK release signé |
-| Taille | 57.9 MB |
+| Taille | 58.2 MB |
 | Keystore | RSA 2048 bits, 10 000 jours de validité |
 | Tree-shaking | MaterialIcons : −99 % (1,6 MB → 16 Ko) |
 
-> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (57.9MB)`**
+> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built app-release.apk (58.2MB)`**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -1956,7 +1972,7 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
 | **Sauvegarde MDP** | `AutofillGroup` + `finishAutofillContext` → Google/Samsung/iCloud Password Manager | ✅ (bonus) |
-| **Déploiement APK signé** | `flutter build apk --release` — APK 57.9 MB disponible en téléchargement | ✅ (bonus) |
+| **Déploiement APK signé** | `flutter build apk --release` — APK 58.2 MB disponible en téléchargement | ✅ (bonus) |
 
 ---
 
