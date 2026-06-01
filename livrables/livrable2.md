@@ -176,7 +176,7 @@ diapaler-africa-default-rtdb/
 ├── pitches/
 │   └── {timestamp}/
 │       ├── id           → "1748123456789"
-│       ├── userId       → "marieme@teki.sn"
+│       ├── userId       → "uid_entrepreneur_abc123" (UID Firebase — pas l'email)
 │       ├── userName     → "Mariéme Tine"
 │       ├── title        → "Téranga Mode"
 │       ├── sector       → "Mode & Textile"
@@ -215,10 +215,13 @@ diapaler-africa-default-rtdb/
 │       ├── fromName     → "Mariéme Tine"
 │       ├── toName       → "Ibrahima Sall"
 │       ├── message      → "Bonjour, je recherche un mentor..."
-│       ├── type         → "mentor" | "investment"   ← distingue demandes mentorat vs propositions investissement
-│       ├── status       → "pending" | "accepted" | "rejected" | "cancelled"
-│       ├── createdAt    → "2025-05-20T09:00:00.000"
-│       └── respondedAt  → "2025-05-21T14:30:00.000"
+│       ├── type              → "mentor" | "investment"   ← distingue demandes mentorat vs propositions investissement
+│       ├── status            → "pending" | "accepted" | "rejected" | "cancelled"
+│       ├── proposedDate      → "2025-06-15" (optionnel — date suggérée par l'expéditeur)
+│       ├── proposedTime      → "14:00" (optionnel — heure suggérée)
+│       ├── rejectionReason   → "Agenda complet" (optionnel — raison du refus)
+│       ├── createdAt         → "2025-05-20T09:00:00.000"
+│       └── respondedAt       → "2025-05-21T14:30:00.000"
 │
 ├── availability/
 │   └── {userId}/
@@ -247,12 +250,15 @@ diapaler-africa-default-rtdb/
 └── notifications/
     └── {uid}/
         └── {notifId}/
-            ├── id        → "1748123456789"
-            ├── title     → "Nouveau rendez-vous"
-            ├── message   → "Ibrahima a réservé une session..."
-            ├── type      → "session_booked" | "session_cancelled" | "info"
-            ├── timestamp → "2025-05-24T10:00:00.000"
-            └── isRead    → false
+            ├── id          → "1748123456789"
+            ├── title       → "Nouveau rendez-vous"
+            ├── message     → "Ibrahima a réservé une session..."
+            ├── type        → "session_booked" | "session_cancelled" | "investment_offer" | "session_request" | "info"
+            ├── timestamp   → "2025-05-24T10:00:00.000"
+            ├── isRead      → false
+            ├── requestId   → "1748123456789" (optionnel — ID du mentorRequest pour actions inline Accept/Decline)
+            ├── fromUserId  → "uid_expediteur" (optionnel — pour ouvrir le chat après acceptation)
+            └── fromName    → "Mariéme Tine" (optionnel — nom affiché dans la notification)
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : nœud users/ avec un profil**
@@ -712,11 +718,12 @@ class InteractionsService {
     });
   }
 
-  // ── UPDATE : Rejeter une demande
-  static Future<void> rejectRequest(String requestId) async {
+  // ── UPDATE : Rejeter une demande (avec raison optionnelle)
+  static Future<void> rejectRequest(String requestId, {String? reason}) async {
     await _db.child('mentorRequests/$requestId').update({
       'status': RequestStatus.rejected.name,
       'respondedAt': DateTime.now().toIso8601String(),
+      if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
   }
 }
@@ -986,7 +993,24 @@ Directives :
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['content'][0]['text'] as String;
+      // Détection en cascade — format Groq/OpenAI en priorité, Anthropic en fallback
+      final choices = data['choices'];
+      if (choices is List && choices.isNotEmpty) {
+        final msg = choices[0]?['message'];
+        if (msg is Map) {
+          final text = msg['content'];
+          if (text is String && text.isNotEmpty) return text;
+        }
+      }
+      final content = data['content'];
+      if (content is List && content.isNotEmpty) {
+        final first = content[0];
+        if (first is Map) {
+          final text = first['text'];
+          if (text is String && text.isNotEmpty) return text;
+        }
+      }
+      throw Exception('Format de réponse inattendu du serveur.');
     } else if (response.statusCode == 429) {
       throw Exception('Limite d\'utilisation atteinte. Réessaie dans quelques instants.');
     } else {
@@ -1062,6 +1086,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **CREATE** session agenda | `AgendaController` | `bookedSessions/{uid}/{id}.set()` | Réservation RDV |
 | **CREATE** demande mentorat | `InteractionsService` | `mentorRequests/{id}.set()` type=`'mentor'` | Envoi demande de mentorat |
 | **CREATE** demande investissement | `InteractionsService` | `mentorRequests/{id}.set()` type=`'investment'` | Proposer un investissement |
+| **READ (check)** anti-doublon demande | `InteractionsService` | `mentorRequests.orderByChild('fromUserId').equalTo()` | Avant envoi d'une demande |
 | **READ** profil (unique) | `DatabaseService` | `users/{uid}.get()` | Connexion / Démarrage |
 | **READ** membres inscrits | `UsersService` | `users.get()` | Chargement Matching |
 | **READ** pitchs (stream) | `DatabaseService` | `pitches.onValue` | Vue pitchs publiés |

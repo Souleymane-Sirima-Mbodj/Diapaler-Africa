@@ -422,15 +422,17 @@ class AppColors {
 ### 2.7 Dashboard Entrepreneur — `page_accueil.dart`
 
 **Fonctionnalités :**
-- En-tête sticky (SliverAppBar) : avatar amber + "Bienvenue Prénom 👋" + cloche notifications + badge
-- Skeleton loading (squelette.dart) pendant 900ms au démarrage
-- 3 cartes de statistiques animées : Projets / Mentors actifs / Score
-- Carrousel de citations d'entrepreneurs africains (auto-scroll Timer)
-- Section "Mes projets" avec barre de progression par projet
-- Section "Mentors recommandés" (scroll horizontal)
-- Bouton "DÉPOSER UN PITCH" → `PitchPage`
-- Bouton "TROUVER UN MENTOR" → `MatchingPage`
-- Bouton "MES PROJETS" → `NewProjectPage`
+- En-tête gradient navy (`_NavyHero`) : avatar amber + "Bonjour 🇸🇳 + Nom complet" + cloche notifications (badge rouge dynamique via `NotificationService.notifications`)
+- Barre de recherche dans l'en-tête → bascule sur l'onglet Matching (`appTabIndex.value = 1`)
+- Skeleton loading (`squelette.dart`) pendant 900ms au démarrage
+- `_ProjectHero` : si aucun projet → carte "Aucun projet en cours" → `AddProjectPage` ; si projet existant → carte de progression avec barre animée (`TweenAnimationBuilder`)
+- Section "Actions rapides" — grille 2×2 (`_QuickActionsGrid`) :
+  - "Trouver un mentor" → onglet Matching (`appTabIndex.value = 1`)
+  - "Déposer un pitch" → `PitchPage`
+  - "DER / FJ Orientation" → bottom sheet d'orientation financement
+  - "CIS Investisseurs" → bottom sheet CIS
+- `_StatsStrip` — bande horizontale scrollable : Mentors actifs / Sessions / Score / Pitchs / Favoris (`AnimatedCounter`)
+- Section "Mentors pour toi" → bandeau "Recommandations bientôt disponibles" (fonctionnalité prévue)
 - Pull-to-refresh (RefreshIndicator)
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Entrepreneur**
@@ -445,7 +447,7 @@ class AppColors {
 - 3 cartes stats : Mentorés / Sessions / Années d'expérience
 - Domaines d'expertise (chips vert clair)
 - Bio complète
-- Accès rapide : Messages, Agenda, Demandes reçues, Mon Planning, Pitchs publiés
+- Accès rapide : Demandes reçues, Mon Planning, Pitchs publiés (Messages et Agenda sont accessibles via les onglets de la barre de navigation principale)
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Mentor**
 > *(Insérer ici la capture d'écran)*
@@ -458,7 +460,7 @@ class AppColors {
 - En-tête sticky avec avatar bleu + badge "Investisseur"
 - 3 cartes stats : Opportunités / Entrepreneurs / Favoris
 - Secteurs d'intérêt (chips bleu clair)
-- Accès rapide : Explorer la communauté, Pitchs reçus (StreamBuilder), Messages, Mon Agenda
+- Accès rapide : Explorer la communauté, Pitchs reçus (StreamBuilder) (Messages et Agenda accessibles via les onglets de la barre de navigation principale)
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Investisseur**
 > *(Insérer ici la capture d'écran)*
@@ -497,12 +499,16 @@ class AppColors {
 - Biographie : utilise `mentor.bio` si non vide (membres Firebase), sinon génère une bio avec le bon pronom selon `mentor.gender`
 - Tags / domaines d'expertise (chips)
 - Score, statistiques
+- **Section "Disponibilités"** — widget `_AvailabilityPreview` :
+  - Profils démo (uid vide) → badges "Exemple" (point gris) — données illustratives
+  - Membres Firebase → vraies disponibilités lues en temps réel via `InteractionsService.getAvailability(mentor.uid)` (StreamBuilder)
+  - Message "Disponibilités non encore configurées." si aucun créneau Firebase
 - **Bouton d'action adapté selon le rôle du profil consulté** :
-  - Si Mentor → "Envoyer une demande de mentorat" (type `'mentor'`)
+  - Si Mentor → "Réserver une session" → `_BookingSheet` (calendrier Firebase réel)
   - Si Investisseur → "Proposer un investissement" (type `'investment'`)
-  - Visible pour tous les mentors (pas seulement les membres Firebase)
-- Si relation déjà acceptée → bouton "Contacter" → `ChatPage`
-- Logique de communication stricte : chat disponible seulement après acceptation de la demande
+  - Visible pour tous les profils (pas seulement les membres Firebase)
+- **Bouton "Message"** — ID de conversation généré avec `AuthService.currentUid` (UID Firebase, jamais l'email) pour cohérence avec `page_notifications.dart`
+- Logique de communication stricte : chat disponible seulement après acceptation de la demande (`_checkRequestStatus()` bidirectionnel)
 
 > **📸 CAPTURE D'ÉCRAN — Écran Détail d'un Profil**
 > *(Insérer ici la capture d'écran)*
@@ -547,6 +553,8 @@ La page Messages est organisée en **2 onglets** :
 - Icône et couleur distinctes selon le type (string) : `mentor_request`, `session_booked`, `session_cancelled`, `message`…
 - Horodatage relatif ("Il y a 5m", "Il y a 2h"…)
 - Fond légèrement coloré pour les notifications non lues + point coloré
+- **Navigation contextuelle au tap** selon le type de notification : `message` → onglet Messages, `session_booked` / `rdv_booked` / `session_cancelled` → onglet Agenda, `mentor_request` / `mentor_request_accepted` / `mentor_request_rejected` / `investment_offer` → page Demandes (`RequestsPage`)
+- **Actions inline Accept/Décline** pour les types `investment_offer` et `session_request` : boutons "Accepter" / "Refuser" directement dans la tuile sans naviguer vers `RequestsPage`
 - Bouton **"Effacer tout"** → supprime le nœud Firebase
 - Badge rouge dynamique sur l'icône cloche (dans les dashboards)
 - État vide illustré si aucune notification
@@ -569,7 +577,7 @@ La page Messages est organisée en **2 onglets** :
 - Centres d'intérêt (chips colorés)
 - Mes Projets avec barres de progression (**Entrepreneur uniquement**)
 - Boutons d'actions **rôle-spécifiques** :
-  - Entrepreneur → "Mes demandes" (envoyées)
+  - Entrepreneur → "Mes contacts" (relations acceptées — mentorat + investissement)
   - Mentor → "Planning" + "Demandes reçues"
   - Investisseur → "Pitchs publiés"
 - AppBar : Partager · Modifier · Déconnexion (icône rouge)
@@ -644,9 +652,8 @@ La page Messages est organisée en **2 onglets** :
 
 **Agenda — `page_agenda.dart`**
 - Titre et messages **adaptés selon le rôle** : "Mes sessions" (Entrepreneur) / "Mon agenda" (Mentor) / "Mes rendez-vous" (Investisseur)
-- Sessions à venir + passées depuis Firebase
+- Sessions **à venir uniquement** depuis Firebase (pas de section "Passées" — pas de suivi de complétion en base)
 - Bouton "Mon Planning" dans l'AppBar (Mentor uniquement)
-- Sessions de démo avec des mentors Agro-industrie (Ibrahima Diop, Abdoulaye Fall, Fatou Diallo)
 - **Bouton "Annuler"** sur chaque session réservée : dialog de confirmation → `AgendaController.cancel()` bilatéral
 
 **Planning — `page_planning.dart`**

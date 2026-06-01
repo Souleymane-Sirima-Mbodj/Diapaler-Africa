@@ -159,7 +159,7 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Profil | Stats rôle-spécifiques + LinkedIn cliquable + coordonnées condensées + boutons adaptatifs | Tous |
 | Dépôt de pitch | Stepper 3 étapes avec **validation** + double sauvegarde + redirect Profil | Entrepreneur |
 | Pitchs publiés | StreamBuilder temps réel + bouton partage + **filtres secteur + recherche** + bouton investissement | Mentor, Investisseur |
-| Projets | Création + suivi progression (Étape 1/3) + suppression | Entrepreneur |
+| Projets | Création + suivi progression (Étape 1/3) + **modification** (mode édition `AddProjectPage(existingProject:)`) + suppression | Entrepreneur |
 | Agenda | Titre/descriptions **rôle-spécifiques** + synchronisation Firebase + **bouton Annuler** | Tous |
 | Planning | Gestion créneaux disponibles + bouton dans AppBar Agenda | Mentor |
 | Demandes | Envoi + gestion (accepter/refuser) + 2 sections (mentorat / investissement) | Tous |
@@ -725,6 +725,126 @@ ClipOval(
 
 ---
 
+### 4.18 Notifications — pas de navigation au tap
+
+**Problème :** Taper sur une notification ne faisait rien (seulement `markAsRead`) — l'utilisateur ne savait pas où aller.
+
+**Solution :** Méthode `_handleNotifTap(ctx, notif)` dans `page_notifications.dart` qui navigue selon le `type` de la notification :
+- `'message'` → `appTabIndex.value = 2` (onglet Messages) + `Navigator.pop()`
+- `'session_booked'` / `'rdv_booked'` / `'session_cancelled'` → `appTabIndex.value = 3` (onglet Agenda) + `Navigator.pop()`
+- `'mentor_request'` / `'mentor_request_accepted'` / `'mentor_request_rejected'` / `'investment_offer'` → `Navigator.push(RequestsPage())`
+- Autres types → aucune action (comportement inchangé)
+
+---
+
+### 4.19 Genre par défaut incorrectement initialisé à "Femme"
+
+**Problème :** L'inscription initialisait `_gender = Gender.female`, forçant toujours "Femme" par défaut même si l'utilisateur ne précisait pas son genre.
+
+**Cause :** La valeur initiale du champ était une valeur par défaut binaire sans option neutre.
+
+**Solution :** Changement du défaut en `_gender = Gender.undisclosed` et ajout d'une troisième pill "Non précisé" dans `_GenderRow`. L'utilisateur voit désormais trois options : **Femme / Homme / Non précisé**, sans présélection imposée.
+
+---
+
+### 4.20 Demandes de mentorat en double (absence d'anti-doublon)
+
+**Problème :** Un utilisateur pouvait envoyer plusieurs demandes identiques au même mentor/investisseur. Firebase accumulait des `mentorRequests` en doublon avec `status: 'pending'`, sans que le destinataire ne soit prévenu qu'il recevait la même demande plusieurs fois.
+
+**Cause :** `page_send_request.dart` n'effectuait aucune vérification avant l'envoi.
+
+**Solution :**
+1. Nouvelle méthode `InteractionsService.hasPendingRequest({fromUserId, toUserId})` — requête Firebase `orderByChild('fromUserId').equalTo(fromUserId)` filtrée sur `toUserId` et `status == 'pending'`
+2. Dans `page_send_request.dart`, vérification anti-doublon avant l'envoi : si une demande est déjà en attente, un `SnackBar` amber informe l'utilisateur et la méthode retourne immédiatement
+
+---
+
+### 4.21 Sessions statiques hardcodées dans l'agenda
+
+**Problème :** La page `page_agenda.dart` affichait 3 sessions de démo hardcodées (Ibrahima Diop, Abdoulaye Fall, Fatou Diallo — agro-industrie) même pour les nouveaux utilisateurs sans aucune session Firebase. Ces données fictives créaient une confusion UX : les utilisateurs pensaient avoir des rendez-vous réels.
+
+**Cause :** Implémentation initiale avec `List<_Session>` statique + classes `_Session`, `_SessionCard`, `_StatusBadge`, `_DetailRow` internes.
+
+**Solution :** Suppression complète de toutes les données et classes statiques. La page utilise exclusivement `AgendaController.sessions` (ValueNotifier Firebase) avec un état vide illustré si aucune session n'existe. La section "Passées" a également été supprimée (Firebase ne stocke pas de flag d'achèvement).
+
+---
+
+### 4.22 Filtre pitchs insensible à la casse — résultats manquants
+
+**Problème :** Dans `page_pitches_publics.dart`, la comparaison de secteur utilisait `==` (sensible à la casse) : un pitch stocké avec `sector: 'tech & digital'` n'apparaissait pas avec le filtre `'Tech & Digital'`, même secteur, casse différente.
+
+**Cause :** Comparaison directe sans normalisation des chaînes :
+```dart
+// Avant : sensible à la casse
+final matchSector = _selectedSector == 'Tous' || p['sector'] == _selectedSector;
+```
+
+**Solution :** Comparaison `.toLowerCase()` des deux membres :
+```dart
+// Après : insensible à la casse
+final matchSector = _selectedSector == 'Tous' ||
+    p['sector'].toString().toLowerCase() == _selectedSector.toLowerCase();
+```
+
+---
+
+### 4.23 Doublon boutons Messages/Agenda sur les dashboards Mentor et Investisseur
+
+**Problème :** Les dashboards Mentor et Investisseur affichaient des boutons "Messages" et "Agenda" en plus des onglets de la barre de navigation principale, créant une redondance confuse pour l'utilisateur.
+
+**Solution :** Suppression des boutons doublons sur les deux dashboards. Navigation exclusive via les onglets de la barre principale (`IndexedStack`). Les imports inutilisés `service_navigation.dart` ont également été supprimés.
+
+---
+
+### 4.24 `hasFilter` toujours vrai pour un Investisseur (page Matching)
+
+**Problème :** Pour un Investisseur, le bouton "Réinitialiser" s'affichait **en permanence** même sans aucun filtre actif.
+
+**Cause :** `_role` est initialisé à `'Entrepreneur'` pour un Investisseur (son filtre par défaut), mais `hasFilter` comparait `_role != 'Tous'` — toujours `true` puisque `'Entrepreneur' != 'Tous'`.
+
+**Solution :** Introduction de `defaultRole` adapté au rôle connecté :
+```dart
+final defaultRole = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
+final hasFilter = _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != defaultRole;
+```
+
+---
+
+### 4.25 ID de conversation incohérent entre les écrans
+
+**Problème :** En ouvrant le même chat depuis `page_detail_mentor.dart` et depuis `page_notifications.dart`, deux conversations différentes étaient créées dans Firebase.
+
+**Cause :** `page_detail_mentor.dart` utilisait `profile.email` comme identifiant alors que `page_notifications.dart` utilisait `AuthService.currentUid` (UID Firebase). `generateConversationId` produisait deux clés distinctes pour la même paire d'utilisateurs.
+
+**Solution :** Unification — tous les écrans utilisent `AuthService.currentUid` pour construire les IDs de conversation.
+
+---
+
+### 4.26 Booking avec fausses données statiques (`_SlotsRow`)
+
+**Problème :** La page détail d'un mentor affichait des créneaux "Libre" fictifs (widget `_SlotsRow` avec données hardcodées) alors que le booking réel (`_BookingSheet`) lisait les vraies disponibilités Firebase. L'incohérence induisait l'utilisateur en erreur.
+
+**Solution :** Suppression complète de `_SlotsRow`. Nouveau widget `_AvailabilityPreview` qui affiche :
+- Les vraies disponibilités Firebase pour les membres inscrits (via `InteractionsService.getAvailability()`)
+- Des créneaux illustratifs avec badge "Exemple" (point gris) pour les profils de démonstration (uid vide)
+
+---
+
+### 4.27 Parser chatbot fragile — format unique
+
+**Problème :** `service_chatbot.dart` lisait la réponse en supposant toujours le format Anthropic (`data['content'][0]['text']`). Si le proxy Cloudflare Worker retournait un format Groq/OpenAI (`choices[0].message.content`), la réponse était `null` et le chat plantait silencieusement.
+
+**Cause :** Le parser était écrit pour un format unique, sans détection de l'API sous-jacente.
+
+**Solution :** Détection en cascade :
+1. Tente d'abord **Groq/OpenAI** : `data['choices']?[0]?['message']?['content']`
+2. Fallback sur **Anthropic** : `data['content']?[0]?['text']`
+3. Si aucun des deux formats n'est reconnu → `Exception('Format de réponse inattendu du serveur.')`
+
+Le client Flutter est maintenant indépendant du format de l'API sous-jacente utilisée par le proxy.
+
+---
+
 ## 5. Solutions proposées et innovations
 
 ### 5.1 Réactivité globale sans state management externe
@@ -853,7 +973,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 
 ### 7.3 Déploiement
 
-L'application a été compilée en APK release signé (57.9 MB) et est disponible au téléchargement :
+L'application a été compilée en APK release signé (58.3 MB) et est disponible au téléchargement :
 
 > **📦 Télécharger DIAPALER AFRICA :**  
 > **https://drive.google.com/file/d/1XLJiSSJR8rQXCrAmY5mJWyx9i-6HFoGJ/view?usp=sharing**
@@ -863,14 +983,14 @@ L'application a été compilée en APK release signé (57.9 MB) et est disponibl
 | Paramètre | Valeur |
 |---|---|
 | Type de build | Release signé |
-| Taille APK | 57.9 MB |
+| Taille APK | 58.3 MB |
 | Plateforme | Android |
 | Compilateur | Flutter `assembleRelease` |
 | Keystore | RSA 2048 bits, validité 10 000 jours |
-| Tree-shaking icônes | MaterialIcons réduit de 1 645 184 → 16 040 octets (−99 %) |
+| Tree-shaking icônes | MaterialIcons réduit de 1 645 184 → 16 528 octets (−99 %) |
 | Signature | `diapaler-release.jks`, alias `diapaler` |
 
-> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built build\app\outputs\flutter-apk\app-release.apk (57.9MB)`**
+> **📸 CAPTURE D'ÉCRAN — Terminal : `✓ Built build\app\outputs\flutter-apk\app-release.apk (58.3MB)`**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -914,9 +1034,9 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 | L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique, matching rôle-adaptatif, système de Contacts, bouton Annuler session |
 | L2 | Firebase CRUD (4 ops) | 21+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId`, type `'investment'`, sanitize Firebase path |
 | L3 | Connexion + Inscription | 4 étapes rôle-adaptées, jauge MDP, `AutofillGroup` sauvegarde MDP, `_bootstrap()` offline-first |
-| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, "Mes contacts" Entrepreneur, `BoxFit.cover` Avatar, projets + boutons rôle-adaptatifs |
-| L5 | Notifs + Recherche + GPS | Filtres pitchs dynamiques, DIALI IA, flux investisseur complet, système de Contacts, compatibilité dynamique, bouton Annuler agenda, CIS, Wave Premium, **déploiement APK** |
-| L6 | Rapport | 17 bugs documentés (+ 3 nouveaux), métriques complètes, qualité du code, **APK signé déployé et mis à jour** |
+| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, "Mes contacts" Entrepreneur, `BoxFit.cover` Avatar, projets CRUD + **mode édition** `AddProjectPage(existingProject:)` + boutons rôle-adaptatifs |
+| L5 | Notifs + Recherche + GPS | Filtres pitchs dynamiques, DIALI IA, flux investisseur complet, système de Contacts, compatibilité dynamique, bouton Annuler agenda, CIS, Wave Premium, **déploiement APK**, booking Firebase réel (`_BookingSheet`), notifications inline Accept/Decline, `_AvailabilityPreview` |
+| L6 | Rapport | 27 bugs documentés, métriques complètes, qualité du code, **APK signé déployé (58.3 MB)** |
 
 Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur ajoutée** à l'écosystème entrepreneurial sénégalais, en connectant entrepreneurs, mentors et investisseurs dans une plateforme unifiée, moderne et accessible, avec :
 - Un **chatbot IA** (DIALI) contextuelisé à l'écosystème sénégalais
@@ -926,7 +1046,7 @@ Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur 
 
 Ce projet démontre qu'il est possible, avec Flutter, Firebase et l'API Groq, de concevoir en quelques semaines une application mobile de **qualité professionnelle**, complète, réactive et prête pour la mise sur le marché africain.
 
-Les dernières itérations ont enrichi la plateforme avec un **flux investisseur complet** (propositions d'investissement, acceptation, relation de Contacts), un **système de Contacts** centralisant toutes les relations acceptées, un **matching rôle-adaptatif** (Mentor/Investisseur voient les Entrepreneurs), une **compatibilité dynamique** basée sur les intérêts partagés, et des **filtres avancés** dans la page Pitchs Publiés. Ces évolutions confirment la maturité et l'extensibilité de l'architecture choisie.
+Les dernières itérations ont enrichi la plateforme avec un **flux investisseur complet** (propositions d'investissement, acceptation, relation de Contacts), un **système de Contacts** centralisant toutes les relations acceptées, un **matching rôle-adaptatif** (Mentor/Investisseur voient les Entrepreneurs), une **compatibilité dynamique** synchronisée entre affichage et tri, et des **filtres avancés** dans la page Pitchs Publiés. Des corrections ciblées ont également renforcé la robustesse : **navigation contextuelle** depuis le centre de notifications, **anti-doublon** sur les demandes de mentorat via `hasPendingRequest()`, **genre par défaut neutre** ("Non précisé"), **suppression des sessions statiques** de l'agenda au profit d'un rendu purement Firebase, et **parser chatbot cascadant** supportant les formats Groq/OpenAI et Anthropic. Ces évolutions confirment la maturité et l'extensibilité de l'architecture choisie.
 
 ---
 

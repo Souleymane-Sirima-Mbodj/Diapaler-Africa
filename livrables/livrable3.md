@@ -627,7 +627,7 @@ class _LoginPageState extends State<LoginPage> {
 **Champs :**
 - Nom complet (prénom + nom obligatoires, min 4 caractères)
 - Adresse email (validation regex)
-- Sexe (Femme / Homme — 2 pills animés)
+- Sexe (**Femme / Homme / Non précisé** — 3 pills animés, **défaut : Non précisé**)
 - Date de naissance (DatePicker natif Flutter — `helpText: 'Date de naissance'`)
 - Badge confirmation du rôle choisi (lecture seule)
 
@@ -647,7 +647,7 @@ bool get _emailValid =>
 // lastDate    : 13 ans en arrière (âge minimum requis)
 await showDatePicker(
   context: context,
-  initialDate: _birthDate ?? DateTime(now.year - 22, 1, 1),
+  initialDate: _birthDate ?? DateTime(now.year - 22), // mois/jour = 1/1 par défaut
   firstDate: DateTime(1940),
   lastDate: DateTime(now.year - 13, 12, 31),
   helpText: 'Ta date de naissance',

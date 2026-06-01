@@ -619,10 +619,18 @@ if (!added) {
   return;
 }
 
-// ── UPDATE : Modifier un projet (avancement d'étape)
+// ── UPDATE : Avancement d'étape
 UserProfileController.updateProject(
   project.copyWith(step: project.step + 1),
 );
+
+// ── UPDATE : Mode édition complet (depuis page_profil.dart → _ProjectTile)
+// Tap sur un projet → AddProjectPage(existingProject: project)
+// La page est réutilisée en mode édition — tous les champs pré-remplis.
+// À la sauvegarde : UserProfileController.updateProject(updatedProject)
+Navigator.push(context, MaterialPageRoute(
+  builder: (_) => AddProjectPage(existingProject: project),
+));
 
 // ── DELETE : Supprimer un projet
 UserProfileController.deleteProject(project.id);
@@ -750,7 +758,7 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 | Cache offline-first | `CacheService.saveProfile()` dans `update()` | ✅ |
 | Réactivité UI | `ValueNotifier` → rebuild instantané sur tous les écrans | ✅ |
 | Photo dans toute l'app | Widget `Avatar` réutilisable partout | ✅ |
-| Gestion de projets | `addProject` / `updateProject` / `deleteProject` | ✅ (bonus) |
+| Gestion de projets | `addProject` / `updateProject` / `deleteProject` + mode édition `AddProjectPage(existingProject:)` | ✅ (bonus) |
 | Jauge de complétion | Indicateur 0–100%, barre toujours amber (`AppColors.amber`) | ✅ (bonus) |
 | Déconnexion sécurisée | `reset()` + cache + Firebase signOut → redirige vers LoginPage | ✅ |
 | Membres DIAPALER réels | `UsersService.listMembers()` + badge dans Matching | ✅ (bonus) |
