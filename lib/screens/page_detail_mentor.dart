@@ -355,17 +355,17 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                 ),
               ],
               const SizedBox(height: 22),
-              const _SectionTitle('Créneaux disponibles'),
+              const _SectionTitle('Disponibilités'),
               const SizedBox(height: 4),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Appuie sur "Réserver une session" pour voir les disponibilités réelles et envoyer une demande.',
+                  'Appuie sur "Réserver une session" pour choisir un créneau et envoyer ta demande.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4),
                 ),
               ),
               const SizedBox(height: 10),
-              const _SlotsRow(),
+              _AvailabilityPreview(mentor: mentor),
               const SizedBox(height: 28),
               Builder(
                 builder: (context) {
@@ -454,9 +454,12 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              final profile = UserProfileController.profile.value;
+                              // Utilise le UID Firebase (et non l'email) pour garantir
+                              // la cohérence avec l'ID de conversation côté notifications.
+                              final myUid = AuthService.currentUid ??
+                                  UserProfileController.profile.value.email;
                               final convId = InteractionsService.generateConversationId(
-                                profile.email,
+                                myUid,
                                 mentor.uid.isNotEmpty ? mentor.uid : mentor.name,
                               );
                               Navigator.of(context).push(
@@ -756,7 +759,7 @@ class _BookingSheetState extends State<_BookingSheet> {
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';
 
-  Future<void> _confirm(Availability? avail) async {
+  Future<void> _confirm() async {
     if (_selectedDay == null || _selectedTime == null) return;
     setState(() => _sending = true);
 
@@ -944,7 +947,7 @@ class _BookingSheetState extends State<_BookingSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _sending ? null : () => _confirm(avail),
+                    onPressed: _sending ? null : _confirm,
                     icon: _sending
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.send_rounded),
@@ -964,17 +967,24 @@ class _BookingSheetState extends State<_BookingSheet> {
   }
 }
 
-class _SlotsRow extends StatefulWidget {
-  const _SlotsRow();
+/// Aperçu des disponibilités du mentor.
+/// — Profil démo (uid vide) : créneaux illustratifs statiques.
+/// — Membre Firebase (uid non vide) : données réelles en temps réel.
+class _AvailabilityPreview extends StatelessWidget {
+  final Mentor mentor;
+  const _AvailabilityPreview({required this.mentor});
 
-  @override
-  State<_SlotsRow> createState() => _SlotsRowState();
-}
+  static const _dayFr = <String, String>{
+    'Monday': 'Lundi',
+    'Tuesday': 'Mardi',
+    'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi',
+    'Friday': 'Vendredi',
+    'Saturday': 'Samedi',
+    'Sunday': 'Dimanche',
+  };
 
-class _SlotsRowState extends State<_SlotsRow> {
-  int? _selected;
-
-  static const _slots = [
+  static const _demoSlots = <(String, String)>[
     ('Lundi', '14h00'),
     ('Mardi', '10h00'),
     ('Mercredi', '15h00'),
@@ -982,126 +992,127 @@ class _SlotsRowState extends State<_SlotsRow> {
     ('Vendredi', '16h00'),
   ];
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildRow(List<(String, String)> slots, {required bool isDemo}) {
     return SizedBox(
-      height: 118,
+      height: 110,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _slots.length,
+        itemCount: slots.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          final s = _slots[i];
-          final isSelected = _selected == i;
-          return MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => setState(
-                  () => _selected = isSelected ? null : i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: 96,
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.navy : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected ? AppColors.navy : AppColors.border,
-                    width: isSelected ? 2 : 1,
+          final s = slots[i];
+          return Container(
+            width: 96,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  s.$1.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.muted,
+                    letterSpacing: 0.6,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color:
-                                AppColors.amber.withValues(alpha: 0.45),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : [],
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                const SizedBox(height: 6),
+                Text(
+                  s.$2,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      s.$1.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: isSelected
-                            ? AppColors.amber
-                            : AppColors.muted,
-                        letterSpacing: 0.6,
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: isDemo ? AppColors.subtle : AppColors.green,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      s.$2,
+                      isDemo ? 'Exemple' : 'Dispo',
                       style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.navyDeep,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isDemo ? AppColors.subtle : AppColors.green,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    if (isSelected)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.amber,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_rounded,
-                                size: 11, color: AppColors.navyDeep),
-                            SizedBox(width: 2),
-                            Text(
-                              'Choisi',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.navyDeep,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: const BoxDecoration(
-                              color: AppColors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Libre',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.green,
-                            ),
-                          ),
-                        ],
-                      ),
                   ],
                 ),
-              ),
+              ],
             ),
           );
         },
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Profil démo : créneaux illustratifs
+    if (mentor.uid.isEmpty) {
+      return _buildRow(_demoSlots, isDemo: true);
+    }
+    // Membre Firebase : disponibilités réelles
+    return StreamBuilder<Availability?>(
+      stream: InteractionsService.getAvailability(mentor.uid),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 40,
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        final avail = snap.data;
+        if (avail == null || avail.schedule.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Disponibilités non encore configurées.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+            ),
+          );
+        }
+        final slots = avail.schedule.entries
+            .where((e) => e.value.isAvailable)
+            .map((e) => (
+                  _dayFr[e.key] ?? e.key,
+                  e.value.timeSlots.isEmpty
+                      ? 'Dispo'
+                      : e.value.timeSlots.first.startTime,
+                ))
+            .toList();
+        if (slots.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Aucun créneau disponible pour le moment.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+            ),
+          );
+        }
+        return _buildRow(slots, isDemo: false);
+      },
     );
   }
 }

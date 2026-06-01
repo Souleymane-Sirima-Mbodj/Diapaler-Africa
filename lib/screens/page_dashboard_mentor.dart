@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
-import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';

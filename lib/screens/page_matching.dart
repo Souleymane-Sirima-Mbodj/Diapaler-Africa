@@ -215,13 +215,16 @@ class _MatchingPageState extends State<MatchingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final myRole = UserProfileController.profile.value.role;
+    // Pour un Investisseur, le rôle est forcé à 'Entrepreneur' — ce n'est pas un filtre actif.
+    final defaultRole = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
     final filtered = _filtered;
     final hasFilter =
-        _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != 'Tous';
+        _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != defaultRole;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_matchingTitle(UserProfileController.profile.value.role)),
+        title: Text(_matchingTitle(myRole)),
         actions: [
           if (hasFilter)
             TextButton(
@@ -304,7 +307,7 @@ class _MatchingPageState extends State<MatchingPage> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Row(
               children: [
-                for (final r in _rolePills(UserProfileController.profile.value.role))
+                for (final r in _rolePills(myRole))
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
