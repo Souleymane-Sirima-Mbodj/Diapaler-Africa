@@ -74,6 +74,22 @@ class DatabaseService {
     });
   }
 
+  /// Met à jour le titre, secteur, description et montant d'un pitch existant.
+  static Future<void> updatePitch({
+    required String pitchId,
+    required String title,
+    required String sector,
+    required String description,
+    required String amount,
+  }) async {
+    await _db.ref('pitches/$pitchId').update({
+      'title': title,
+      'sector': sector,
+      'description': description,
+      'amount': amount,
+    });
+  }
+
   /// Supprime un pitch de [pitches/$pitchId].
   static Future<void> deletePitch(String pitchId) async {
     await _db.ref('pitches/$pitchId').remove();

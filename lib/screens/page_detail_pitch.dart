@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/donnees_mentors.dart';
 import '../services/service_base_de_donnees.dart';
 import '../theme/theme_app.dart';
 
@@ -32,6 +33,18 @@ class PitchDetailPage extends StatelessWidget {
       'juil', 'août', 'sep', 'oct', 'nov', 'déc',
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  Future<void> _showEditSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _PitchEditSheet(pitch: pitch),
+    );
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -87,6 +100,11 @@ class PitchDetailPage extends StatelessWidget {
             expandedHeight: 160,
             elevation: 0,
             actions: [
+              IconButton(
+                onPressed: () => _showEditSheet(context),
+                icon: const Icon(Icons.edit_rounded),
+                tooltip: 'Modifier ce pitch',
+              ),
               IconButton(
                 onPressed: () => _confirmDelete(context),
                 icon: const Icon(Icons.delete_outline_rounded),
@@ -281,6 +299,23 @@ class PitchDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 30),
 
+                  // ── Bouton modifier ──
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showEditSheet(context),
+                      icon: const Icon(Icons.edit_rounded, size: 18),
+                      label: const Text(
+                        'Modifier ce pitch',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
                   // ── Bouton supprimer ──
                   SizedBox(
                     width: double.infinity,
@@ -460,6 +495,281 @@ class _DocRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bottom sheet — Modifier un pitch (Update du CRUD)
+// ─────────────────────────────────────────────────────────────────
+
+class _PitchEditSheet extends StatefulWidget {
+  final Map<String, dynamic> pitch;
+  const _PitchEditSheet({required this.pitch});
+
+  @override
+  State<_PitchEditSheet> createState() => _PitchEditSheetState();
+}
+
+class _PitchEditSheetState extends State<_PitchEditSheet> {
+  late TextEditingController _title;
+  late TextEditingController _description;
+  late TextEditingController _amount;
+  String? _sector;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = TextEditingController(
+        text: widget.pitch['title']?.toString() ?? '');
+    _description = TextEditingController(
+        text: widget.pitch['description']?.toString() ?? '');
+    _amount = TextEditingController(
+        text: widget.pitch['amount']?.toString() ?? '');
+    _sector = widget.pitch['sector']?.toString();
+
+    for (final c in [_title, _description, _amount]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _description.dispose();
+    _amount.dispose();
+    super.dispose();
+  }
+
+  bool get _valid =>
+      _title.text.trim().length >= 3 &&
+      _sector != null &&
+      _description.text.trim().length >= 10;
+
+  Future<void> _save() async {
+    if (!_valid) return;
+    setState(() => _loading = true);
+    try {
+      final pitchId = widget.pitch['id']?.toString() ?? '';
+      await DatabaseService.updatePitch(
+        pitchId: pitchId,
+        title: _title.text.trim(),
+        sector: _sector!,
+        description: _description.text.trim(),
+        amount: _amount.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pitch mis à jour ✓'),
+          backgroundColor: AppColors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur : $e'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, ctrl) => Column(
+          children: [
+            // Poignée
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.edit_rounded,
+                        color: AppColors.amber, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Modifier le pitch',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                controller: ctrl,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  // Titre
+                  const Text('Titre *',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _title,
+                    decoration: InputDecoration(
+                      hintText: 'Titre du projet',
+                      prefixIcon: const Icon(Icons.title_rounded,
+                          color: AppColors.subtle),
+                      suffixIcon: _title.text.isNotEmpty
+                          ? Icon(
+                              _title.text.trim().length >= 3
+                                  ? Icons.check_circle_rounded
+                                  : Icons.cancel_rounded,
+                              color: _title.text.trim().length >= 3
+                                  ? AppColors.green
+                                  : AppColors.red,
+                              size: 20,
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Secteur
+                  const Text('Secteur *',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: _sector,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.subtle),
+                    decoration: const InputDecoration(
+                      hintText: 'Choisis un secteur',
+                      prefixIcon: Icon(Icons.category_rounded,
+                          color: AppColors.subtle),
+                    ),
+                    items: allSectors
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.navyDeep)),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => _sector = v),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  const Text('Description *',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _description,
+                    maxLines: 8,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      hintText: 'Décris ton projet en détail…',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Montant
+                  const Text('Besoin de financement (FCFA)',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _amount,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      hintText: '5 000 000',
+                      prefixIcon: Icon(Icons.payments_rounded,
+                          color: AppColors.subtle),
+                      suffixText: 'FCFA',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Bouton sauvegarder
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: (_loading || !_valid) ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        disabledBackgroundColor:
+                            AppColors.navy.withValues(alpha: 0.35),
+                        disabledForegroundColor: Colors.white,
+                      ),
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'ENREGISTRER LES MODIFICATIONS',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1,
+                                fontSize: 13,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -88,8 +88,9 @@ class FavoriteService {
         'name': m.name,
         'title': m.title,
         'city': m.city,
-        'sectors': m.sectors,
-        'companies': m.companies,
+        // Listes stockées comme map indexée dans Firebase — converties en lecture.
+        'sectors': {for (var i = 0; i < m.sectors.length; i++) '$i': m.sectors[i]},
+        'companies': {for (var i = 0; i < m.companies.length; i++) '$i': m.companies[i]},
         'rating': m.rating,
         'reviews': m.reviews,
         'years': m.years,
@@ -99,7 +100,8 @@ class FavoriteService {
         'gender': m.gender.name,
         'bio': m.bio,
         'uid': m.uid,
-        'photoBase64': m.photoBase64,
+        // photoBase64 exclu — trop volumineux pour Firebase Realtime DB,
+        // la photo sera chargée depuis le profil si nécessaire.
       };
 
   static Mentor _fromJson(Map<String, dynamic> m) => Mentor(
@@ -121,11 +123,22 @@ class FavoriteService {
         ),
         bio: m['bio']?.toString() ?? '',
         uid: m['uid']?.toString() ?? '',
-        photoBase64: m['photoBase64']?.toString() ?? '',
+        photoBase64: '',
       );
 
+  /// Gère les listes stockées comme Map indexée dans Firebase
+  /// (ex: {"0": "Tech", "1": "Finance"}) ou comme List native.
   static List<String> _toStringList(dynamic v) {
     if (v is List) return v.map((e) => e.toString()).toList();
+    if (v is Map) {
+      final sorted = v.entries.toList()
+        ..sort((a, b) {
+          final ai = int.tryParse(a.key.toString()) ?? 0;
+          final bi = int.tryParse(b.key.toString()) ?? 0;
+          return ai.compareTo(bi);
+        });
+      return sorted.map((e) => e.value.toString()).toList();
+    }
     return [];
   }
 }
