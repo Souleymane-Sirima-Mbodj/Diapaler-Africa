@@ -109,6 +109,7 @@ class _RootShellState extends State<RootShell> {
       _listenPendingRequests(uid);
       _listenMentorsActive(uid);
     }
+    AgendaController.sessions.addListener(_onSessionsChanged);
     appTabIndex.addListener(_onTabIndexChanged);
   }
 
@@ -179,6 +180,17 @@ class _RootShellState extends State<RootShell> {
     }
   }
 
+  /// Synchronise `sessionsCount` depuis la liste réelle des sessions réservées.
+  /// Déclenché à chaque ajout ou annulation de session (AgendaController).
+  void _onSessionsChanged() {
+    if (!mounted) return;
+    final count = AgendaController.sessions.value.length;
+    final current = UserProfileController.profile.value;
+    if (current.sessionsCount != count) {
+      UserProfileController.update(current.copyWith(sessionsCount: count));
+    }
+  }
+
   void _onTabIndexChanged() {
     if (mounted) setState(() => _index = appTabIndex.value);
   }
@@ -186,6 +198,7 @@ class _RootShellState extends State<RootShell> {
   @override
   void dispose() {
     appTabIndex.removeListener(_onTabIndexChanged);
+    AgendaController.sessions.removeListener(_onSessionsChanged);
     _pendingRequestsSub?.cancel();
     _mentorsActiveSub?.cancel();
     pendingRequestsCount.value = 0;
