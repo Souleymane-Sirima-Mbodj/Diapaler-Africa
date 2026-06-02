@@ -1312,16 +1312,16 @@ class _ConsentCheckboxState extends State<_ConsentCheckbox> {
   void initState() {
     super.initState();
     _cguRec = TapGestureRecognizer()
-      ..onTap = () => _showPlaceholderDialog(
+      ..onTap = () => _showLegalDialog(
             context,
             "Conditions d'utilisation",
-            "Les conditions d'utilisation seront disponibles prochainement.",
+            _cguText,
           );
     _privacyRec = TapGestureRecognizer()
-      ..onTap = () => _showPlaceholderDialog(
+      ..onTap = () => _showLegalDialog(
             context,
             'Politique de confidentialité',
-            'La politique de confidentialité sera disponible prochainement.',
+            _privacyText,
           );
   }
 
@@ -1332,16 +1332,51 @@ class _ConsentCheckboxState extends State<_ConsentCheckbox> {
     super.dispose();
   }
 
-  void _showPlaceholderDialog(BuildContext ctx, String title, String message) {
+  static const _cguText =
+      'En utilisant Diapaler Africa, vous vous engagez à :\n\n'
+      '• Ne publier que des informations véridiques sur votre profil et vos projets.\n'
+      '• Respecter la vie privée et la confidentialité des autres membres.\n'
+      '• Utiliser la plateforme à des fins professionnelles et légales.\n'
+      '• Ne pas partager vos identifiants de connexion avec des tiers.\n'
+      '• Ne pas diffuser de contenu offensant, trompeur ou frauduleux.\n\n'
+      'Diapaler Africa se réserve le droit de suspendre ou supprimer tout compte '
+      'ne respectant pas ces conditions, sans préavis.\n\n'
+      'Pour toute question : support@diapaler.sn\n\nVersion 1.0 — Juin 2026';
+
+  static const _privacyText =
+      'Diapaler Africa collecte uniquement les données nécessaires au fonctionnement de la plateforme :\n\n'
+      '• Identité : nom, email, téléphone, photo de profil.\n'
+      '• Informations professionnelles : secteur, bio, LinkedIn, années d\'expérience.\n'
+      '• Données d\'interaction : demandes de mentorat, investissement, messagerie.\n\n'
+      'Vos données sont stockées de façon sécurisée sur Firebase (Google) et ne sont jamais '
+      'vendues ni partagées avec des tiers sans votre consentement.\n\n'
+      'Vous pouvez demander la modification ou la suppression de vos données à tout moment '
+      'en contactant : support@diapaler.sn\n\n'
+      'Conforme à la loi 2008-12 sur la protection des données personnelles au Sénégal.\n\n'
+      'Version 1.0 — Juin 2026';
+
+  void _showLegalDialog(BuildContext ctx, String title, String content) {
     showDialog<void>(
       context: ctx,
       builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Text(
+              content,
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+          ),
+        ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            child: const Text('J\'ai compris'),
           ),
         ],
       ),

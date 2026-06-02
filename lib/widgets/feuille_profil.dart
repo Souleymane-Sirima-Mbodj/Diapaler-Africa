@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
-import '../screens/page_profil.dart';
 import '../screens/page_connexion.dart';
+import '../screens/page_mes_favoris.dart';
+import '../screens/page_parametres.dart';
+import '../screens/page_profil.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
 import '../services/service_navigation.dart';
@@ -139,11 +142,8 @@ class _ProfileSheet extends StatelessWidget {
                       trailing: '${p.favoritesCount}',
                       onTap: () {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fonctionnalité favoris disponible prochainement.'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const MesFavorisPage()),
                         );
                       },
                     ),
@@ -159,7 +159,7 @@ class _ProfileSheet extends StatelessWidget {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Changement de langue disponible prochainement.'),
+                    content: Text('Diapaler Africa est actuellement disponible en français uniquement.'),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -170,25 +170,18 @@ class _ProfileSheet extends StatelessWidget {
               label: 'Paramètres',
               onTap: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Paramètres disponibles prochainement.'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ParametresPage()),
                 );
               },
             ),
             _Tile(
               icon: Icons.help_outline_rounded,
               label: 'Aide & support',
-              onTap: () {
+              onTap: () async {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Support disponible prochainement. Contact : support@diapaler.sn'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                final uri = Uri(scheme: 'mailto', path: 'support@diapaler.sn');
+                if (await canLaunchUrl(uri)) await launchUrl(uri);
               },
             ),
             const Divider(height: 24),
