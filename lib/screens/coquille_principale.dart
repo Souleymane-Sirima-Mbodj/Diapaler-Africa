@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
+import '../services/service_favoris.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
@@ -105,11 +106,13 @@ class _RootShellState extends State<RootShell> {
     final uid = AuthService.currentUid;
     if (uid != null && uid.isNotEmpty) {
       AgendaController.load(uid);
+      FavoriteService.load(uid);
       NotificationService.init(uid);
       _listenPendingRequests(uid);
       _listenMentorsActive(uid);
     }
     AgendaController.sessions.addListener(_onSessionsChanged);
+    FavoriteService.favorites.addListener(_onFavoritesChanged);
     appTabIndex.addListener(_onTabIndexChanged);
   }
 
@@ -191,6 +194,17 @@ class _RootShellState extends State<RootShell> {
     }
   }
 
+  /// Synchronise `favoritesCount` depuis la liste réelle des favoris.
+  /// Déclenché à chaque ajout ou suppression d'un favori.
+  void _onFavoritesChanged() {
+    if (!mounted) return;
+    final count = FavoriteService.favorites.value.length;
+    final current = UserProfileController.profile.value;
+    if (current.favoritesCount != count) {
+      UserProfileController.update(current.copyWith(favoritesCount: count));
+    }
+  }
+
   void _onTabIndexChanged() {
     if (mounted) setState(() => _index = appTabIndex.value);
   }
@@ -199,6 +213,7 @@ class _RootShellState extends State<RootShell> {
   void dispose() {
     appTabIndex.removeListener(_onTabIndexChanged);
     AgendaController.sessions.removeListener(_onSessionsChanged);
+    FavoriteService.favorites.removeListener(_onFavoritesChanged);
     _pendingRequestsSub?.cancel();
     _mentorsActiveSub?.cancel();
     pendingRequestsCount.value = 0;

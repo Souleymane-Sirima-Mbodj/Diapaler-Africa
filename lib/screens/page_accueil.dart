@@ -15,6 +15,7 @@ import 'page_nouveau_projet.dart';
 import 'page_notifications.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
+import 'page_mes_favoris.dart';
 import 'page_mes_mentors.dart';
 import 'page_dashboard_investisseur.dart';
 import 'page_dashboard_mentor.dart';
@@ -840,6 +841,9 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.red,
             label: 'Favoris',
             value: p.favoritesCount,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MesFavorisPage()),
+            ),
           ),
         ];
         return SizedBox(
