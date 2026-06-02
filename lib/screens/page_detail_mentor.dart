@@ -117,10 +117,22 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     }
   }
 
-  void _toggleFavorite() {
+  Future<void> _toggleFavorite() async {
     final myUid = AuthService.currentUid ?? '';
-    FavoriteService.toggle(myUid, widget.mentor);
-    // L'état _isFavorite est mis à jour par _onFavoritesChanged via le listener.
+    if (myUid.isEmpty) return;
+    try {
+      await FavoriteService.toggle(myUid, widget.mentor);
+      // L'état _isFavorite est mis à jour par _onFavoritesChanged via le listener.
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de modifier le favori : $e'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _showBookingSheet(BuildContext ctx) async {
