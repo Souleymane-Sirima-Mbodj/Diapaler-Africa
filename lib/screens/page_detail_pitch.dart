@@ -1,16 +1,13 @@
-import 'dart:io' show File;
-
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/donnees_mentors.dart';
 import '../services/service_base_de_donnees.dart';
+import '../services/service_cloudinary.dart';
 import '../theme/theme_app.dart';
 
-/// Page de détail d'un pitch publié.
-/// Reçoit la map brute Firebase du pitch.
+/// Page de détail d'un pitch publié (vue propriétaire — entrepreneur).
 class PitchDetailPage extends StatefulWidget {
   final Map<String, dynamic> pitch;
 
@@ -28,8 +25,8 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
   String? _videoUrl;
   String? _deckUrl;
 
-  // ── Progression d'upload : clé = type ('businessPlan' | 'video' | 'deck') ──
-  final Map<String, double> _progress = {};
+  // ── Types en cours d'upload ─────────────────────────────────────
+  final Set<String> _uploading = {};
 
   @override
   void initState() {
@@ -46,7 +43,6 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
   String get _description => _pitch['description']?.toString() ?? '';
   String get _amount => _pitch['amount']?.toString() ?? '';
   String get _pitchId => _pitch['id']?.toString() ?? '';
-  String get _userName => _pitch['userName']?.toString() ?? '';
 
   DateTime? get _createdAt {
     final v = _pitch['createdAt'];
@@ -69,30 +65,32 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
   String? _urlFromType(String type) {
     switch (type) {
       case 'businessPlan': return _businessPlanUrl;
-      case 'video': return _videoUrl;
-      case 'deck': return _deckUrl;
+      case 'video':        return _videoUrl;
+      case 'deck':         return _deckUrl;
     }
     return null;
   }
 
   void _setUrl(String type, String? url) {
-    switch (type) {
-      case 'businessPlan': _businessPlanUrl = url; break;
-      case 'video': _videoUrl = url; break;
-      case 'deck': _deckUrl = url; break;
-    }
+    setState(() {
+      switch (type) {
+        case 'businessPlan': _businessPlanUrl = url; break;
+        case 'video':        _videoUrl        = url; break;
+        case 'deck':         _deckUrl         = url; break;
+      }
+    });
   }
 
   String _labelFromType(String type) {
     switch (type) {
       case 'businessPlan': return 'Business Plan';
-      case 'video': return 'Vidéo de présentation';
-      case 'deck': return 'Deck';
+      case 'video':        return 'Vidéo de présentation';
+      case 'deck':         return 'Deck / Présentation';
     }
     return type;
   }
 
-  // ── Upload ───────────────────────────────────────────────────────
+  // ── Upload vers Cloudinary ───────────────────────────────────────
   Future<void> _uploadDocument({
     required String type,
     required String dbField,
@@ -110,85 +108,75 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
     final pf = result.files.first;
     if (pf.path == null) return;
 
-    // 2. Vérification de la taille
+    // 2. Vérification taille
     if (pf.size > maxMb * 1024 * 1024) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            'Fichier trop volumineux (max $maxMb Mo). '
-            'Taille actuelle : ${(pf.size / (1024 * 1024)).toStringAsFixed(1)} Mo.'),
+          'Fichier trop volumineux (max $maxMb Mo). '
+          'Taille : ${(pf.size / (1024 * 1024)).toStringAsFixed(1)} Mo.',
+        ),
         backgroundColor: AppColors.red,
         behavior: SnackBarBehavior.floating,
       ));
       return;
     }
 
-    // 3. Upload Firebase Storage
-    setState(() => _progress[type] = 0.0);
-
+    // 3. Upload Cloudinary
+    setState(() => _uploading.add(type));
     try {
-      final ext = pf.name.contains('.')
-          ? '.${pf.name.split('.').last.toLowerCase()}'
-          : '';
-      final ref =
-          FirebaseStorage.instance.ref('pitches/$_pitchId/$type$ext');
-
-      final task = ref.putFile(
-        File(pf.path!),
-        SettableMetadata(contentType: _mimeType(ext)),
+      final url = await CloudinaryService.uploadFile(
+        filePath: pf.path!,
+        resourceType: _resourceType(type),
+        folder: 'pitches/$_pitchId',
       );
 
-      // Suivi de la progression
-      task.snapshotEvents.listen((snap) {
-        if (snap.totalBytes > 0 && mounted) {
-          setState(() =>
-              _progress[type] = snap.bytesTransferred / snap.totalBytes);
-        }
-      });
-
-      await task;
-      final url = await ref.getDownloadURL();
-
-      // 4. Sauvegarde URL en base
+      // 4. Sauvegarde URL en base Firebase
       await DatabaseService.updatePitchDocumentUrl(
         pitchId: _pitchId,
         field: dbField,
         url: url,
       );
 
-      // 5. État local
-      if (!mounted) return;
-      setState(() {
-        _progress.remove(type);
-        _setUrl(type, url);
-      });
+      _setUrl(type, url);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${_labelFromType(type)} uploadé avec succès ✓'),
+        content: Text('${_labelFromType(type)} uploadé ✓'),
         backgroundColor: AppColors.green,
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _progress.remove(type));
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur upload : $e'),
+        content: Text('Erreur : $e'),
         backgroundColor: AppColors.red,
         behavior: SnackBarBehavior.floating,
       ));
+    } finally {
+      if (mounted) setState(() => _uploading.remove(type));
     }
   }
 
+  String _resourceType(String type) {
+    if (type == 'video') return 'video';
+    return 'auto'; // Cloudinary détecte automatiquement image/raw (PDF)
+  }
+
   // ── Suppression d'un document ────────────────────────────────────
+  /// Retire le lien de la base Firebase. Le fichier reste sur Cloudinary
+  /// (la suppression côté Cloudinary nécessite la clé API secrète — non
+  /// stockée côté client).
   Future<void> _deleteDocument(String type, String dbField) async {
     final label = _labelFromType(type);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Supprimer "$label" ?'),
+        title: Text('Retirer "$label" ?'),
         content: const Text(
-            'Le fichier sera supprimé définitivement. Cette action est irréversible.'),
+          'Le document sera retiré du pitch. Tu pourras en uploader un nouveau.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -197,7 +185,7 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Supprimer'),
+            child: const Text('Retirer'),
           ),
         ],
       ),
@@ -205,23 +193,12 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final url = _urlFromType(type);
-      if (url != null && url.isNotEmpty) {
-        try {
-          await FirebaseStorage.instance.refFromURL(url).delete();
-        } catch (_) {}
-      }
       await DatabaseService.updatePitchDocumentUrl(
         pitchId: _pitchId,
         field: dbField,
         url: null,
       );
-      if (!mounted) return;
-      setState(() => _setUrl(type, null));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$label supprimé.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      _setUrl(type, null);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -232,7 +209,7 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
     }
   }
 
-  // ── Ouvrir un document dans le navigateur ──────────────────────
+  // ── Ouvrir un document ───────────────────────────────────────────
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -246,23 +223,8 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
     }
   }
 
-  // ── MIME type à partir de l'extension ───────────────────────────
-  String _mimeType(String ext) {
-    switch (ext) {
-      case '.pdf': return 'application/pdf';
-      case '.mp4': return 'video/mp4';
-      case '.mov': return 'video/quicktime';
-      case '.avi': return 'video/x-msvideo';
-      case '.mkv': return 'video/x-matroska';
-      case '.jpg':
-      case '.jpeg': return 'image/jpeg';
-      case '.png': return 'image/png';
-      default: return 'application/octet-stream';
-    }
-  }
-
   // ── Actions pitch ────────────────────────────────────────────────
-  Future<void> _showEditSheet(BuildContext context) async {
+  Future<void> _showEditSheet() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -274,7 +236,7 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context) async {
+  Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -298,9 +260,9 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       await DatabaseService.deletePitch(_pitchId);
-      if (context.mounted) {
+      if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -329,12 +291,12 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
             elevation: 0,
             actions: [
               IconButton(
-                onPressed: () => _showEditSheet(context),
+                onPressed: _showEditSheet,
                 icon: const Icon(Icons.edit_rounded),
                 tooltip: 'Modifier ce pitch',
               ),
               IconButton(
-                onPressed: () => _confirmDelete(context),
+                onPressed: _confirmDelete,
                 icon: const Icon(Icons.delete_outline_rounded),
                 tooltip: 'Supprimer ce pitch',
               ),
@@ -370,101 +332,65 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Meta chips ──
+                  // Meta chips
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       if (_sector.isNotEmpty)
-                        _Chip(
-                          icon: Icons.category_rounded,
-                          label: _sector,
-                          color: AppColors.blue,
-                        ),
+                        _Chip(icon: Icons.category_rounded, label: _sector, color: AppColors.blue),
                       if (_amount.isNotEmpty)
-                        _Chip(
-                          icon: Icons.payments_rounded,
-                          label: '$_amount FCFA',
-                          color: AppColors.green,
-                        ),
+                        _Chip(icon: Icons.payments_rounded, label: '$_amount FCFA', color: AppColors.green),
                       if (_dateLabel.isNotEmpty)
-                        _Chip(
-                          icon: Icons.calendar_today_rounded,
-                          label: 'Publié le $_dateLabel',
-                          color: AppColors.muted,
-                        ),
+                        _Chip(icon: Icons.calendar_today_rounded, label: 'Publié le $_dateLabel', color: AppColors.muted),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Description ──
+                  // Description
                   _SectionCard(
                     icon: Icons.description_rounded,
                     title: 'Description du projet',
                     color: AppColors.purple,
                     child: Text(
-                      _description.isNotEmpty
-                          ? _description
-                          : 'Aucune description renseignée.',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.navyDeep,
-                        height: 1.6,
-                      ),
+                      _description.isNotEmpty ? _description : 'Aucune description renseignée.',
+                      style: const TextStyle(fontSize: 14, color: AppColors.navyDeep, height: 1.6),
                     ),
                   ),
                   const SizedBox(height: 14),
 
-                  // ── Financement ──
+                  // Financement
                   _SectionCard(
                     icon: Icons.monetization_on_rounded,
                     title: 'Besoin de financement',
                     color: AppColors.green,
                     child: _amount.isEmpty
-                        ? const Text(
-                            'Non renseigné',
-                            style: TextStyle(
-                                fontSize: 14, color: AppColors.muted),
-                          )
+                        ? const Text('Non renseigné',
+                            style: TextStyle(fontSize: 14, color: AppColors.muted))
                         : Row(
                             children: [
-                              Text(
-                                _amount,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.navyDeep,
-                                ),
-                              ),
+                              Text(_amount,
+                                  style: const TextStyle(
+                                      fontSize: 28, fontWeight: FontWeight.w900, color: AppColors.navyDeep)),
                               const SizedBox(width: 6),
-                              const Text(
-                                'FCFA',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.muted,
-                                ),
-                              ),
+                              const Text('FCFA',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.muted)),
                             ],
                           ),
                   ),
                   const SizedBox(height: 14),
 
-                  // ── Visibilité ──
+                  // Visibilité
                   _SectionCard(
                     icon: Icons.visibility_rounded,
                     title: 'Visibilité',
                     color: AppColors.amber,
                     child: const Row(
                       children: [
-                        Icon(Icons.public_rounded,
-                            size: 16, color: AppColors.green),
+                        Icon(Icons.public_rounded, size: 16, color: AppColors.green),
                         SizedBox(width: 8),
-                        Text(
-                          'Visible par tous les mentors & investisseurs',
-                          style: TextStyle(
-                              fontSize: 13, color: AppColors.navyDeep),
-                        ),
+                        Text('Visible par tous les mentors & investisseurs',
+                            style: TextStyle(fontSize: 13, color: AppColors.navyDeep)),
                       ],
                     ),
                   ),
@@ -481,9 +407,10 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                         _DocRow(
                           icon: Icons.picture_as_pdf_rounded,
                           color: AppColors.red,
-                          label: 'Business Plan (PDF)',
+                          label: 'Business Plan',
+                          hint: 'PDF · max 20 Mo',
                           url: _businessPlanUrl,
-                          progress: _progress['businessPlan'],
+                          uploading: _uploading.contains('businessPlan'),
                           onUpload: () => _uploadDocument(
                             type: 'businessPlan',
                             dbField: 'businessPlanUrl',
@@ -491,12 +418,9 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                             allowedExtensions: ['pdf'],
                             maxMb: 20,
                           ),
-                          onOpen: _businessPlanUrl != null
-                              ? () => _openUrl(_businessPlanUrl!)
-                              : null,
+                          onOpen: _businessPlanUrl != null ? () => _openUrl(_businessPlanUrl!) : null,
                           onDelete: _businessPlanUrl != null
-                              ? () => _deleteDocument(
-                                  'businessPlan', 'businessPlanUrl')
+                              ? () => _deleteDocument('businessPlan', 'businessPlanUrl')
                               : null,
                         ),
                         const SizedBox(height: 12),
@@ -506,17 +430,16 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                           icon: Icons.videocam_rounded,
                           color: AppColors.purple,
                           label: 'Vidéo de présentation',
+                          hint: 'MP4 / MOV · max 100 Mo',
                           url: _videoUrl,
-                          progress: _progress['video'],
+                          uploading: _uploading.contains('video'),
                           onUpload: () => _uploadDocument(
                             type: 'video',
                             dbField: 'videoUrl',
                             fileType: FileType.video,
                             maxMb: 100,
                           ),
-                          onOpen: _videoUrl != null
-                              ? () => _openUrl(_videoUrl!)
-                              : null,
+                          onOpen: _videoUrl != null ? () => _openUrl(_videoUrl!) : null,
                           onDelete: _videoUrl != null
                               ? () => _deleteDocument('video', 'videoUrl')
                               : null,
@@ -527,9 +450,10 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                         _DocRow(
                           icon: Icons.image_rounded,
                           color: AppColors.blue,
-                          label: 'Deck / Présentation (PDF ou image)',
+                          label: 'Deck / Présentation',
+                          hint: 'PDF ou image · max 20 Mo',
                           url: _deckUrl,
-                          progress: _progress['deck'],
+                          uploading: _uploading.contains('deck'),
                           onUpload: () => _uploadDocument(
                             type: 'deck',
                             dbField: 'deckUrl',
@@ -537,9 +461,7 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                             allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
                             maxMb: 20,
                           ),
-                          onOpen: _deckUrl != null
-                              ? () => _openUrl(_deckUrl!)
-                              : null,
+                          onOpen: _deckUrl != null ? () => _openUrl(_deckUrl!) : null,
                           onDelete: _deckUrl != null
                               ? () => _deleteDocument('deck', 'deckUrl')
                               : null,
@@ -549,34 +471,28 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
                   ),
                   const SizedBox(height: 30),
 
-                  // ── Bouton modifier ──
+                  // Bouton modifier
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => _showEditSheet(context),
+                      onPressed: _showEditSheet,
                       icon: const Icon(Icons.edit_rounded, size: 18),
-                      label: const Text(
-                        'Modifier ce pitch',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                      label: const Text('Modifier ce pitch',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                     ),
                   ),
                   const SizedBox(height: 10),
 
-                  // ── Bouton supprimer ──
+                  // Bouton supprimer
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => _confirmDelete(context),
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          color: AppColors.red),
-                      label: const Text(
-                        'Supprimer ce pitch',
-                        style: TextStyle(color: AppColors.red),
-                      ),
+                      onPressed: _confirmDelete,
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red),
+                      label: const Text('Supprimer ce pitch',
+                          style: TextStyle(color: AppColors.red)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.red),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -617,14 +533,7 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
         ],
       ),
     );
@@ -667,14 +576,9 @@ class _SectionCard extends StatelessWidget {
                 child: Icon(icon, size: 15, color: color),
               ),
               const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navyDeep,
-                ),
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
             ],
           ),
           const SizedBox(height: 12),
@@ -685,13 +589,14 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-/// Ligne de document avec boutons upload / ouvrir / supprimer.
+/// Ligne de document avec boutons Upload / Ouvrir / Retirer.
 class _DocRow extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String label;
-  final String? url;           // null = pas encore uploadé
-  final double? progress;      // null = inactif ; 0.0..1.0 = upload en cours
+  final String hint;
+  final String? url;        // null = pas encore uploadé
+  final bool uploading;     // true pendant l'upload
   final VoidCallback? onUpload;
   final VoidCallback? onOpen;
   final VoidCallback? onDelete;
@@ -700,40 +605,36 @@ class _DocRow extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.label,
+    required this.hint,
     this.url,
-    this.progress,
+    this.uploading = false,
     this.onUpload,
     this.onOpen,
     this.onDelete,
   });
 
   bool get _hasFile => url != null && url!.isNotEmpty;
-  bool get _isUploading => progress != null;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Icône du type de document
+        // Icône
         Container(
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: _hasFile
                 ? color.withValues(alpha: 0.12)
                 : AppColors.border.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: _hasFile ? color : AppColors.muted,
-          ),
+          child: Icon(icon, size: 20, color: _hasFile ? color : AppColors.muted),
         ),
         const SizedBox(width: 12),
 
-        // Label + barre de progression
+        // Label + hint / spinner
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,66 +648,55 @@ class _DocRow extends StatelessWidget {
                   color: _hasFile ? AppColors.navyDeep : AppColors.muted,
                 ),
               ),
-              if (_isUploading) ...[
-                const SizedBox(height: 5),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 4,
-                    backgroundColor: AppColors.border,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 2),
+              const SizedBox(height: 2),
+              if (uploading)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          minHeight: 3,
+                          backgroundColor: AppColors.border,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('Upload en cours…',
+                        style: TextStyle(fontSize: 10.5, color: color)),
+                  ],
+                )
+              else
                 Text(
-                  '${((progress ?? 0) * 100).round()} %',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+                  hint,
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
-              ],
             ],
           ),
         ),
         const SizedBox(width: 8),
 
-        // Bouton d'action
-        if (_isUploading)
+        // Boutons d'action
+        if (uploading)
           SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: color,
-            ),
+            width: 18, height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: color),
           )
         else if (_hasFile)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ouvrir
-              _ActionChip(
-                label: 'Ouvrir',
-                color: color,
-                onTap: onOpen,
-              ),
+              _ActionChip(label: 'Ouvrir', color: color, onTap: onOpen),
               const SizedBox(width: 6),
-              // Supprimer
               GestureDetector(
                 onTap: onDelete,
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 17,
-                  color: AppColors.muted,
-                ),
+                child: const Icon(Icons.close_rounded, size: 18, color: AppColors.muted),
               ),
             ],
           )
         else
-          // Uploader
           _ActionChip(
             label: 'Uploader',
             color: AppColors.navy,
@@ -843,9 +733,9 @@ class _ActionChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: outlined ? Colors.transparent : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: outlined
-              ? Border.all(color: AppColors.border)
-              : Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: outlined ? AppColors.border : color.withValues(alpha: 0.25),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -854,14 +744,9 @@ class _ActionChip extends StatelessWidget {
               Icon(icon, size: 12, color: color),
               const SizedBox(width: 4),
             ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: color)),
           ],
         ),
       ),
@@ -891,14 +776,10 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(
-        text: widget.pitch['title']?.toString() ?? '');
-    _description = TextEditingController(
-        text: widget.pitch['description']?.toString() ?? '');
-    _amount = TextEditingController(
-        text: widget.pitch['amount']?.toString() ?? '');
-    _sector = widget.pitch['sector']?.toString();
-
+    _title       = TextEditingController(text: widget.pitch['title']?.toString() ?? '');
+    _description = TextEditingController(text: widget.pitch['description']?.toString() ?? '');
+    _amount      = TextEditingController(text: widget.pitch['amount']?.toString() ?? '');
+    _sector      = widget.pitch['sector']?.toString();
     for (final c in [_title, _description, _amount]) {
       c.addListener(() => setState(() {}));
     }
@@ -921,32 +802,27 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
     if (!_valid) return;
     setState(() => _loading = true);
     try {
-      final pitchId = widget.pitch['id']?.toString() ?? '';
       await DatabaseService.updatePitch(
-        pitchId: pitchId,
-        title: _title.text.trim(),
-        sector: _sector!,
+        pitchId: widget.pitch['id']?.toString() ?? '',
+        title:       _title.text.trim(),
+        sector:      _sector!,
         description: _description.text.trim(),
-        amount: _amount.text.trim(),
+        amount:      _amount.text.trim(),
       );
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pitch mis à jour ✓'),
-          backgroundColor: AppColors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Pitch mis à jour ✓'),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur : $e'),
-          backgroundColor: AppColors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -955,8 +831,7 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,
@@ -964,12 +839,10 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
         expand: false,
         builder: (_, ctrl) => Column(
           children: [
-            // Poignée
             const SizedBox(height: 12),
             Center(
               child: Container(
-                width: 40,
-                height: 4,
+                width: 40, height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.border,
                   borderRadius: BorderRadius.circular(999),
@@ -982,24 +855,17 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
               child: Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 34, height: 34,
                     decoration: BoxDecoration(
                       color: AppColors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.edit_rounded,
-                        color: AppColors.amber, size: 18),
+                    child: const Icon(Icons.edit_rounded, color: AppColors.amber, size: 18),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Modifier le pitch',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
+                  const Text('Modifier le pitch',
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
                 ],
               ),
             ),
@@ -1009,128 +875,86 @@ class _PitchEditSheetState extends State<_PitchEditSheet> {
                 controller: ctrl,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
-                  // Titre
                   const Text('Titre *',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _title,
                     decoration: InputDecoration(
                       hintText: 'Titre du projet',
-                      prefixIcon: const Icon(Icons.title_rounded,
-                          color: AppColors.subtle),
+                      prefixIcon: const Icon(Icons.title_rounded, color: AppColors.subtle),
                       suffixIcon: _title.text.isNotEmpty
                           ? Icon(
                               _title.text.trim().length >= 3
                                   ? Icons.check_circle_rounded
                                   : Icons.cancel_rounded,
-                              color: _title.text.trim().length >= 3
-                                  ? AppColors.green
-                                  : AppColors.red,
+                              color: _title.text.trim().length >= 3 ? AppColors.green : AppColors.red,
                               size: 20,
                             )
                           : null,
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Secteur
                   const Text('Secteur *',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: _sector,
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.subtle),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.subtle),
                     decoration: const InputDecoration(
                       hintText: 'Choisis un secteur',
-                      prefixIcon: Icon(Icons.category_rounded,
-                          color: AppColors.subtle),
+                      prefixIcon: Icon(Icons.category_rounded, color: AppColors.subtle),
                     ),
                     items: allSectors
                         .map((s) => DropdownMenuItem(
                               value: s,
                               child: Text(s,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.navyDeep)),
+                                  style: const TextStyle(fontSize: 14, color: AppColors.navyDeep)),
                             ))
                         .toList(),
                     onChanged: (v) => setState(() => _sector = v),
                   ),
                   const SizedBox(height: 16),
-
-                  // Description
                   const Text('Description *',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _description,
                     maxLines: 8,
                     maxLength: 500,
-                    decoration: const InputDecoration(
-                      hintText: 'Décris ton projet en détail…',
-                    ),
+                    decoration: const InputDecoration(hintText: 'Décris ton projet en détail…'),
                   ),
                   const SizedBox(height: 16),
-
-                  // Montant
                   const Text('Besoin de financement (FCFA)',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _amount,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       hintText: '5 000 000',
-                      prefixIcon: Icon(Icons.payments_rounded,
-                          color: AppColors.subtle),
+                      prefixIcon: Icon(Icons.payments_rounded, color: AppColors.subtle),
                       suffixText: 'FCFA',
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Bouton sauvegarder
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
                       onPressed: (_loading || !_valid) ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        disabledBackgroundColor:
-                            AppColors.navy.withValues(alpha: 0.35),
+                        disabledBackgroundColor: AppColors.navy.withValues(alpha: 0.35),
                         disabledForegroundColor: Colors.white,
                       ),
                       child: _loading
                           ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
+                              width: 22, height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                             )
-                          : const Text(
-                              'ENREGISTRER LES MODIFICATIONS',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1,
-                                fontSize: 13,
-                              ),
-                            ),
+                          : const Text('ENREGISTRER LES MODIFICATIONS',
+                              style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1, fontSize: 13)),
                     ),
                   ),
                   const SizedBox(height: 32),
