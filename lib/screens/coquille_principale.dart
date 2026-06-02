@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
+import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../services/service_navigation.dart';
@@ -96,6 +97,7 @@ class RootShell extends StatefulWidget {
 class _RootShellState extends State<RootShell> {
   int _index = 0;
   StreamSubscription? _pendingRequestsSub;
+  StreamSubscription? _mentorsActiveSub;
 
   @override
   void initState() {
@@ -105,6 +107,7 @@ class _RootShellState extends State<RootShell> {
       AgendaController.load(uid);
       NotificationService.init(uid);
       _listenPendingRequests(uid);
+      _listenMentorsActive(uid);
     }
     appTabIndex.addListener(_onTabIndexChanged);
   }
@@ -131,6 +134,51 @@ class _RootShellState extends State<RootShell> {
     }, onError: (_) => pendingRequestsCount.value = 0);
   }
 
+  /// Écoute en temps réel et calcule le compteur `mentorsActive`
+  /// directement depuis les demandes acceptées — jamais de désynchronisation.
+  ///
+  /// - Mentor       : demandes reçues, type='mentor',      status='accepted'
+  /// - Investisseur : demandes reçues, type='investment',  status='accepted'
+  /// - Entrepreneur : demandes envoyées, type='mentor',    status='accepted'
+  void _listenMentorsActive(String uid) {
+    _mentorsActiveSub?.cancel();
+    _mentorsActiveSub = FirebaseDatabase.instance
+        .ref('mentorRequests')
+        .onValue
+        .listen((event) {
+      final data = event.snapshot.value as Map?;
+      final role = UserProfileController.profile.value.role;
+
+      if (data == null) {
+        _applyMentorsActive(0);
+        return;
+      }
+
+      int count = 0;
+      for (final v in data.values) {
+        if (v is! Map) continue;
+        final status = v['status']?.toString();
+        final type = v['type']?.toString() ?? 'mentor';
+        final from = v['fromUserId']?.toString() ?? '';
+        final to = v['toUserId']?.toString() ?? '';
+        if (status != 'accepted') continue;
+
+        if (role == 'Mentor' && type == 'mentor' && to == uid) count++;
+        if (role == 'Investisseur' && type == 'investment' && to == uid) count++;
+        if (role == 'Entrepreneur' && type == 'mentor' && from == uid) count++;
+      }
+      _applyMentorsActive(count);
+    }, onError: (_) {});
+  }
+
+  void _applyMentorsActive(int count) {
+    if (!mounted) return;
+    final current = UserProfileController.profile.value;
+    if (current.mentorsActive != count) {
+      UserProfileController.update(current.copyWith(mentorsActive: count));
+    }
+  }
+
   void _onTabIndexChanged() {
     if (mounted) setState(() => _index = appTabIndex.value);
   }
@@ -139,6 +187,7 @@ class _RootShellState extends State<RootShell> {
   void dispose() {
     appTabIndex.removeListener(_onTabIndexChanged);
     _pendingRequestsSub?.cancel();
+    _mentorsActiveSub?.cancel();
     pendingRequestsCount.value = 0;
     super.dispose();
   }
