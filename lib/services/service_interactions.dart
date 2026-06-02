@@ -61,6 +61,19 @@ class InteractionsService {
     });
   }
 
+  /// Retourne en temps réel les demandes envoyées par [userId].
+  static Stream<List<MentorRequest>> getSentRequests(String userId) {
+    return _db.child('mentorRequests').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return [];
+      return data.values
+          .where((v) => v is Map && v['fromUserId'] == userId)
+          .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
+  }
+
   static Future<void> acceptRequest(String requestId) async {
     await _db.child('mentorRequests/$requestId').update({
       'status': RequestStatus.accepted.name,

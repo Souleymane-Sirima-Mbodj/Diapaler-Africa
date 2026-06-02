@@ -60,9 +60,10 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   Future<void> _checkRequestStatus() async {
     final mentor = widget.mentor;
 
-    // Profils statiques (uid vide) : accès libre (données démo)
+    // Profils statiques (uid vide) : pas de vérification Firebase
+    // Le bloc boutons est masqué directement dans le Builder pour ces profils.
     if (mentor.uid.isEmpty) {
-      setState(() => _requestAccepted = true);
+      setState(() => _requestAccepted = false);
       return;
     }
 
@@ -426,6 +427,10 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   }
                   // Un investisseur ne voit ce bloc que sur le profil d'un Entrepreneur
                   if (myRole == 'Investisseur' && mentor.isInvestor) {
+                    return const SizedBox.shrink();
+                  }
+                  // Profil statique (démo) → pas d'actions Firebase disponibles
+                  if (mentor.uid.isEmpty) {
                     return const SizedBox.shrink();
                   }
 

@@ -15,6 +15,7 @@ import 'page_nouveau_projet.dart';
 import 'page_notifications.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
+import 'page_mes_mentors.dart';
 import 'page_dashboard_investisseur.dart';
 import 'page_dashboard_mentor.dart';
 
@@ -809,6 +810,9 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.blue,
             label: 'Mentors',
             value: p.mentorsActive,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MesMentorsPage()),
+            ),
           ),
           _StatPill(
             icon: Icons.calendar_month_rounded,
@@ -859,6 +863,7 @@ class _StatPill extends StatelessWidget {
   final num value;
   final int decimals;
   final String suffix;
+  final VoidCallback? onTap;
 
   const _StatPill({
     required this.icon,
@@ -867,11 +872,14 @@ class _StatPill extends StatelessWidget {
     required this.value,
     this.decimals = 0,
     this.suffix = '',
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -918,6 +926,7 @@ class _StatPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
     );
   }
 }

@@ -89,6 +89,7 @@ class _MessagesPageState extends State<MessagesPage>
 
         final data = snapshot.data!.snapshot.value as Map?;
         final contacts = <_Contact>[];
+        final myRole = UserProfileController.profile.value.role;
 
         if (data != null) {
           for (final entry in data.entries) {
@@ -107,6 +108,7 @@ class _MessagesPageState extends State<MessagesPage>
                 name: m['toName']?.toString() ?? 'Contact',
                 type: type,
                 isInitiator: true,
+                myRole: myRole,
               ));
             } else if (toId == currentUid) {
               contacts.add(_Contact(
@@ -114,6 +116,7 @@ class _MessagesPageState extends State<MessagesPage>
                 name: m['fromName']?.toString() ?? 'Contact',
                 type: type,
                 isInitiator: false,
+                myRole: myRole,
               ));
             }
           }
@@ -469,27 +472,32 @@ class _Contact {
   final String name;
   final String type; // 'mentor' | 'investment'
   final bool isInitiator; // true si c'est moi qui ai initié la demande
+  final String myRole;   // rôle de l'utilisateur courant
 
   const _Contact({
     required this.uid,
     required this.name,
     required this.type,
     required this.isInitiator,
+    required this.myRole,
   });
 
   String get roleLabel {
     if (type == 'mentor') {
       return isInitiator ? 'Mon mentor' : 'Mon mentoré';
     } else {
-      return isInitiator ? 'Mon investisseur' : 'Mon entrepreneur';
+      // Pour l'investissement, le label dépend du rôle de l'utilisateur courant
+      // — peu importe qui a initié la demande.
+      if (myRole == 'Entrepreneur') return 'Mon investisseur';
+      return 'Mon entrepreneur'; // vue de l'investisseur
     }
   }
 
   Color get roleColor {
-    if (type == 'investment' && !isInitiator) return AppColors.amber; // Entrepreneur
-    if (type == 'mentor' && !isInitiator) return AppColors.roleMentor; // Mentoré
-    if (type == 'mentor') return AppColors.roleMentor; // Mentor
-    return AppColors.blue; // Investisseur
+    if (type == 'mentor') return AppColors.roleMentor;
+    // investment
+    if (myRole == 'Entrepreneur') return AppColors.blue;   // l'investisseur
+    return AppColors.amber;                                 // l'entrepreneur
   }
 }
 

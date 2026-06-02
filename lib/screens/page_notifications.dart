@@ -29,10 +29,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         appTabIndex.value = 3; // onglet Agenda
         Navigator.of(ctx).pop();
       case 'mentor_request':
-      case 'mentor_request_accepted':
-      case 'mentor_request_rejected':
+        // Reçu par le mentor/investisseur → onglet "Reçues" (défaut)
         Navigator.of(ctx).push(
           MaterialPageRoute(builder: (_) => const RequestsPage()),
+        );
+      case 'mentor_request_accepted':
+      case 'mentor_request_rejected':
+        // Reçu par l'entrepreneur (sa demande a été traitée) → onglet "Envoyées" (1)
+        Navigator.of(ctx).push(
+          MaterialPageRoute(
+              builder: (_) => const RequestsPage(initialTab: 1)),
         );
       // investment_offer et session_request sont gérés inline — pas de navigation ici
       default:
