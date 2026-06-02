@@ -14,8 +14,8 @@ import 'page_connexion.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
 import 'page_agenda.dart';
+import 'page_mes_mentors.dart';
 import 'page_pitches_publics.dart';
-import 'page_planning.dart';
 import 'page_requests.dart';
 
 /// Pourcentage de complétion du profil — basé sur les champs remplis.
@@ -272,14 +272,18 @@ class _StatsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: pendingRequestsCount,
-      builder: (context, pending, _) => _buildContent(context, pending),
+    // Double écoute : profile ET pendingRequestsCount
+    // pour que les stats se mettent à jour dès que l'un ou l'autre change.
+    return ValueListenableBuilder<UserProfile>(
+      valueListenable: UserProfileController.profile,
+      builder: (context, p, _) => ValueListenableBuilder<int>(
+        valueListenable: pendingRequestsCount,
+        builder: (context, pending, _) => _buildContent(context, p, pending),
+      ),
     );
   }
 
-  Widget _buildContent(BuildContext context, int pending) {
-    final p = UserProfileController.profile.value;
+  Widget _buildContent(BuildContext context, UserProfile p, int pending) {
     final pitchsTotal = p.projects.length;
     final completed = p.projects.where((x) => x.isCompleted).length;
 
@@ -395,7 +399,7 @@ class _StatsStrip extends StatelessWidget {
             label: 'Mentors',
             badge: pending,
             onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
+                  MaterialPageRoute(builder: (_) => const MesMentorsPage()),
                 )),
         _MiniStat(
             icon: Icons.bookmark_rounded,

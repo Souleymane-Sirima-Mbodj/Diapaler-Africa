@@ -8,15 +8,36 @@ import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 
 class RequestsPage extends StatefulWidget {
-  const RequestsPage({super.key});
+  /// 0 = onglet Reçues (défaut), 1 = onglet Envoyées
+  final int initialTab;
+  const RequestsPage({super.key, this.initialTab = 0});
 
   @override
   State<RequestsPage> createState() => _RequestsPageState();
 }
 
-class _RequestsPageState extends State<RequestsPage> {
+class _RequestsPageState extends State<RequestsPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   /// Construit les widgets d'une section (pending en premier, puis traitées).
-  List<Widget> _buildSection(List<MentorRequest> items) {
+  List<Widget> _buildSection(List<MentorRequest> items, {required bool isSent}) {
     final pending = items.where((r) => r.status == RequestStatus.pending).toList();
     final processed = items.where((r) => r.status != RequestStatus.pending).toList();
     return [
@@ -32,7 +53,7 @@ class _RequestsPageState extends State<RequestsPage> {
             ),
           ),
         ),
-        ...pending.map((r) => _RequestCard(request: r)),
+        ...pending.map((r) => _RequestCard(request: r, isSent: isSent)),
       ],
       if (processed.isNotEmpty) ...[
         const SizedBox(height: 8),
@@ -47,9 +68,101 @@ class _RequestsPageState extends State<RequestsPage> {
             ),
           ),
         ),
-        ...processed.map((r) => _RequestCard(request: r)),
+        ...processed.map((r) => _RequestCard(request: r, isSent: isSent)),
       ],
     ];
+  }
+
+  Widget _buildRequestList(
+    Stream<List<MentorRequest>> stream, {
+    required bool isSent,
+  }) {
+    return StreamBuilder<List<MentorRequest>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Erreur de chargement.\n${snapshot.error}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted),
+            ),
+          );
+        }
+
+        final requests = snapshot.data ?? [];
+        final mentorRequests =
+            requests.where((r) => r.type == 'mentor').toList();
+        final investmentRequests =
+            requests.where((r) => r.type == 'investment').toList();
+
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSent
+                      ? Icons.send_outlined
+                      : Icons.mail_outline_rounded,
+                  size: 60,
+                  color: AppColors.muted,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  isSent
+                      ? 'Aucune demande envoyée'
+                      : 'Aucune demande reçue',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+          children: [
+            if (mentorRequests.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
+                child: Text(
+                  'Demandes de mentorat',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ),
+              ..._buildSection(mentorRequests, isSent: isSent),
+            ],
+            if (investmentRequests.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
+                child: Text(
+                  'Propositions d\'investissement',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ),
+              ..._buildSection(investmentRequests, isSent: isSent),
+            ],
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -62,108 +175,59 @@ class _RequestsPageState extends State<RequestsPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
-          'Demandes reçues',
+          'Demandes',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: AppColors.navyDeep,
           ),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
+          ),
+          indicatorColor: AppColors.navyDeep,
+          labelColor: AppColors.navyDeep,
+          unselectedLabelColor: AppColors.muted,
+          tabs: const [
+            Tab(text: 'Reçues'),
+            Tab(text: 'Envoyées'),
+          ],
+        ),
       ),
-      body: StreamBuilder<List<MentorRequest>>(
-        stream: InteractionsService.getReceivedRequests(currentUid),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Erreur de chargement.\n${snapshot.error}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted),
-              ),
-            );
-          }
-
-          final requests = snapshot.data ?? [];
-
-          // Sépare par type
-          final mentorRequests =
-              requests.where((r) => r.type == 'mentor').toList();
-          final investmentRequests =
-              requests.where((r) => r.type == 'investment').toList();
-
-          if (requests.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.mail_outline_rounded,
-                    size: 60,
-                    color: AppColors.muted,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Aucune demande',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-            children: [
-              // ── Section mentorat ──
-              if (mentorRequests.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
-                  child: Text(
-                    'Demandes de mentorat',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                ),
-                ..._buildSection(mentorRequests),
-              ],
-              // ── Section investissement ──
-              if (investmentRequests.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
-                  child: Text(
-                    'Propositions d\'investissement',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                ),
-                ..._buildSection(investmentRequests),
-              ],
-            ],
-          );
-        },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildRequestList(
+            InteractionsService.getReceivedRequests(currentUid),
+            isSent: false,
+          ),
+          _buildRequestList(
+            InteractionsService.getSentRequests(currentUid),
+            isSent: true,
+          ),
+        ],
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Carte de demande — s'adapte selon reçue ou envoyée
+// ─────────────────────────────────────────────────────────────────
+
 class _RequestCard extends StatelessWidget {
   final MentorRequest request;
+  /// true si c'est une demande envoyée par l'utilisateur courant
+  final bool isSent;
 
-  const _RequestCard({required this.request});
+  const _RequestCard({required this.request, this.isSent = false});
 
   Color _getStatusColor() {
     switch (request.status) {
@@ -199,9 +263,16 @@ class _RequestCard extends StatelessWidget {
       ? AppColors.green
       : AppColors.amber;
 
-  String get _typeSubtitle => request.type == 'investment'
-      ? 'te propose un investissement'
-      : 'te demande du mentorat';
+  String get _typeSubtitle {
+    if (isSent) {
+      return request.type == 'investment'
+          ? 'Investissement proposé à ${request.toName}'
+          : 'Demande de mentorat envoyée à ${request.toName}';
+    }
+    return request.type == 'investment'
+        ? '${request.fromName} te propose un investissement'
+        : '${request.fromName} te demande du mentorat';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +300,7 @@ class _RequestCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      request.fromName,
+                      isSent ? request.toName : request.fromName,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -282,7 +353,8 @@ class _RequestCard extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          if (isPending) ...[
+          // Boutons Accepter/Refuser uniquement pour les demandes REÇUES en attente
+          if (!isSent && isPending) ...[
             const SizedBox(height: 12),
             Row(
               children: [
@@ -335,8 +407,8 @@ class _RequestCard extends StatelessWidget {
 
           // Entrepreneur : +1 mentor actif
           try {
-            final entrSnap = await DatabaseService.readUserProfile(
-                request.fromUserId);
+            final entrSnap =
+                await DatabaseService.readUserProfile(request.fromUserId);
             if (entrSnap != null) {
               final updatedEntr = entrSnap.copyWith(
                 mentorsActive: entrSnap.mentorsActive + 1,
@@ -347,7 +419,7 @@ class _RequestCard extends StatelessWidget {
           } catch (_) {}
         }
       } else if (request.type == 'investment') {
-        // Investisseur : +1 opportunité active (mentorsActive = "Opportunités")
+        // Investisseur : +1 opportunité active
         try {
           final investorSnap =
               await DatabaseService.readUserProfile(request.fromUserId);
@@ -383,12 +455,15 @@ class _RequestCard extends StatelessWidget {
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Demande acceptée — notification envoyée.')),
+        const SnackBar(
+            content: Text('Demande acceptée — notification envoyée.')),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : impossible d\'accepter la demande. $e')),
+        SnackBar(
+            content:
+                Text('Erreur : impossible d\'accepter la demande. $e')),
       );
     }
   }
@@ -407,12 +482,15 @@ class _RequestCard extends StatelessWidget {
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Demande refusée — notification envoyée.')),
+        const SnackBar(
+            content: Text('Demande refusée — notification envoyée.')),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : impossible de refuser la demande. $e')),
+        SnackBar(
+            content:
+                Text('Erreur : impossible de refuser la demande. $e')),
       );
     }
   }
