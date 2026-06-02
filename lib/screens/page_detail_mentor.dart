@@ -356,62 +356,24 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                 ),
               ],
               // Disponibilités : masquées tant que la demande n'est pas acceptée
-              // (uniquement pour Entrepreneur et Investisseur).
+              // Disponibilités : visibles uniquement après acceptation.
+              // Profils statiques et non-acceptés → section masquée.
               Builder(builder: (context) {
+                // Profil statique → pas de section disponibilités
+                if (mentor.uid.isEmpty) return const SizedBox.shrink();
+
                 final myRole = UserProfileController.profile.value.role;
                 final needsAcceptance =
                     myRole == 'Entrepreneur' || myRole == 'Investisseur';
+                // Masqué si la demande n'est pas encore acceptée
                 final canSee = !needsAcceptance || _requestAccepted == true;
-
-                if (!canSee) {
-                  // Bloqué : afficher un encart discret
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.fieldBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lock_outline_rounded,
-                              size: 18, color: AppColors.subtle),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              myRole == 'Investisseur'
-                                  ? 'Les disponibilités seront visibles après acceptation de ta proposition.'
-                                  : 'Les disponibilités seront visibles après acceptation de ta demande.',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.muted,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                if (!canSee) return const SizedBox.shrink();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 22),
                     const _SectionTitle('Disponibilités'),
-                    const SizedBox(height: 4),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                        'Appuie sur "Réserver une session" pour choisir un créneau et envoyer ta demande.',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.muted, height: 1.4),
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     _AvailabilityPreview(mentor: mentor),
                     const SizedBox(height: 28),
@@ -429,9 +391,41 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   if (myRole == 'Investisseur' && mentor.isInvestor) {
                     return const SizedBox.shrink();
                   }
-                  // Profil statique (démo) → pas d'actions Firebase disponibles
+
+                  // Profil statique (démo) → montrer le bouton de demande
+                  // (uid vide = pas d'état d'acceptation à vérifier)
                   if (mentor.uid.isEmpty) {
-                    return const SizedBox.shrink();
+                    final isInvestorViewing = myRole == 'Investisseur';
+                    final isInvestorProfile = mentor.isInvestor;
+                    final IconData actionIcon =
+                        isInvestorViewing || isInvestorProfile
+                            ? Icons.monetization_on_rounded
+                            : Icons.handshake_rounded;
+                    final String actionLabel = isInvestorViewing
+                        ? 'Proposer un investissement'
+                        : isInvestorProfile
+                            ? 'Proposer un investissement'
+                            : 'Envoyer une demande de mentorat';
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SendRequestPage(mentor: mentor),
+                            ),
+                          ),
+                          icon: Icon(actionIcon, size: 18),
+                          label: Text(actionLabel),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: AppColors.green,
+                            side: const BorderSide(color: AppColors.green),
+                          ),
+                        ),
+                      ),
+                    );
                   }
 
                   // Chargement en cours → spinner
