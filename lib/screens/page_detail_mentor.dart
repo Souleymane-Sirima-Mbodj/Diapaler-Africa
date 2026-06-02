@@ -5,6 +5,7 @@ import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
+import '../services/service_favoris.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
@@ -47,14 +48,29 @@ class MentorDetailPage extends StatefulWidget {
 }
 
 class _MentorDetailPageState extends State<MentorDetailPage> {
-  bool _isFavorite = false;
+  late bool _isFavorite;
   // null = chargement en cours, true = acceptée, false = non acceptée
   bool? _requestAccepted;
 
   @override
   void initState() {
     super.initState();
+    _isFavorite = FavoriteService.isFavorite(widget.mentor);
+    FavoriteService.favorites.addListener(_onFavoritesChanged);
     _checkRequestStatus();
+  }
+
+  void _onFavoritesChanged() {
+    final fav = FavoriteService.isFavorite(widget.mentor);
+    if (fav != _isFavorite) {
+      setState(() => _isFavorite = fav);
+    }
+  }
+
+  @override
+  void dispose() {
+    FavoriteService.favorites.removeListener(_onFavoritesChanged);
+    super.dispose();
   }
 
   Future<void> _checkRequestStatus() async {
@@ -102,14 +118,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   }
 
   void _toggleFavorite() {
-    final profile = UserProfileController.profile.value;
-    final delta = _isFavorite ? -1 : 1;
-    UserProfileController.update(
-      profile.copyWith(
-        favoritesCount: (profile.favoritesCount + delta).clamp(0, 999),
-      ),
-    );
-    setState(() => _isFavorite = !_isFavorite);
+    final myUid = AuthService.currentUid ?? '';
+    FavoriteService.toggle(myUid, widget.mentor);
+    // L'état _isFavorite est mis à jour par _onFavoritesChanged via le listener.
   }
 
   Future<void> _showBookingSheet(BuildContext ctx) async {
