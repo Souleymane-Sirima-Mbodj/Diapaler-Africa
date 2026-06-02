@@ -131,9 +131,6 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
   void _bookSessionLegacy() {
     final profile = UserProfileController.profile.value;
-    UserProfileController.update(
-      profile.copyWith(sessionsCount: profile.sessionsCount + 1),
-    );
     final sessionDate = DateTime.now().add(const Duration(days: 7));
     final session = BookedSession(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
