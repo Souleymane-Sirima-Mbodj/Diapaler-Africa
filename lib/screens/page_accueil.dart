@@ -17,6 +17,7 @@ import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
 import 'page_mes_favoris.dart';
 import 'page_mes_mentors.dart';
+import 'page_mes_pitchs.dart';
 import 'page_dashboard_investisseur.dart';
 import 'page_dashboard_mentor.dart';
 
@@ -835,6 +836,9 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.purple,
             label: 'Pitchs',
             value: p.projects.length,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+            ),
           ),
           _StatPill(
             icon: Icons.bookmark_rounded,

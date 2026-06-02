@@ -56,6 +56,29 @@ class DatabaseService {
     });
   }
 
+  /// Stream temps réel des pitchs publiés uniquement par [userId].
+  static Stream<List<Map<String, dynamic>>> getMyPitches(String userId) {
+    return _db.ref('pitches').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return [];
+      final list = data.values
+          .where((v) => v is Map && v['userId'] == userId)
+          .map((v) => Map<String, dynamic>.from(v as Map))
+          .toList();
+      list.sort((a, b) {
+        final aT = (a['createdAt'] as num?) ?? 0;
+        final bT = (b['createdAt'] as num?) ?? 0;
+        return bT.compareTo(aT);
+      });
+      return list;
+    });
+  }
+
+  /// Supprime un pitch de [pitches/$pitchId].
+  static Future<void> deletePitch(String pitchId) async {
+    await _db.ref('pitches/$pitchId').remove();
+  }
+
   // ────────────────────────────── Premium ──────────────────────────────────
 
   /// Active le statut Premium de l'utilisateur dans Firebase.
