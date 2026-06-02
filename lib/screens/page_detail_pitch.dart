@@ -1,24 +1,55 @@
+import 'dart:io' show File;
+
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../data/donnees_mentors.dart';
 import '../services/service_base_de_donnees.dart';
 import '../theme/theme_app.dart';
 
 /// Page de détail d'un pitch publié.
 /// Reçoit la map brute Firebase du pitch.
-class PitchDetailPage extends StatelessWidget {
+class PitchDetailPage extends StatefulWidget {
   final Map<String, dynamic> pitch;
 
   const PitchDetailPage({super.key, required this.pitch});
 
-  String get _title => pitch['title']?.toString() ?? 'Sans titre';
-  String get _sector => pitch['sector']?.toString() ?? '';
-  String get _description => pitch['description']?.toString() ?? '';
-  String get _amount => pitch['amount']?.toString() ?? '';
-  String get _pitchId => pitch['id']?.toString() ?? '';
-  String get _userName => pitch['userName']?.toString() ?? '';
+  @override
+  State<PitchDetailPage> createState() => _PitchDetailPageState();
+}
+
+class _PitchDetailPageState extends State<PitchDetailPage> {
+  late Map<String, dynamic> _pitch;
+
+  // ── URLs des documents (null = pas encore uploadé) ──────────────
+  String? _businessPlanUrl;
+  String? _videoUrl;
+  String? _deckUrl;
+
+  // ── Progression d'upload : clé = type ('businessPlan' | 'video' | 'deck') ──
+  final Map<String, double> _progress = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _pitch = Map<String, dynamic>.from(widget.pitch);
+    _businessPlanUrl = _pitch['businessPlanUrl']?.toString();
+    _videoUrl = _pitch['videoUrl']?.toString();
+    _deckUrl = _pitch['deckUrl']?.toString();
+  }
+
+  // ── Getters ─────────────────────────────────────────────────────
+  String get _title => _pitch['title']?.toString() ?? 'Sans titre';
+  String get _sector => _pitch['sector']?.toString() ?? '';
+  String get _description => _pitch['description']?.toString() ?? '';
+  String get _amount => _pitch['amount']?.toString() ?? '';
+  String get _pitchId => _pitch['id']?.toString() ?? '';
+  String get _userName => _pitch['userName']?.toString() ?? '';
 
   DateTime? get _createdAt {
-    final v = pitch['createdAt'];
+    final v = _pitch['createdAt'];
     if (v == null) return null;
     if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
     if (v is String) return DateTime.tryParse(v);
@@ -35,6 +66,202 @@ class PitchDetailPage extends StatelessWidget {
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
+  String? _urlFromType(String type) {
+    switch (type) {
+      case 'businessPlan': return _businessPlanUrl;
+      case 'video': return _videoUrl;
+      case 'deck': return _deckUrl;
+    }
+    return null;
+  }
+
+  void _setUrl(String type, String? url) {
+    switch (type) {
+      case 'businessPlan': _businessPlanUrl = url; break;
+      case 'video': _videoUrl = url; break;
+      case 'deck': _deckUrl = url; break;
+    }
+  }
+
+  String _labelFromType(String type) {
+    switch (type) {
+      case 'businessPlan': return 'Business Plan';
+      case 'video': return 'Vidéo de présentation';
+      case 'deck': return 'Deck';
+    }
+    return type;
+  }
+
+  // ── Upload ───────────────────────────────────────────────────────
+  Future<void> _uploadDocument({
+    required String type,
+    required String dbField,
+    required FileType fileType,
+    List<String>? allowedExtensions,
+    required int maxMb,
+  }) async {
+    // 1. Sélection du fichier
+    final result = await FilePicker.platform.pickFiles(
+      type: fileType,
+      allowedExtensions: allowedExtensions,
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final pf = result.files.first;
+    if (pf.path == null) return;
+
+    // 2. Vérification de la taille
+    if (pf.size > maxMb * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Fichier trop volumineux (max $maxMb Mo). '
+            'Taille actuelle : ${(pf.size / (1024 * 1024)).toStringAsFixed(1)} Mo.'),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
+    // 3. Upload Firebase Storage
+    setState(() => _progress[type] = 0.0);
+
+    try {
+      final ext = pf.name.contains('.')
+          ? '.${pf.name.split('.').last.toLowerCase()}'
+          : '';
+      final ref =
+          FirebaseStorage.instance.ref('pitches/$_pitchId/$type$ext');
+
+      final task = ref.putFile(
+        File(pf.path!),
+        SettableMetadata(contentType: _mimeType(ext)),
+      );
+
+      // Suivi de la progression
+      task.snapshotEvents.listen((snap) {
+        if (snap.totalBytes > 0 && mounted) {
+          setState(() =>
+              _progress[type] = snap.bytesTransferred / snap.totalBytes);
+        }
+      });
+
+      await task;
+      final url = await ref.getDownloadURL();
+
+      // 4. Sauvegarde URL en base
+      await DatabaseService.updatePitchDocumentUrl(
+        pitchId: _pitchId,
+        field: dbField,
+        url: url,
+      );
+
+      // 5. État local
+      if (!mounted) return;
+      setState(() {
+        _progress.remove(type);
+        _setUrl(type, url);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${_labelFromType(type)} uploadé avec succès ✓'),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _progress.remove(type));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur upload : $e'),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  // ── Suppression d'un document ────────────────────────────────────
+  Future<void> _deleteDocument(String type, String dbField) async {
+    final label = _labelFromType(type);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Supprimer "$label" ?'),
+        content: const Text(
+            'Le fichier sera supprimé définitivement. Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final url = _urlFromType(type);
+      if (url != null && url.isNotEmpty) {
+        try {
+          await FirebaseStorage.instance.refFromURL(url).delete();
+        } catch (_) {}
+      }
+      await DatabaseService.updatePitchDocumentUrl(
+        pitchId: _pitchId,
+        field: dbField,
+        url: null,
+      );
+      if (!mounted) return;
+      setState(() => _setUrl(type, null));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$label supprimé.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  // ── Ouvrir un document dans le navigateur ──────────────────────
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Impossible d\'ouvrir ce fichier.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  // ── MIME type à partir de l'extension ───────────────────────────
+  String _mimeType(String ext) {
+    switch (ext) {
+      case '.pdf': return 'application/pdf';
+      case '.mp4': return 'video/mp4';
+      case '.mov': return 'video/quicktime';
+      case '.avi': return 'video/x-msvideo';
+      case '.mkv': return 'video/x-matroska';
+      case '.jpg':
+      case '.jpeg': return 'image/jpeg';
+      case '.png': return 'image/png';
+      default: return 'application/octet-stream';
+    }
+  }
+
+  // ── Actions pitch ────────────────────────────────────────────────
   Future<void> _showEditSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -43,7 +270,7 @@ class PitchDetailPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => _PitchEditSheet(pitch: pitch),
+      builder: (_) => _PitchEditSheet(pitch: _pitch),
     );
   }
 
@@ -86,13 +313,14 @@ class PitchDetailPage extends StatelessWidget {
     }
   }
 
+  // ── Build ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.fieldBg,
       body: CustomScrollView(
         slivers: [
-          // ── AppBar ──────────────────────────────────────────────
+          // ── AppBar ───────────────────────────────────────────────
           SliverAppBar(
             pinned: true,
             backgroundColor: AppColors.navyDeep,
@@ -242,57 +470,79 @@ class PitchDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  // ── Documents (PDF / Vidéo) — à venir ──
+                  // ── Documents & Médias ──────────────────────────
                   _SectionCard(
                     icon: Icons.attach_file_rounded,
                     title: 'Documents & Médias',
                     color: AppColors.roleMentor,
                     child: Column(
                       children: [
+                        // Business Plan (PDF)
                         _DocRow(
                           icon: Icons.picture_as_pdf_rounded,
                           color: AppColors.red,
                           label: 'Business Plan (PDF)',
-                          available: false,
+                          url: _businessPlanUrl,
+                          progress: _progress['businessPlan'],
+                          onUpload: () => _uploadDocument(
+                            type: 'businessPlan',
+                            dbField: 'businessPlanUrl',
+                            fileType: FileType.custom,
+                            allowedExtensions: ['pdf'],
+                            maxMb: 20,
+                          ),
+                          onOpen: _businessPlanUrl != null
+                              ? () => _openUrl(_businessPlanUrl!)
+                              : null,
+                          onDelete: _businessPlanUrl != null
+                              ? () => _deleteDocument(
+                                  'businessPlan', 'businessPlanUrl')
+                              : null,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
+
+                        // Vidéo de présentation
                         _DocRow(
                           icon: Icons.videocam_rounded,
                           color: AppColors.purple,
                           label: 'Vidéo de présentation',
-                          available: false,
+                          url: _videoUrl,
+                          progress: _progress['video'],
+                          onUpload: () => _uploadDocument(
+                            type: 'video',
+                            dbField: 'videoUrl',
+                            fileType: FileType.video,
+                            maxMb: 100,
+                          ),
+                          onOpen: _videoUrl != null
+                              ? () => _openUrl(_videoUrl!)
+                              : null,
+                          onDelete: _videoUrl != null
+                              ? () => _deleteDocument('video', 'videoUrl')
+                              : null,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
+
+                        // Deck / Présentation
                         _DocRow(
                           icon: Icons.image_rounded,
                           color: AppColors.blue,
-                          label: 'Deck / Présentation',
-                          available: false,
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.amber.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color:
-                                    AppColors.amber.withValues(alpha: 0.3)),
+                          label: 'Deck / Présentation (PDF ou image)',
+                          url: _deckUrl,
+                          progress: _progress['deck'],
+                          onUpload: () => _uploadDocument(
+                            type: 'deck',
+                            dbField: 'deckUrl',
+                            fileType: FileType.custom,
+                            allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                            maxMb: 20,
                           ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.info_outline_rounded,
-                                  size: 16, color: AppColors.amber),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'L\'upload de fichiers sera disponible dans une prochaine mise à jour.',
-                                  style: TextStyle(
-                                      fontSize: 12, color: AppColors.muted),
-                                ),
-                              ),
-                            ],
-                          ),
+                          onOpen: _deckUrl != null
+                              ? () => _openUrl(_deckUrl!)
+                              : null,
+                          onDelete: _deckUrl != null
+                              ? () => _deleteDocument('deck', 'deckUrl')
+                              : null,
                         ),
                       ],
                     ),
@@ -435,27 +685,42 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+/// Ligne de document avec boutons upload / ouvrir / supprimer.
 class _DocRow extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String label;
-  final bool available;
+  final String? url;           // null = pas encore uploadé
+  final double? progress;      // null = inactif ; 0.0..1.0 = upload en cours
+  final VoidCallback? onUpload;
+  final VoidCallback? onOpen;
+  final VoidCallback? onDelete;
+
   const _DocRow({
     required this.icon,
     required this.color,
     required this.label,
-    required this.available,
+    this.url,
+    this.progress,
+    this.onUpload,
+    this.onOpen,
+    this.onDelete,
   });
+
+  bool get _hasFile => url != null && url!.isNotEmpty;
+  bool get _isUploading => progress != null;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Icône du type de document
         Container(
-          width: 36,
-          height: 36,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
-            color: available
+            color: _hasFile
                 ? color.withValues(alpha: 0.12)
                 : AppColors.border.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(9),
@@ -463,38 +728,143 @@ class _DocRow extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: available ? color : AppColors.muted,
+            color: _hasFile ? color : AppColors.muted,
           ),
         ),
         const SizedBox(width: 12),
+
+        // Label + barre de progression
         Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: available ? AppColors.navyDeep : AppColors.muted,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _hasFile ? AppColors.navyDeep : AppColors.muted,
+                ),
+              ),
+              if (_isUploading) ...[
+                const SizedBox(height: 5),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: AppColors.border,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${((progress ?? 0) * 100).round()} %',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: available
-                ? AppColors.green.withValues(alpha: 0.1)
-                : AppColors.border,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            available ? 'Ajouté' : 'À venir',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: available ? AppColors.green : AppColors.muted,
+        const SizedBox(width: 8),
+
+        // Bouton d'action
+        if (_isUploading)
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: color,
             ),
+          )
+        else if (_hasFile)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ouvrir
+              _ActionChip(
+                label: 'Ouvrir',
+                color: color,
+                onTap: onOpen,
+              ),
+              const SizedBox(width: 6),
+              // Supprimer
+              GestureDetector(
+                onTap: onDelete,
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 17,
+                  color: AppColors.muted,
+                ),
+              ),
+            ],
+          )
+        else
+          // Uploader
+          _ActionChip(
+            label: 'Uploader',
+            color: AppColors.navy,
+            icon: Icons.upload_rounded,
+            outlined: true,
+            onTap: onUpload,
           ),
-        ),
       ],
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  final bool outlined;
+  final VoidCallback? onTap;
+
+  const _ActionChip({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.outlined = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: outlined ? Colors.transparent : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: outlined
+              ? Border.all(color: AppColors.border)
+              : Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 12, color: color),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
