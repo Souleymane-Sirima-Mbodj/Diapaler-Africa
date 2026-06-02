@@ -14,6 +14,7 @@ import 'page_connexion.dart';
 import 'page_nouveau_projet.dart';
 import 'page_modification_profil.dart';
 import 'page_agenda.dart';
+import 'page_mes_favoris.dart';
 import 'page_mes_mentors.dart';
 import 'page_pitches_publics.dart';
 import 'page_requests.dart';
@@ -319,12 +320,8 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.red,
             value: '${p.favoritesCount}',
             label: 'Favoris',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Fonctionnalité favoris disponible prochainement'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
                 )),
       ];
     } else if (p.role == 'Investisseur') {
@@ -351,12 +348,8 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.red,
             value: '${p.favoritesCount}',
             label: 'Favoris',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Fonctionnalité favoris disponible prochainement'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
                 )),
         _MiniStat(
             icon: Icons.calendar_today_rounded,
@@ -406,12 +399,8 @@ class _StatsStrip extends StatelessWidget {
             color: AppColors.red,
             value: '${p.favoritesCount}',
             label: 'Favoris',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Fonctionnalité favoris disponible prochainement'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
                 )),
       ];
     }
