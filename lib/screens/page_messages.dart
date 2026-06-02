@@ -29,6 +29,12 @@ class _MessagesPageState extends State<MessagesPage>
   String _contactSearch = '';
   String _msgSearch = '';
 
+  // Streams initialisés une seule fois dans initState() pour éviter
+  // qu'ils soient recréés à chaque build() (ce qui provoque un état gris).
+  late final Stream<DatabaseEvent> _contactsStream;
+  late final Stream<List<Conversation>> _messagesStream;
+  late final String _currentUid;
+
   static const _colors = <Color>[
     AppColors.amber,
     AppColors.blue,
@@ -67,6 +73,11 @@ class _MessagesPageState extends State<MessagesPage>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
+    _currentUid = AuthService.currentUid ?? '';
+    // Streams créés une seule fois — ne se réinitialisent pas lors des rebuilds.
+    _contactsStream =
+        FirebaseDatabase.instance.ref('mentorRequests').onValue;
+    _messagesStream = InteractionsService.getConversations(_currentUid);
   }
 
   @override
@@ -78,10 +89,10 @@ class _MessagesPageState extends State<MessagesPage>
   // ── Onglet Contacts ─────────────────────────────────────────────
 
   Widget _buildContactsTab() {
-    final currentUid = AuthService.currentUid ?? '';
+    final currentUid = _currentUid;
 
     return StreamBuilder<DatabaseEvent>(
-      stream: FirebaseDatabase.instance.ref('mentorRequests').onValue,
+      stream: _contactsStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -210,10 +221,10 @@ class _MessagesPageState extends State<MessagesPage>
   // ── Onglet Messages ─────────────────────────────────────────────
 
   Widget _buildMessagesTab() {
-    final currentEmail = UserProfileController.profile.value.email;
+    final currentUid = _currentUid;
 
     return StreamBuilder<List<Conversation>>(
-      stream: InteractionsService.getConversations(currentEmail),
+      stream: _messagesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -232,7 +243,7 @@ class _MessagesPageState extends State<MessagesPage>
         final filtered = _msgSearch.isEmpty
             ? all
             : all.where((c) {
-                final otherName = c.user1Id == currentEmail
+                final otherName = c.user1Id == currentUid
                     ? c.user2Name
                     : c.user1Name;
                 return otherName
@@ -240,7 +251,6 @@ class _MessagesPageState extends State<MessagesPage>
                     .contains(_msgSearch.toLowerCase());
               }).toList();
 
-        final currentUid = AuthService.currentUid ?? '';
         final unreadTotal = all
             .where((c) => c.lastSenderId != currentUid)
             .fold<int>(0, (sum, c) => sum + c.unreadCount);
@@ -293,10 +303,10 @@ class _MessagesPageState extends State<MessagesPage>
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (_, i) {
                         final conv = filtered[i];
-                        final otherName = conv.user1Id == currentEmail
+                        final otherName = conv.user1Id == currentUid
                             ? conv.user2Name
                             : conv.user1Name;
-                        final otherId = conv.user1Id == currentEmail
+                        final otherId = conv.user1Id == currentUid
                             ? conv.user2Id
                             : conv.user1Id;
                         final unread = conv.unreadCount > 0;
@@ -443,7 +453,7 @@ class _MessagesPageState extends State<MessagesPage>
             Tab(icon: Icon(Icons.people_rounded, size: 20), text: 'Contacts'),
             Tab(
                 icon: Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                text: 'Messages'),
+                text: 'Discussions'),
           ],
           labelColor: AppColors.navyDeep,
           unselectedLabelColor: AppColors.muted,
