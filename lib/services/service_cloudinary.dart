@@ -16,10 +16,10 @@ import 'package:http/http.dart' as http;
 /// ──────────────────────────────────────────────
 class CloudinaryService {
   /// Ton Cloud Name Cloudinary (visible sur dashboard.cloudinary.com)
-  static const String _cloudName = 'TON_CLOUD_NAME'; // ← à remplacer
+  static const String _cloudName = 'ddpgzzwxb';
 
-  /// Nom du preset non-signé (unsigned upload preset)
-  static const String _uploadPreset = 'TON_PRESET_UNSIGNED'; // ← à remplacer
+  /// Nom du preset non-signé créé dans Settings → Upload → Upload Presets
+  static const String _uploadPreset = 'diapaler_unsigned';
 
   /// Uploade [filePath] vers Cloudinary et retourne l'URL publique HTTPS.
   ///
@@ -30,13 +30,6 @@ class CloudinaryService {
     String resourceType = 'auto',
     String folder = 'pitches',
   }) async {
-    if (_cloudName == 'TON_CLOUD_NAME' || _uploadPreset == 'TON_PRESET_UNSIGNED') {
-      throw Exception(
-        'Configure CloudinaryService : renseigne _cloudName et _uploadPreset '
-        'dans lib/services/service_cloudinary.dart',
-      );
-    }
-
     final uri = Uri.parse(
       'https://api.cloudinary.com/v1_1/$_cloudName/$resourceType/upload',
     );
