@@ -95,6 +95,21 @@ class DatabaseService {
     await _db.ref('pitches/$pitchId').remove();
   }
 
+  /// Met à jour (ou supprime) l'URL d'un document lié à un pitch.
+  /// [field] : 'businessPlanUrl' | 'videoUrl' | 'deckUrl'
+  /// Passer [url] = null pour supprimer le champ.
+  static Future<void> updatePitchDocumentUrl({
+    required String pitchId,
+    required String field,
+    required String? url,
+  }) async {
+    if (url == null) {
+      await _db.ref('pitches/$pitchId/$field').remove();
+    } else {
+      await _db.ref('pitches/$pitchId').update({field: url});
+    }
+  }
+
   // ────────────────────────────── Premium ──────────────────────────────────
 
   /// Active le statut Premium de l'utilisateur dans Firebase.
