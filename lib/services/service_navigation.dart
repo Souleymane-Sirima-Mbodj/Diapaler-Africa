@@ -22,3 +22,8 @@ final ValueNotifier<int> pendingRequestsCount = ValueNotifier<int>(0);
 /// Mis à jour en temps réel depuis Firebase (nœud `pitches/`).
 /// Utilisé pour les stats "Projets" et "Terminés" du profil entrepreneur.
 final ValueNotifier<int> pitchCount = ValueNotifier<int>(0);
+
+/// Demande de pré-filtre rôle pour MatchingPage.
+/// Quand une valeur non vide est émise (ex. 'Mentor'), MatchingPage applique
+/// ce filtre puis remet la valeur à '' pour éviter les re-déclenchements.
+final ValueNotifier<String> matchingFilterRequest = ValueNotifier<String>('');

@@ -706,7 +706,10 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.roleMentor,
           title: 'Trouver',
           subtitle: 'un mentor',
-          onTap: () => appTabIndex.value = 1,
+          onTap: () {
+            matchingFilterRequest.value = 'Mentor';
+            appTabIndex.value = 1;
+          },
         ),
         _QuickAction(
           icon: Icons.upload_file_rounded,
