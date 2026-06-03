@@ -1,3 +1,4 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
@@ -9,6 +10,7 @@ import '../widgets/avatar.dart';
 import 'page_matching.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
+import 'page_profil_public.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -18,62 +20,6 @@ class InvestorDashboard extends StatefulWidget {
 }
 
 class _InvestorDashboardState extends State<InvestorDashboard> {
-  // ── Suppression d'un entrepreneur ───────────────────────────────
-  Future<void> _confirmDeleteEntrepreneur(
-      BuildContext context, MentorRequest req) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Retirer cet entrepreneur ?'),
-        content: Text(
-            '${req.toName} sera retiré(e) de votre liste d\'entrepreneurs suivis.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Retirer'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-    try {
-      await InteractionsService.cancelRequest(
-        requestId: req.id,
-        fromUserId: req.fromUserId,
-        toUserId: req.toUserId,
-      );
-      // Met à jour le compteur local
-      final p = UserProfileController.profile.value;
-      UserProfileController.update(
-          p.copyWith(mentorsActive: (p.mentorsActive - 1).clamp(0, 9999)));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${req.toName} retiré(e) de vos entrepreneurs.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur : $e'),
-            backgroundColor: AppColors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<UserProfile>(
@@ -197,7 +143,12 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                         child: _StatCard(
                           icon: Icons.people_rounded,
                           label: 'Entrepreneurs',
-                          value: '${profile.sessionsCount}',
+                          value: '${profile.mentorsActive}',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const _MesEntrepreneursPage(),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -366,69 +317,6 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                     ),
                   ),
 
-                  // ── Mes Entrepreneurs ────────────────────────────
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Mes Entrepreneurs',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  StreamBuilder<List<MentorRequest>>(
-                    stream: InteractionsService.getSentRequests(
-                        AuthService.currentUid ?? ''),
-                    builder: (ctx, snap) {
-                      final all = snap.data ?? [];
-                      final entrepreneurs = all
-                          .where((r) =>
-                              r.type == 'investment' &&
-                              r.status == RequestStatus.accepted)
-                          .toList();
-                      if (snap.connectionState == ConnectionState.waiting &&
-                          all.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      if (entrepreneurs.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.fieldBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.people_outline_rounded,
-                                  color: AppColors.muted, size: 22),
-                              SizedBox(width: 10),
-                              Text(
-                                'Aucun entrepreneur suivi pour l\'instant.',
-                                style: TextStyle(
-                                    fontSize: 13, color: AppColors.muted),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return Column(
-                        children: entrepreneurs
-                            .map((req) => _EntrepreneurCard(
-                                  name: req.toName,
-                                  accentColor: AppColors.blue,
-                                  onDelete: () =>
-                                      _confirmDeleteEntrepreneur(context, req),
-                                ))
-                            .toList(),
-                      );
-                    },
-                  ),
                 ]),
               ),
             ),
@@ -443,62 +331,160 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.fieldBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.blue, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.navyDeep,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: onTap != null ? AppColors.blue.withValues(alpha: 0.35) : AppColors.border,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.muted,
-              fontWeight: FontWeight.w600,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppColors.blue, size: 20),
+                if (onTap != null) ...[
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 14, color: AppColors.muted),
+                ],
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Carte d'un entrepreneur (identique à celle du dashboard mentor)
+// Page liste des entrepreneurs de l'investisseur (tap sur la stat)
 // ─────────────────────────────────────────────────────────────────
-class _EntrepreneurCard extends StatelessWidget {
-  final String name;
-  final Color accentColor;
-  final VoidCallback onDelete;
+class _MesEntrepreneursPage extends StatelessWidget {
+  const _MesEntrepreneursPage();
 
-  const _EntrepreneurCard({
+  @override
+  Widget build(BuildContext context) {
+    final myUid = AuthService.currentUid ?? '';
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mes Entrepreneurs')),
+      body: StreamBuilder<List<MentorRequest>>(
+        stream: FirebaseDatabase.instance.ref('mentorRequests').onValue.map(
+          (event) {
+            final data = event.snapshot.value as Map?;
+            if (data == null) return <MentorRequest>[];
+            final list = <MentorRequest>[];
+            for (final v in data.values) {
+              if (v is! Map) continue;
+              final m = Map<String, dynamic>.from(v);
+              if (m['type']?.toString() != 'investment') continue;
+              if (m['status']?.toString() != 'accepted') continue;
+              final from = m['fromUserId']?.toString() ?? '';
+              final to   = m['toUserId']?.toString() ?? '';
+              if (from != myUid && to != myUid) continue;
+              list.add(MentorRequest.fromJson(m));
+            }
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
+        ),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entrepreneurs = snap.data ?? [];
+          if (entrepreneurs.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.people_outline_rounded,
+                        size: 56, color: AppColors.subtle),
+                    SizedBox(height: 14),
+                    Text(
+                      'Aucun entrepreneur pour l\'instant.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+            itemCount: entrepreneurs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final req = entrepreneurs[i];
+              // L'entrepreneur est la partie opposée à l'investisseur
+              final entrUid  = req.fromUserId == myUid ? req.toUserId  : req.fromUserId;
+              final entrName = req.fromUserId == myUid ? req.toName    : req.fromName;
+              return _EntrepreneurListTile(
+                name: entrName,
+                uid: entrUid,
+                request: req,
+                myUid: myUid,
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EntrepreneurListTile extends StatelessWidget {
+  final String name;
+  final String uid;
+  final MentorRequest request;
+  final String myUid;
+
+  const _EntrepreneurListTile({
     required this.name,
-    required this.accentColor,
-    required this.onDelete,
+    required this.uid,
+    required this.request,
+    required this.myUid,
   });
 
   String get _initials {
@@ -508,71 +494,117 @@ class _EntrepreneurCard extends StatelessWidget {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: accentColor.withValues(alpha: 0.15),
-            child: Text(
-              _initials,
-              style: TextStyle(
-                color: accentColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
-            ),
+  Future<void> _remove(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Retirer cet entrepreneur ?'),
+        content: Text('$name sera retiré(e) de votre liste.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.only(top: 3),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.roleEntrepreneur.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Entrepreneur',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.roleEntrepreneur,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_remove_rounded, size: 20),
-            color: AppColors.red.withValues(alpha: 0.7),
-            tooltip: 'Retirer',
-            onPressed: onDelete,
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Retirer'),
           ),
         ],
       ),
     );
+    if (confirmed != true) return;
+    await InteractionsService.cancelRequest(
+      requestId: request.id,
+      fromUserId: request.fromUserId,
+      toUserId: request.toUserId,
+    );
+    final p = UserProfileController.profile.value;
+    UserProfileController.update(
+        p.copyWith(mentorsActive: (p.mentorsActive - 1).clamp(0, 9999)));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$name retiré(e).'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProfilPublicPage(uid: uid, name: name),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.blue.withValues(alpha: 0.15),
+              child: Text(
+                _initials,
+                style: const TextStyle(
+                  color: AppColors.blue,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.roleEntrepreneur.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Entrepreneur',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.roleEntrepreneur,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.person_remove_rounded, size: 18),
+              color: AppColors.red.withValues(alpha: 0.7),
+              tooltip: 'Retirer',
+              onPressed: () => _remove(context),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
+

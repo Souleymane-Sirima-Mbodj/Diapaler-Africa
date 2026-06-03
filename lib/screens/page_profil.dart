@@ -319,41 +319,7 @@ class _StatsStrip extends StatelessWidget {
                 )),
       ];
     } else if (p.role == 'Investisseur') {
-      items = [
-        _MiniStat(
-            icon: Icons.trending_up_rounded,
-            color: AppColors.blue,
-            value: '${p.mentorsActive}',
-            label: 'Contacts',
-            badge: pending,
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.rocket_launch_rounded,
-            color: AppColors.amber,
-            value: '${p.sessionsCount}',
-            label: 'Pitchs vus',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PublicPitchesPage()),
-                )),
-        _MiniStat(
-            icon: Icons.bookmark_rounded,
-            color: AppColors.red,
-            value: '${p.favoritesCount}',
-            label: 'Favoris',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
-                )),
-        _MiniStat(
-            icon: Icons.calendar_today_rounded,
-            color: AppColors.green,
-            value: '${p.sessionsCount}',
-            label: 'Rendez-vous',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AgendaPage()),
-                )),
-      ];
+      return const SizedBox.shrink();
     } else {
       // Entrepreneur / Entrepreneure
       items = [
@@ -372,23 +338,6 @@ class _StatsStrip extends StatelessWidget {
             label: 'Terminés',
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.mark_chat_unread_rounded,
-            color: AppColors.red,
-            value: '$pending',
-            label: 'Demandes',
-            badge: pending,
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.handshake_rounded,
-            color: AppColors.blue,
-            value: '${p.mentorsActive}',
-            label: 'Mentors',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesMentorsPage()),
                 )),
       ];
     }

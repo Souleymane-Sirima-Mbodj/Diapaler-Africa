@@ -389,7 +389,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   const Divider(),
                   const SizedBox(height: 16),
                   const Text(
-                    'Mes Entrepreneurs',
+                    'Entrepreneurs',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,

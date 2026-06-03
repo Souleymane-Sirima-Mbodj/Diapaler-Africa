@@ -11,7 +11,7 @@ import '../widgets/carte_mentor.dart';
 String _matchingTitle(String role) {
   switch (role) {
     case 'Mentor':
-      return 'Mes Entrepreneurs';
+      return 'Entrepreneurs';
     case 'Investisseur':
       return 'Entrepreneurs à financer';
     default:
@@ -25,7 +25,7 @@ List<String> _rolePills(String role) {
     return ['Entrepreneur']; // Investisseur ne voit QUE les entrepreneurs
   }
   if (role == 'Mentor') {
-    return ['Tous', 'Entrepreneur'];
+    return ['Entrepreneur'];
   }
   return ['Tous', 'Mentor', 'Investisseur'];
 }
@@ -71,9 +71,9 @@ class _MatchingPageState extends State<MatchingPage> {
     _searchCtrl.addListener(() {
       setState(() => _query = _searchCtrl.text);
     });
-    // Investisseur : forcer le filtre sur Entrepreneur dès le départ
+    // Mentor / Investisseur : forcer le filtre sur Entrepreneur dès le départ
     final myRole = UserProfileController.profile.value.role;
-    if (myRole == 'Investisseur') _role = 'Entrepreneur';
+    if (myRole == 'Investisseur' || myRole == 'Mentor') _role = 'Entrepreneur';
     _loadMembers();
   }
 
@@ -184,7 +184,7 @@ class _MatchingPageState extends State<MatchingPage> {
       _query = '';
       _sector = 'Tous';
       _city = 'Toutes';
-      _role = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
+      _role = (myRole == 'Investisseur' || myRole == 'Mentor') ? 'Entrepreneur' : 'Tous';
       _nearMe = false;
       _userPosition = null;
     });
@@ -216,8 +216,8 @@ class _MatchingPageState extends State<MatchingPage> {
   @override
   Widget build(BuildContext context) {
     final myRole = UserProfileController.profile.value.role;
-    // Pour un Investisseur, le rôle est forcé à 'Entrepreneur' — ce n'est pas un filtre actif.
-    final defaultRole = myRole == 'Investisseur' ? 'Entrepreneur' : 'Tous';
+    // Pour un Investisseur ou un Mentor, le rôle est forcé à 'Entrepreneur' — ce n'est pas un filtre actif.
+    final defaultRole = (myRole == 'Investisseur' || myRole == 'Mentor') ? 'Entrepreneur' : 'Tous';
     final filtered = _filtered;
     final hasFilter =
         _query.isNotEmpty || _sector != 'Tous' || _city != 'Toutes' || _role != defaultRole;

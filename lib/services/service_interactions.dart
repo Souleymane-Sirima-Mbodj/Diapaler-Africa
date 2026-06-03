@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import '../data/interactions.dart';
+import 'service_notifications.dart';
 
 class InteractionsService {
   static final _db = FirebaseDatabase.instance.ref();
@@ -142,6 +143,50 @@ class InteractionsService {
     );
     await _db.child('mentorRequests/$id').set(request.toJson());
     return id;
+  }
+
+  /// Accepte une demande de session et notifie l'entrepreneur.
+  static Future<void> acceptSessionRequest({
+    required String requestId,
+    required String mentorName,
+    required String entrepreneurUid,
+  }) async {
+    await _db.child('mentorRequests/$requestId').update({
+      'status': RequestStatus.accepted.name,
+      'respondedAt': DateTime.now().toIso8601String(),
+    });
+    await NotificationService.notifyUser(
+      uid: entrepreneurUid,
+      title: 'Session confirmée ✓',
+      message: '$mentorName a accepté ta demande de session.',
+      type: 'session_accepted',
+    );
+  }
+
+  /// Refuse une demande de session et notifie l'entrepreneur.
+  static Future<void> rejectSessionRequest({
+    required String requestId,
+    required String mentorName,
+    required String entrepreneurUid,
+  }) async {
+    await _db.child('mentorRequests/$requestId').update({
+      'status': RequestStatus.rejected.name,
+      'respondedAt': DateTime.now().toIso8601String(),
+    });
+    await NotificationService.notifyUser(
+      uid: entrepreneurUid,
+      title: 'Session refusée',
+      message: '$mentorName n\'a pas pu accepter ta demande de session.',
+      type: 'session_rejected',
+    );
+  }
+
+  /// Annule une demande de session en attente (status → 'cancelled').
+  static Future<void> cancelSessionRequest(String requestId) async {
+    await _db.child('mentorRequests/$requestId').update({
+      'status': 'cancelled',
+      'cancelledAt': DateTime.now().toIso8601String(),
+    });
   }
 
   // ────── AVAILABILITY ──────

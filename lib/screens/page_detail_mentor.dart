@@ -767,7 +767,7 @@ class _CompaniesList extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Feuille de réservation avec disponibilités réelles du mentor
+// Feuille de réservation — 2 étapes : jour puis créneau horaire
 // ─────────────────────────────────────────────────────────────────
 class _BookingSheet extends StatefulWidget {
   final Mentor mentor;
@@ -778,65 +778,84 @@ class _BookingSheet extends StatefulWidget {
 }
 
 class _BookingSheetState extends State<_BookingSheet> {
-  static const _dayNames = {
-    'Monday': 'Lundi',
-    'Tuesday': 'Mardi',
-    'Wednesday': 'Mercredi',
-    'Thursday': 'Jeudi',
-    'Friday': 'Vendredi',
-    'Saturday': 'Samedi',
-    'Sunday': 'Dimanche',
-  };
+  static const _dayEn = [
+    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+  ];
+  static const _dayFrShort = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  static const _dayFrLong  = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+  static const _monthFr    = [
+    'jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'
+  ];
+  static const _monthFrLong = [
+    'janvier','février','mars','avril','mai','juin',
+    'juillet','août','septembre','octobre','novembre','décembre'
+  ];
 
-  String? _selectedDay;
-  String? _selectedTime;
-  bool _sending = false;
+  // 0 = choisir un jour, 1 = choisir un créneau
+  int _step = 0;
+  DateTime? _selectedDate;
+  String?   _selectedTime;
+  bool      _sending = false;
 
-  /// Retourne les prochains jours (14 jours) correspondant au jour de semaine donné.
-  List<DateTime> _nextDates(String dayName) {
-    const weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    final targetWd = weekdays.indexOf(dayName) + 1; // DateTime.weekday: 1=Mon
-    final dates = <DateTime>[];
+  /// Les 14 prochains jours à partir de demain.
+  List<DateTime> get _next14 {
+    final list = <DateTime>[];
     var d = DateTime.now().add(const Duration(days: 1));
-    while (dates.length < 3) {
-      if (d.weekday == targetWd) dates.add(d);
+    for (int i = 0; i < 14; i++) {
+      list.add(DateTime(d.year, d.month, d.day));
       d = d.add(const Duration(days: 1));
     }
-    return dates;
+    return list;
   }
 
-  String _formatDate(DateTime d) =>
-      '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}';
+  String _dayEnName(DateTime d) => _dayEn[d.weekday - 1];
+
+  bool _isAvailable(DateTime date, Availability avail) {
+    final schedule = avail.schedule[_dayEnName(date)];
+    return schedule?.isAvailable ?? false;
+  }
+
+  List<String> _slotsFor(DateTime date, Availability avail) {
+    final schedule = avail.schedule[_dayEnName(date)];
+    if (schedule == null || !schedule.isAvailable) return [];
+    if (schedule.timeSlots.isEmpty) {
+      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+    }
+    return schedule.timeSlots.map((ts) => ts.startTime).toList();
+  }
+
+  String _dateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _dateLabel(DateTime d) =>
+      '${_dayFrLong[d.weekday - 1]} ${d.day} ${_monthFrLong[d.month - 1]}';
 
   Future<void> _confirm() async {
-    if (_selectedDay == null || _selectedTime == null) return;
+    if (_selectedDate == null || _selectedTime == null) return;
     setState(() => _sending = true);
 
     final profile = UserProfileController.profile.value;
-    final myUid = AuthService.currentUid ?? '';
-    // Trouver la date sélectionnée
-    final parts = _selectedDay!.split('|'); // format: "Monday|2026-06-08"
-    final dateStr = parts.length > 1 ? parts[1] : _selectedDay!;
+    final myUid   = AuthService.currentUid ?? '';
+    final dateStr = _dateKey(_selectedDate!);
 
     try {
       final reqId = await InteractionsService.sendSessionRequest(
-        fromUserId: myUid,
-        toUserId: widget.mentor.uid,
-        fromName: profile.fullName,
-        toName: widget.mentor.name,
-        message: 'Demande de session le $dateStr à $_selectedTime.',
+        fromUserId:   myUid,
+        toUserId:     widget.mentor.uid,
+        fromName:     profile.fullName,
+        toName:       widget.mentor.name,
+        message:      'Demande de session le $dateStr à $_selectedTime.',
         proposedDate: dateStr,
         proposedTime: _selectedTime!,
       );
-      // Notifier le mentor
       await NotificationService.notifyUser(
-        uid: widget.mentor.uid,
-        title: 'Nouvelle demande de session',
-        message: '${profile.fullName} souhaite réserver une session le $dateStr à $_selectedTime.',
-        type: 'session_request',
-        requestId: reqId,
+        uid:        widget.mentor.uid,
+        title:      'Nouvelle demande de session',
+        message:    '${profile.fullName} souhaite réserver une session le $dateStr à $_selectedTime.',
+        type:       'session_request',
+        requestId:  reqId,
         fromUserId: myUid,
-        fromName: profile.fullName,
+        fromName:   profile.fullName,
       );
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -850,7 +869,10 @@ class _BookingSheetState extends State<_BookingSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de l\'envoi.'), behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('Erreur lors de l\'envoi.'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
     if (mounted) setState(() => _sending = false);
@@ -862,156 +884,281 @@ class _BookingSheetState extends State<_BookingSheet> {
       stream: InteractionsService.getAvailability(widget.mentor.uid),
       builder: (ctx, snap) {
         final avail = snap.data;
-        final availDays = avail?.schedule.entries
-            .where((e) => e.value.isAvailable)
-            .toList() ?? [];
+        final dates = _next14;
 
-        return DraggableScrollableSheet(
-          initialChildSize: 0.75,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (_, controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
-                ),
-              ),
-              Text(
-                'Réserver avec ${widget.mentor.name.split(" ").first}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.navyDeep),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Sélectionne un créneau disponible. Le mentor sera notifié et pourra accepter ou proposer un autre horaire.',
-                style: TextStyle(fontSize: 12.5, color: AppColors.muted, height: 1.4),
-              ),
-              const SizedBox(height: 20),
-              if (snap.connectionState == ConnectionState.waiting)
-                const Center(child: CircularProgressIndicator())
-              else if (availDays.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.fieldBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Text(
-                    'Ce mentor n\'a pas encore configuré ses disponibilités.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppColors.muted),
-                  ),
-                )
-              else ...[
-                const Text('Jours disponibles',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.navyDeep)),
-                const SizedBox(height: 10),
-                ...availDays.map((entry) {
-                  final dayKey = entry.key;
-                  final schedule = entry.value;
-                  final dates = _nextDates(dayKey);
-                  final dayLabel = _dayNames[dayKey] ?? dayKey;
-                  final slots = schedule.timeSlots;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(dayLabel,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
-                      const SizedBox(height: 6),
-                      ...dates.map((date) {
-                        final dateStr = '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
-                        final dateDisplay = _formatDate(date);
-
-                        if (slots.isEmpty) {
-                          // Dispo toute la journée — proposer quelques créneaux standards
-                          return Wrap(
-                            spacing: 8, runSpacing: 8,
-                            children: ['09:00','11:00','14:00','16:00'].map((t) {
-                              final key = '$dayKey|$dateStr';
-                              final selected = _selectedDay == key && _selectedTime == t;
-                              return GestureDetector(
-                                onTap: () => setState(() { _selectedDay = key; _selectedTime = t; }),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: selected ? AppColors.navy : Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: selected ? AppColors.navy : AppColors.border),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(dateDisplay, style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.muted, fontWeight: FontWeight.w700)),
-                                      Text(t, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: selected ? Colors.white : AppColors.navyDeep)),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          );
-                        } else {
-                          return Wrap(
-                            spacing: 8, runSpacing: 8,
-                            children: slots.map((slot) {
-                              final t = slot.startTime;
-                              final key = '$dayKey|$dateStr';
-                              final selected = _selectedDay == key && _selectedTime == t;
-                              return GestureDetector(
-                                onTap: () => setState(() { _selectedDay = key; _selectedTime = t; }),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: selected ? AppColors.navy : Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: selected ? AppColors.navy : AppColors.border),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(dateDisplay, style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.muted, fontWeight: FontWeight.w700)),
-                                      Text('$t – ${slot.endTime}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: selected ? Colors.white : AppColors.navyDeep)),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          );
-                        }
-                      }),
-                      const SizedBox(height: 14),
-                    ],
-                  );
-                }),
-              ],
-              if (_selectedDay != null && _selectedTime != null) ...[
-                const Divider(height: 1, color: AppColors.border),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _sending ? null : _confirm,
-                    icon: _sending
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.send_rounded),
-                    label: const Text('ENVOYER LA DEMANDE',
-                        style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8)),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+              // ── Poignée ──
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 6),
+                child: Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-              ],
+              ),
+              // ── En-tête avec breadcrumb ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Row(
+                  children: [
+                    if (_step == 1)
+                      GestureDetector(
+                        onTap: () => setState(() {
+                          _step = 0;
+                          _selectedTime = null;
+                        }),
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 10),
+                          child: Icon(Icons.arrow_back_ios_new_rounded,
+                              size: 18, color: AppColors.navy),
+                        ),
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _step == 0 ? 'Choisir un jour' : 'Choisir un créneau',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.navyDeep,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _step == 0
+                                ? '${widget.mentor.name.split(" ").first} · 2 semaines max'
+                                : _dateLabel(_selectedDate!),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Indicateur d'étape
+                    Row(
+                      children: List.generate(2, (i) => Container(
+                        width: i == _step ? 16 : 6,
+                        height: 6,
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          color: i == _step ? AppColors.navy : AppColors.border,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      )),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              if (snap.connectionState == ConnectionState.waiting)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                )
+              else if (_step == 0)
+                _buildStep0(avail, dates)
+              else
+                _buildStep1(avail),
+
+              const SizedBox(height: 20),
             ],
           ),
         );
       },
+    );
+  }
+
+  // ── Étape 1 : grille de jours ──────────────────────────────────
+  Widget _buildStep0(Availability? avail, List<DateTime> dates) {
+    final hasAnyAvailable = avail != null &&
+        dates.any((d) => _isAvailable(d, avail));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!hasAnyAvailable && avail != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.fieldBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Text(
+                'Ce mentor n\'a pas encore configuré ses disponibilités.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: dates.map((date) {
+                final available = avail != null && _isAvailable(date, avail);
+                final dayShort  = _dayFrShort[date.weekday - 1];
+                final month     = _monthFr[date.month - 1];
+
+                return GestureDetector(
+                  onTap: available
+                      ? () => setState(() {
+                            _selectedDate = date;
+                            _step = 1;
+                          })
+                      : null,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 54,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: available ? Colors.white : AppColors.fieldBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: available
+                            ? AppColors.blue.withValues(alpha: 0.45)
+                            : AppColors.border,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          dayShort,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                            color: available ? AppColors.muted : AppColors.subtle,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                            color: available ? AppColors.navyDeep : AppColors.subtle,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          month,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: available ? AppColors.muted : AppColors.subtle,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Container(
+                          width: 6, height: 6,
+                          decoration: BoxDecoration(
+                            color: available ? AppColors.green : AppColors.border,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Étape 2 : créneaux horaires ────────────────────────────────
+  Widget _buildStep1(Availability? avail) {
+    if (_selectedDate == null) return const SizedBox.shrink();
+    final slots = avail != null ? _slotsFor(_selectedDate!, avail) : <String>[];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (slots.isEmpty)
+            const Text(
+              'Aucun créneau disponible pour ce jour.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: slots.map((t) {
+                final selected = _selectedTime == t;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedTime = t),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.navy : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected ? AppColors.navy : AppColors.border,
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: selected ? Colors.white : AppColors.navyDeep,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          if (_selectedTime != null) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _sending ? null : _confirm,
+                icon: _sending
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: const Text(
+                  'CONFIRMER LA SESSION',
+                  style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: AppColors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

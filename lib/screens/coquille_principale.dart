@@ -135,6 +135,7 @@ class _RootShellState extends State<RootShell> {
       }
       final count = data.values.where((v) {
         if (v is! Map) return false;
+        if (v['type']?.toString() == 'session') return false;
         return v['status']?.toString() == 'pending';
       }).length;
       pendingRequestsCount.value = count;
@@ -171,7 +172,8 @@ class _RootShellState extends State<RootShell> {
         if (status != 'accepted') continue;
 
         if (role == 'Mentor' && type == 'mentor' && to == uid) count++;
-        if (role == 'Investisseur' && type == 'investment' && to == uid) count++;
+        // Investisseur : compte les deux sens (proposition envoyée OU reçue, acceptée)
+        if (role == 'Investisseur' && type == 'investment' && (to == uid || from == uid)) count++;
         if (role == 'Entrepreneur' && type == 'mentor' && from == uid) count++;
       }
       _applyMentorsActive(count);
