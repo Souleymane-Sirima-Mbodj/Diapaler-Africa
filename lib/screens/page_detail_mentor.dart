@@ -11,6 +11,7 @@ import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_avis.dart';
 import 'page_chat.dart';
 import 'page_send_request.dart';
 
@@ -53,12 +54,18 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   // null = chargement en cours, true = acceptée, false = non acceptée
   bool? _requestAccepted;
 
+  /// Stream des avis (uniquement pour les profils Firebase réels, uid non vide).
+  Stream<List<Review>>? _reviewsStream;
+
   @override
   void initState() {
     super.initState();
     _isFavorite = FavoriteService.isFavorite(widget.mentor);
     FavoriteService.favorites.addListener(_onFavoritesChanged);
     _checkRequestStatus();
+    if (widget.mentor.uid.isNotEmpty) {
+      _reviewsStream = InteractionsService.getReviews(widget.mentor.uid);
+    }
   }
 
   void _onFavoritesChanged() {
@@ -346,12 +353,36 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                               label: 'Années',
                             )),
                             _HeroDivider(),
-                            Expanded(child: _HeroStat(
-                              icon: Icons.reviews_rounded,
-                              color: AppColors.purple,
-                              value: '${mentor.reviews}',
-                              label: 'Avis',
-                            )),
+                            Expanded(
+                              child: _reviewsStream != null
+                                  ? StreamBuilder<List<Review>>(
+                                      stream: _reviewsStream,
+                                      builder: (_, snap) {
+                                        final count = snap.data?.length ?? 0;
+                                        return _HeroStat(
+                                          icon: Icons.reviews_rounded,
+                                          color: AppColors.purple,
+                                          value: '$count',
+                                          label: 'Avis',
+                                          onTap: () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => ReviewsPage(
+                                                mentor: mentor,
+                                                canReview: _requestAccepted == true &&
+                                                    (AuthService.currentUid ?? '') != mentor.uid,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : _HeroStat(
+                                      icon: Icons.reviews_rounded,
+                                      color: AppColors.purple,
+                                      value: '${mentor.reviews}',
+                                      label: 'Avis',
+                                    ),
+                            ),
                           ],
                         ),
                       ],
@@ -750,16 +781,20 @@ class _HeroStat extends StatelessWidget {
   final Color color;
   final String value;
   final String label;
+  /// Si fourni, la stat devient tappable (indicateur visuel : légère surbrillance).
+  final VoidCallback? onTap;
+
   const _HeroStat({
     required this.icon,
     required this.color,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       children: [
         Icon(icon, color: color, size: 18),
         const SizedBox(height: 3),
@@ -773,16 +808,31 @@ class _HeroStat extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white60,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 2),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 11, color: Colors.white38),
+            ],
+          ],
         ),
       ],
+    );
+    if (onTap == null) return content;
+    return GestureDetector(
+      onTap: onTap,
+      child: content,
     );
   }
 }

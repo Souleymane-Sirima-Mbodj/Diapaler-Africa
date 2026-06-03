@@ -308,4 +308,37 @@ class InteractionsService {
         .child('conversations/$conversationId')
         .update({'unreadCount': 0});
   }
+
+  // ────── REVIEWS ──────
+
+  /// Publie un avis sur [toUid]. Nœud Firebase : `reviews/{toUid}/{id}`.
+  static Future<void> addReview({
+    required String toUid,
+    required String fromUid,
+    required String fromName,
+    required String text,
+  }) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    await _db.child('reviews/$toUid/$id').set({
+      'id': id,
+      'fromUid': fromUid,
+      'fromName': fromName,
+      'text': text,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  /// Écoute en temps réel tous les avis laissés sur [targetUid],
+  /// triés du plus récent au plus ancien.
+  static Stream<List<Review>> getReviews(String targetUid) {
+    return _db.child('reviews/$targetUid').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return <Review>[];
+      return data.values
+          .map<Review>((v) =>
+              Review.fromJson(Map<String, dynamic>.from(v as Map)))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
+  }
 }
