@@ -10,6 +10,7 @@ import '../widgets/avatar.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_planning.dart';
+import 'page_profil_public.dart';
 import 'page_requests.dart';
 
 class MentorDashboard extends StatefulWidget {
@@ -192,6 +193,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
                           icon: Icons.school_rounded,
                           label: 'Mentorés',
                           value: '${profile.mentorsActive}',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const _MesMentoresPage(),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -384,69 +390,6 @@ class _MentorDashboardState extends State<MentorDashboard> {
                     ),
                   ),
 
-                  // ── Mes Entrepreneurs ────────────────────────────
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Entrepreneurs',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  StreamBuilder<List<MentorRequest>>(
-                    stream: InteractionsService.getReceivedRequests(
-                        AuthService.currentUid ?? ''),
-                    builder: (ctx, snap) {
-                      final all = snap.data ?? [];
-                      final entrepreneurs = all
-                          .where((r) =>
-                              r.type == 'mentor' &&
-                              r.status == RequestStatus.accepted)
-                          .toList();
-                      if (snap.connectionState == ConnectionState.waiting &&
-                          all.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      if (entrepreneurs.isEmpty) {
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.fieldBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.school_outlined,
-                                  color: AppColors.muted, size: 22),
-                              SizedBox(width: 10),
-                              Text(
-                                'Aucun entrepreneur mentoré pour l\'instant.',
-                                style: TextStyle(
-                                    fontSize: 13, color: AppColors.muted),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return Column(
-                        children: entrepreneurs
-                            .map((req) => _EntrepreneurCard(
-                                  name: req.fromName,
-                                  accentColor: AppColors.roleMentor,
-                                  onDelete: () => _confirmDeleteEntrepreneur(
-                                      context, req),
-                                ))
-                            .toList(),
-                      );
-                    },
-                  ),
                 ]),
               ),
             ),
@@ -461,45 +404,215 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.fieldBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: onTap != null
+                ? AppColors.roleMentor.withValues(alpha: 0.4)
+                : AppColors.border,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: AppColors.roleMentor, size: 20),
+                if (onTap != null)
+                  const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.muted, size: 16),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.roleMentor, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.navyDeep,
-            ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Page liste des entrepreneurs mentorés
+// ─────────────────────────────────────────────────────────────────
+class _MesMentoresPage extends StatelessWidget {
+  const _MesMentoresPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = AuthService.currentUid ?? '';
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mes Entrepreneurs')),
+      body: StreamBuilder<List<MentorRequest>>(
+        stream: InteractionsService.getReceivedRequests(uid),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entrepreneurs = (snap.data ?? [])
+              .where((r) =>
+                  r.type == 'mentor' && r.status == RequestStatus.accepted)
+              .toList();
+
+          if (entrepreneurs.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.school_outlined,
+                        size: 56,
+                        color: AppColors.roleMentor.withValues(alpha: 0.4)),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Aucun entrepreneur mentoré',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Les entrepreneurs dont vous acceptez les demandes apparaîtront ici.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: entrepreneurs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final req = entrepreneurs[i];
+              return _MentoreListTile(req: req);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MentoreListTile extends StatelessWidget {
+  final MentorRequest req;
+  const _MentoreListTile({required this.req});
+
+  String get _initials {
+    final parts = req.fromName.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProfilPublicPage(
+            uid: req.fromUserId,
+            name: req.fromName,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.muted,
-              fontWeight: FontWeight.w600,
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.roleMentor.withValues(alpha: 0.15),
+              child: Text(
+                _initials,
+                style: const TextStyle(
+                  color: AppColors.roleMentor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    req.fromName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.roleEntrepreneur.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Entrepreneur',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.roleEntrepreneur,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.muted, size: 20),
+          ],
+        ),
       ),
     );
   }

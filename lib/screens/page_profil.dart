@@ -286,60 +286,41 @@ class _StatsStrip extends StatelessWidget {
     final List<_MiniStat> items;
 
     if (p.role == 'Mentor') {
-      items = [
-        _MiniStat(
-            icon: Icons.school_rounded,
-            color: AppColors.roleMentor,
-            value: '${p.mentorsActive}',
-            label: 'Mentorés',
-            badge: pending,
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequestsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.calendar_month_rounded,
-            color: AppColors.blue,
-            value: '${p.sessionsCount}',
-            label: 'Sessions',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AgendaPage()),
-                )),
-        _MiniStat(
-            icon: Icons.workspace_premium_rounded,
-            color: AppColors.amber,
-            value: p.yearsExperience > 0 ? '${p.yearsExperience}' : '—',
-            label: 'Années expé.'),
-        _MiniStat(
-            icon: Icons.bookmark_rounded,
-            color: AppColors.red,
-            value: '${p.favoritesCount}',
-            label: 'Favoris',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
-                )),
-      ];
+      // Mentor : uniquement la carte Années d'expérience, redessinée
+      return _MentorExperienceCard(years: p.yearsExperience);
     } else if (p.role == 'Investisseur') {
       return const SizedBox.shrink();
     } else {
-      // Entrepreneur / Entrepreneure
-      items = [
-        _MiniStat(
-            icon: Icons.rocket_launch_rounded,
-            color: AppColors.amber,
-            value: '$pitches',
-            label: 'Projets',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.check_circle_rounded,
-            color: AppColors.green,
-            value: '$pitches',
-            label: 'Terminés',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-                )),
-      ];
+      // Entrepreneur / Entrepreneure — cartes dédiées (design amélioré)
+      return Row(
+        children: [
+          Expanded(
+            child: _EntrepreneurStatCard(
+              icon: Icons.rocket_launch_rounded,
+              color: AppColors.amber,
+              value: '$pitches',
+              label: 'Projets',
+              subtitle: 'pitch decks publiés',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _EntrepreneurStatCard(
+              icon: Icons.check_circle_rounded,
+              color: AppColors.green,
+              value: '$pitches',
+              label: 'Terminés',
+              subtitle: 'projets clôturés',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+              ),
+            ),
+          ),
+        ],
+      );
     }
     return SizedBox(
       height: 74,
@@ -352,6 +333,189 @@ class _StatsStrip extends StatelessWidget {
             ),
           );
         }),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte expérience mentor (pleine largeur)
+// ─────────────────────────────────────────────────────────────────
+class _MentorExperienceCard extends StatelessWidget {
+  final int years;
+  const _MentorExperienceCard({required this.years});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasYears = years > 0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.roleMentor.withValues(alpha: 0.12),
+            AppColors.amber.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.roleMentor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          // Icône dans un cercle
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.amber.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppColors.amber.withValues(alpha: 0.35), width: 1.5),
+            ),
+            child: const Icon(Icons.workspace_premium_rounded,
+                color: AppColors.amber, size: 26),
+          ),
+          const SizedBox(width: 16),
+          // Texte
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasYears ? '$years ans' : 'Non renseigné',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: hasYears ? AppColors.navyDeep : AppColors.muted,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  "d'expérience professionnelle",
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Badge mentor
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.roleMentor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                  color: AppColors.roleMentor.withValues(alpha: 0.35)),
+            ),
+            child: const Text(
+              'Mentor',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.roleMentor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte stat entrepreneur (design dédié 2 cartes)
+// ─────────────────────────────────────────────────────────────────
+class _EntrepreneurStatCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  const _EntrepreneurStatCard({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+    required this.subtitle,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
+                ),
+                if (onTap != null)
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      size: 11, color: AppColors.subtle),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                color: AppColors.navyDeep,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

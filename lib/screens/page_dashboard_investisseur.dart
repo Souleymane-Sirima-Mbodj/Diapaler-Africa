@@ -7,7 +7,6 @@ import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import 'page_matching.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_profil_public.dart';
@@ -284,35 +283,15 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                     child: ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (_) => const MatchingPage()),
+                            builder: (_) => const PublicPitchesPage()),
                       ),
-                      icon: const Icon(Icons.search_rounded),
+                      icon: const Icon(Icons.rocket_launch_rounded),
                       label: const Text('Explorer la communauté'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         minimumSize: const Size(double.infinity, 0),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const PublicPitchesPage()),
-                      ),
-                      icon: const Icon(Icons.inbox_rounded, size: 18),
-                      label: const Text(
-                        'Pitchs reçus',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.blue,
-                        side: const BorderSide(color: AppColors.blue),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                   ),

@@ -73,6 +73,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     super.dispose();
   }
 
+  // BookingSheet dispose géré dans _BookingSheetState
+
   Future<void> _checkRequestStatus() async {
     final mentor = widget.mentor;
 
@@ -791,11 +793,12 @@ class _BookingSheetState extends State<_BookingSheet> {
     'juillet','août','septembre','octobre','novembre','décembre'
   ];
 
-  // 0 = choisir un jour, 1 = choisir un créneau
+  // 0 = choisir un jour, 1 = choisir un créneau + thème
   int _step = 0;
   DateTime? _selectedDate;
   String?   _selectedTime;
   bool      _sending = false;
+  final TextEditingController _themeCtrl = TextEditingController();
 
   /// Les 14 prochains jours à partir de demain.
   List<DateTime> get _next14 {
@@ -839,6 +842,7 @@ class _BookingSheetState extends State<_BookingSheet> {
     final dateStr = _dateKey(_selectedDate!);
 
     try {
+      final theme = _themeCtrl.text.trim();
       final reqId = await InteractionsService.sendSessionRequest(
         fromUserId:   myUid,
         toUserId:     widget.mentor.uid,
@@ -847,6 +851,7 @@ class _BookingSheetState extends State<_BookingSheet> {
         message:      'Demande de session le $dateStr à $_selectedTime.',
         proposedDate: dateStr,
         proposedTime: _selectedTime!,
+        sessionTheme: theme.isNotEmpty ? theme : null,
       );
       await NotificationService.notifyUser(
         uid:        widget.mentor.uid,
@@ -1134,10 +1139,50 @@ class _BookingSheetState extends State<_BookingSheet> {
             ),
           if (_selectedTime != null) ...[
             const SizedBox(height: 20),
+            // Champ thème / objectif de la session
+            const Text(
+              'Objectif de la session *',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _themeCtrl,
+              maxLength: 120,
+              maxLines: 2,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Ex: Travailler mon pitch, stratégie de financement…',
+                hintStyle: const TextStyle(fontSize: 12.5, color: AppColors.subtle),
+                filled: true,
+                fillColor: AppColors.fieldBg,
+                counterStyle: const TextStyle(fontSize: 10, color: AppColors.muted),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.blue, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _sending ? null : _confirm,
+                onPressed: (_sending || _themeCtrl.text.trim().isEmpty)
+                    ? null
+                    : _confirm,
                 icon: _sending
                     ? const SizedBox(
                         width: 16, height: 16,
