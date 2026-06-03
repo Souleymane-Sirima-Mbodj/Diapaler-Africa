@@ -223,6 +223,42 @@ class ChatMessage {
   );
 }
 
+/// Avis laissé par un utilisateur sur un autre (mentor, investisseur ou entrepreneur).
+@immutable
+class Review {
+  final String id;
+  final String fromUid;
+  final String fromName;
+  final String text;
+  final DateTime createdAt;
+
+  const Review({
+    required this.id,
+    required this.fromUid,
+    required this.fromName,
+    required this.text,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'fromUid': fromUid,
+    'fromName': fromName,
+    'text': text,
+    'createdAt': createdAt.millisecondsSinceEpoch,
+  };
+
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+    id: json['id']?.toString() ?? '',
+    fromUid: json['fromUid']?.toString() ?? '',
+    fromName: json['fromName']?.toString() ?? 'Utilisateur',
+    text: json['text']?.toString() ?? '',
+    createdAt: json['createdAt'] is num
+        ? DateTime.fromMillisecondsSinceEpoch((json['createdAt'] as num).toInt())
+        : DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+  );
+}
+
 @immutable
 class Conversation {
   final String id; // Combined userId1-userId2 (sorted)
