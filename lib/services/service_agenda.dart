@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
+import '../data/interactions.dart';
 import 'service_notifications.dart';
 
 class BookedSession {
@@ -62,12 +63,18 @@ class AgendaController {
   AgendaController._();
 
   static final _db = FirebaseDatabase.instance.ref();
-  static final sessions = ValueNotifier<List<BookedSession>>([]);
+  static final sessions         = ValueNotifier<List<BookedSession>>([]);
+  /// Demandes de session en attente ou acceptées pour l'utilisateur courant.
+  /// Sources : nœud `mentorRequests` filtré type='session' + status in [pending, accepted].
+  static final sessionRequests  = ValueNotifier<List<MentorRequest>>([]);
+
   static StreamSubscription? _subscription;
+  static StreamSubscription? _sessionSubscription;
 
   static Future<void> load(String userId) async {
     // Annule l'ancien listener avant d'en créer un nouveau (évite les doublons entre sessions).
     await _subscription?.cancel();
+    _listenSessionRequests(userId);
     _subscription = _db.child('bookedSessions/$userId').onValue.listen((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) {
@@ -90,8 +97,44 @@ class AgendaController {
   /// Vide les sessions en mémoire et annule le listener Firebase (appelé à la déconnexion).
   static Future<void> reset() async {
     await _subscription?.cancel();
+    await _sessionSubscription?.cancel();
     _subscription = null;
+    _sessionSubscription = null;
     sessions.value = [];
+    sessionRequests.value = [];
+  }
+
+  /// Écoute en temps réel les demandes de session (pending + accepted) de l'utilisateur.
+  static void _listenSessionRequests(String userId) {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = FirebaseDatabase.instance
+        .ref('mentorRequests')
+        .onValue
+        .listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) {
+        sessionRequests.value = [];
+        return;
+      }
+      final list = <MentorRequest>[];
+      for (final v in data.values) {
+        if (v is! Map) continue;
+        final m = Map<String, dynamic>.from(v);
+        if (m['type'] != 'session') continue;
+        final status = m['status']?.toString() ?? '';
+        if (status != 'pending' && status != 'accepted') continue;
+        final from = m['fromUserId']?.toString() ?? '';
+        final to   = m['toUserId']?.toString() ?? '';
+        if (from != userId && to != userId) continue;
+        list.add(MentorRequest.fromJson(m));
+      }
+      list.sort((a, b) {
+        final aKey = '${a.proposedDate ?? ''}${a.proposedTime ?? ''}';
+        final bKey = '${b.proposedDate ?? ''}${b.proposedTime ?? ''}';
+        return aKey.compareTo(bKey);
+      });
+      sessionRequests.value = list;
+    }, onError: (_) => sessionRequests.value = []);
   }
 
   static Future<void> add(String userId, BookedSession session) async {

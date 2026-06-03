@@ -10,6 +10,7 @@ import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
 import 'page_chat.dart';
 import 'page_detail_mentor.dart';
+import 'page_profil_public.dart';
 
 // ─────────────────────────────────────────────────────────────────
 // Onglet Messages — deux onglets : Contacts (relations acceptées)
@@ -526,23 +527,37 @@ class _ContactCard extends StatelessWidget {
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
   }
 
+  void _openProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfilPublicPage(
+          uid: contact.uid,
+          name: contact.name,
+        ),
+      ),
+    );
+  }
+
+  void _openChat(BuildContext context) {
+    final convId =
+        InteractionsService.generateConversationId(currentUid, contact.uid);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatPage(
+          conversationId: convId,
+          otherUserName: contact.name,
+          otherUserId: contact.uid,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return HoverGlowCard(
-      onTap: () {
-        final convId =
-            InteractionsService.generateConversationId(currentUid, contact.uid);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatPage(
-              conversationId: convId,
-              otherUserName: contact.name,
-              otherUserId: contact.uid,
-            ),
-          ),
-        );
-      },
+      onTap: () => _openProfile(context),
       child: Row(
         children: [
           Avatar(
@@ -581,15 +596,19 @@ class _ContactCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-              color: AppColors.fieldBg,
-              shape: BoxShape.circle,
+          // Icône chat : ouvre la discussion
+          GestureDetector(
+            onTap: () => _openChat(context),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: AppColors.fieldBg,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chat_bubble_outline_rounded,
+                  size: 18, color: AppColors.navy),
             ),
-            child: const Icon(Icons.chat_bubble_outline_rounded,
-                size: 18, color: AppColors.navy),
           ),
         ],
       ),

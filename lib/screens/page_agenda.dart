@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
+import '../services/service_authentification.dart';
+import '../services/service_interactions.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import '../widgets/carte_lumineuse.dart';
@@ -56,27 +59,80 @@ class AgendaPage extends StatelessWidget {
       ),
       body: ValueListenableBuilder<List<BookedSession>>(
         valueListenable: AgendaController.sessions,
-        builder: (context, bookedSessions, _) {
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
-            children: [
-              _SummaryCard(
-                upcomingCount: bookedSessions.length,
-                subtitle: summarySubtitle,
-              ),
-              const SizedBox(height: 20),
-              const _SectionLabel('À venir'),
-              const SizedBox(height: 10),
-              if (bookedSessions.isEmpty)
-                _EmptyHint(emptyUpcoming)
-              else
-                for (final s in bookedSessions) ...[
-                  _BookedSessionCard(session: s),
+        builder: (context, bookedSessions, _) =>
+            ValueListenableBuilder<List<MentorRequest>>(
+          valueListenable: AgendaController.sessionRequests,
+          builder: (context, sessionReqs, _) {
+            final today = DateTime.now();
+            final todayStr =
+                '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+            final pending = sessionReqs
+                .where((r) => r.status == RequestStatus.pending)
+                .toList();
+            final accepted = sessionReqs
+                .where((r) => r.status == RequestStatus.accepted)
+                .toList();
+            final upcoming = accepted
+                .where((r) => (r.proposedDate ?? '').compareTo(todayStr) >= 0)
+                .toList();
+            final finished = accepted
+                .where((r) {
+                  final d = r.proposedDate ?? '';
+                  return d.isNotEmpty && d.compareTo(todayStr) < 0;
+                })
+                .toList();
+
+            final upcomingCount = bookedSessions.length + upcoming.length;
+
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
+              children: [
+                _SummaryCard(
+                  upcomingCount: upcomingCount,
+                  pendingCount: pending.length,
+                  subtitle: summarySubtitle,
+                ),
+                // ── En attente ──────────────────────────────────
+                if (pending.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const _SectionLabel('En attente'),
                   const SizedBox(height: 10),
+                  for (final r in pending) ...[
+                    _PendingSessionCard(request: r),
+                    const SizedBox(height: 10),
+                  ],
                 ],
-            ],
-          );
-        },
+                // ── À venir ─────────────────────────────────────
+                const SizedBox(height: 20),
+                const _SectionLabel('À venir'),
+                const SizedBox(height: 10),
+                if (upcomingCount == 0)
+                  _EmptyHint(emptyUpcoming)
+                else ...[
+                  for (final r in upcoming) ...[
+                    _AcceptedSessionCard(request: r),
+                    const SizedBox(height: 10),
+                  ],
+                  for (final s in bookedSessions) ...[
+                    _BookedSessionCard(session: s),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+                // ── Terminés ────────────────────────────────────
+                if (finished.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const _SectionLabel('Terminés'),
+                  const SizedBox(height: 10),
+                  for (final r in finished) ...[
+                    _FinishedSessionCard(request: r),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -85,8 +141,13 @@ class AgendaPage extends StatelessWidget {
 /// Carte de résumé en haut de l'agenda.
 class _SummaryCard extends StatelessWidget {
   final int upcomingCount;
+  final int pendingCount;
   final String subtitle;
-  const _SummaryCard({required this.upcomingCount, required this.subtitle});
+  const _SummaryCard({
+    required this.upcomingCount,
+    required this.pendingCount,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +197,25 @@ class _SummaryCard extends StatelessWidget {
                     height: 1.35,
                   ),
                 ),
+                if (pendingCount > 0) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$pendingCount en attente de confirmation',
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -186,6 +266,524 @@ class _EmptyHint extends StatelessWidget {
           color: AppColors.muted,
           height: 1.4,
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte pour une demande de session EN ATTENTE (mentorRequests pending)
+// — Affiche Accept/Refus si le user est le destinataire (mentor),
+//   ou Annuler si c'est l'expéditeur (entrepreneur).
+// ─────────────────────────────────────────────────────────────────
+class _PendingSessionCard extends StatelessWidget {
+  final MentorRequest request;
+  const _PendingSessionCard({required this.request});
+
+  String get _myUid => AuthService.currentUid ?? '';
+
+  bool get _isRecipient => request.toUserId == _myUid;
+
+  String get _otherName =>
+      request.fromUserId == _myUid ? request.toName : request.fromName;
+
+  String get _day {
+    final parts = (request.proposedDate ?? '').split('-');
+    return parts.length >= 3 ? parts[2] : '—';
+  }
+
+  String get _month {
+    final parts = (request.proposedDate ?? '').split('-');
+    if (parts.length < 2) return '—';
+    const months = ['JAN','FÉV','MAR','AVR','MAI','JUIN',
+                    'JUIL','AOÛT','SEP','OCT','NOV','DÉC'];
+    final m = int.tryParse(parts[1]) ?? 1;
+    return months[(m - 1).clamp(0, 11)];
+  }
+
+  Future<void> _accept(BuildContext context) async {
+    final profile = UserProfileController.profile.value;
+    await InteractionsService.acceptSessionRequest(
+      requestId: request.id,
+      mentorName: profile.fullName,
+      entrepreneurUid: request.fromUserId,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session acceptée — notification envoyée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _reject(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Refuser la demande ?'),
+        content: Text('Refuser la session avec ${request.fromName} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Oui, refuser'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final profile = UserProfileController.profile.value;
+    await InteractionsService.rejectSessionRequest(
+      requestId: request.id,
+      mentorName: profile.fullName,
+      entrepreneurUid: request.fromUserId,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demande refusée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _cancel(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Annuler la demande ?'),
+        content: Text('Annuler la demande de session avec $_otherName ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await InteractionsService.cancelSessionRequest(request.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demande annulée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HoverGlowCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.amber.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _day,
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _month,
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Session avec $_otherName',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded,
+                            size: 13, color: AppColors.muted),
+                        const SizedBox(width: 4),
+                        Text(
+                          request.proposedTime ?? '—',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'En attente',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.amber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_isRecipient)
+            // Mentor reçoit → Accepter / Refuser
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _reject(context),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Refuser'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _accept(context),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: const Text('Accepter'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      backgroundColor: AppColors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            // Entrepreneur envoie → Annuler
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _cancel(context),
+                icon: const Icon(Icons.cancel_outlined, size: 16),
+                label: const Text('Annuler la demande'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte pour une session ACCEPTÉE (mentorRequests accepted)
+// ─────────────────────────────────────────────────────────────────
+class _AcceptedSessionCard extends StatelessWidget {
+  final MentorRequest request;
+  const _AcceptedSessionCard({required this.request});
+
+  String get _otherName {
+    final myUid = UserProfileController.profile.value.email;
+    return request.fromUserId == myUid ? request.toName : request.fromName;
+  }
+
+  String get _day {
+    final parts = (request.proposedDate ?? '').split('-');
+    return parts.length >= 3 ? parts[2] : '—';
+  }
+
+  String get _month {
+    final parts = (request.proposedDate ?? '').split('-');
+    if (parts.length < 2) return '—';
+    const months = ['JAN','FÉV','MAR','AVR','MAI','JUIN',
+                    'JUIL','AOÛT','SEP','OCT','NOV','DÉC'];
+    final m = int.tryParse(parts[1]) ?? 1;
+    return months[(m - 1).clamp(0, 11)];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HoverGlowCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.navy,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _day,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _month,
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Session avec $_otherName',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navyDeep,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded,
+                            size: 13, color: AppColors.muted),
+                        const SizedBox(width: 4),
+                        Text(
+                          request.proposedTime ?? '—',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'Confirmé ✓',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.green,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.videocam_rounded,
+                  size: 15, color: AppColors.muted),
+              const SizedBox(width: 5),
+              const Text(
+                'En ligne',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte pour une session TERMINÉE (accepted + date passée)
+// ─────────────────────────────────────────────────────────────────
+class _FinishedSessionCard extends StatelessWidget {
+  final MentorRequest request;
+  const _FinishedSessionCard({required this.request});
+
+  String get _otherName {
+    final myUid = AuthService.currentUid ?? '';
+    return request.fromUserId == myUid ? request.toName : request.fromName;
+  }
+
+  String get _day {
+    final parts = (request.proposedDate ?? '').split('-');
+    return parts.length >= 3 ? parts[2] : '—';
+  }
+
+  String get _month {
+    final parts = (request.proposedDate ?? '').split('-');
+    if (parts.length < 2) return '—';
+    const months = ['JAN','FÉV','MAR','AVR','MAI','JUIN',
+                    'JUIL','AOÛT','SEP','OCT','NOV','DÉC'];
+    final m = int.tryParse(parts[1]) ?? 1;
+    return months[(m - 1).clamp(0, 11)];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return HoverGlowCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.muted.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _day,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _month,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Session avec $_otherName',
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.muted,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.schedule_rounded,
+                        size: 13, color: AppColors.subtle),
+                    const SizedBox(width: 4),
+                    Text(
+                      request.proposedTime ?? '—',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.subtle,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.muted.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'Terminé ✓',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -321,15 +919,15 @@ class _BookedSessionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.amber.withValues(alpha: 0.14),
+                  color: AppColors.blue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: const Text(
-                  'En attente',
+                  'À venir',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.amber,
+                    color: AppColors.blue,
                   ),
                 ),
               ),
