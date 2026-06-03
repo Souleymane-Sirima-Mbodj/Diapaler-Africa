@@ -341,4 +341,31 @@ class InteractionsService {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     });
   }
+
+  // ────── RATINGS ──────
+
+  /// Enregistre (ou met à jour) la note 1–5 de [fromUid] sur [toUid].
+  /// Nœud Firebase : `ratings/{toUid}/{fromUid}` → entier 1-5.
+  /// Un utilisateur ne peut laisser qu'une seule note par profil (écrasement).
+  static Future<void> setRating({
+    required String toUid,
+    required String fromUid,
+    required int value,
+  }) async {
+    assert(value >= 1 && value <= 5, 'La note doit être comprise entre 1 et 5');
+    await _db.child('ratings/$toUid/$fromUid').set(value);
+  }
+
+  /// Écoute en temps réel toutes les notes laissées sur [targetUid].
+  /// Retourne une Map { fromUid → valeur (1–5) }.
+  static Stream<Map<String, int>> getRatings(String targetUid) {
+    return _db.child('ratings/$targetUid').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return <String, int>{};
+      return {
+        for (final e in data.entries)
+          e.key.toString(): (e.value as num?)?.toInt() ?? 0,
+      };
+    });
+  }
 }

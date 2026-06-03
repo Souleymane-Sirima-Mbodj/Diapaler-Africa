@@ -57,6 +57,10 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   /// Stream des avis (uniquement pour les profils Firebase réels, uid non vide).
   Stream<List<Review>>? _reviewsStream;
 
+  /// Stream des notes 1-5 (uniquement pour les profils Firebase réels).
+  /// Map { fromUid → valeur (1-5) } — permet de calculer la moyenne live.
+  Stream<Map<String, int>>? _ratingsStream;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     _checkRequestStatus();
     if (widget.mentor.uid.isNotEmpty) {
       _reviewsStream = InteractionsService.getReviews(widget.mentor.uid);
+      _ratingsStream = InteractionsService.getRatings(widget.mentor.uid);
     }
   }
 
@@ -82,6 +87,26 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   }
 
   // BookingSheet dispose géré dans _BookingSheetState
+
+  /// Ouvre la bottom sheet de notation pour le mentor/investisseur.
+  void _showRatingSheet(
+      BuildContext ctx, Map<String, int> ratings, Mentor mentor) {
+    final myUid = AuthService.currentUid ?? '';
+    final myCurrentRating = ratings[myUid] ?? 0;
+    showModalBottomSheet<void>(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _RatingSheet(
+        mentor: mentor,
+        initialRating: myCurrentRating,
+        fromUid: myUid,
+      ),
+    );
+  }
 
   /// Calcule le score de compatibilité en temps réel à partir du profil
   /// de l'utilisateur connecté et des secteurs du mentor/investisseur.
@@ -332,12 +357,37 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         // Stats inline dans le hero
                         Row(
                           children: [
-                            Expanded(child: _HeroStat(
-                              icon: Icons.star_rounded,
-                              color: AppColors.amber,
-                              value: mentor.rating.toStringAsFixed(1),
-                              label: 'Note',
-                            )),
+                            Expanded(
+                              child: _ratingsStream != null
+                                  ? StreamBuilder<Map<String, int>>(
+                                      stream: _ratingsStream,
+                                      builder: (_, snap) {
+                                        final ratings = snap.data ?? {};
+                                        final avg = ratings.isEmpty
+                                            ? mentor.rating
+                                            : ratings.values.fold(0, (a, b) => a + b) /
+                                                ratings.length;
+                                        final canRate = _requestAccepted == true &&
+                                            (AuthService.currentUid ?? '').isNotEmpty &&
+                                            (AuthService.currentUid ?? '') != mentor.uid;
+                                        return _HeroStat(
+                                          icon: Icons.star_rounded,
+                                          color: AppColors.amber,
+                                          value: avg.toStringAsFixed(1),
+                                          label: 'Note',
+                                          onTap: canRate
+                                              ? () => _showRatingSheet(context, ratings, mentor)
+                                              : null,
+                                        );
+                                      },
+                                    )
+                                  : _HeroStat(
+                                      icon: Icons.star_rounded,
+                                      color: AppColors.amber,
+                                      value: mentor.rating.toStringAsFixed(1),
+                                      label: 'Note',
+                                    ),
+                            ),
                             _HeroDivider(),
                             Expanded(child: _HeroStat(
                               icon: Icons.bolt_rounded,
@@ -1698,6 +1748,173 @@ class _AvailabilityPreview extends StatelessWidget {
         }
         return _buildRow(slots, isDemo: false);
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bottom sheet de notation (étoiles 1-5)
+// ─────────────────────────────────────────────────────────────────
+class _RatingSheet extends StatefulWidget {
+  final Mentor mentor;
+  /// Note existante de l'utilisateur (0 = aucune).
+  final int initialRating;
+  final String fromUid;
+
+  const _RatingSheet({
+    required this.mentor,
+    required this.initialRating,
+    required this.fromUid,
+  });
+
+  @override
+  State<_RatingSheet> createState() => _RatingSheetState();
+}
+
+class _RatingSheetState extends State<_RatingSheet> {
+  late int _selected;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialRating;
+  }
+
+  Future<void> _confirm() async {
+    if (_selected == 0) return;
+    setState(() => _saving = true);
+    try {
+      await InteractionsService.setRating(
+        toUid: widget.mentor.uid,
+        fromUid: widget.fromUid,
+        value: _selected,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _label(int n) {
+    switch (n) {
+      case 1: return 'Très décevant';
+      case 2: return 'Décevant';
+      case 3: return 'Correct';
+      case 4: return 'Bien';
+      case 5: return 'Excellent !';
+      default: return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isUpdate = widget.initialRating > 0;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 16,
+        bottom: 32 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Poignée
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            isUpdate ? 'Modifier votre note' : 'Donner une note',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.navyDeep,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.mentor.name.split(' ').first,
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          const SizedBox(height: 28),
+          // Étoiles
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return GestureDetector(
+                onTap: () => setState(() => _selected = star),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                  child: Icon(
+                    _selected >= star
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 46,
+                    color: _selected >= star
+                        ? AppColors.amber
+                        : AppColors.border,
+                  ),
+                ),
+              );
+            }),
+          ),
+          // Label contextuel
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: _selected > 0
+                ? Padding(
+                    key: ValueKey(_selected),
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      _label(_selected),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: AppColors.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : const SizedBox(key: ValueKey(0), height: 10),
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_selected == 0 || _saving) ? null : _confirm,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: AppColors.amber,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.fieldBg,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      isUpdate ? 'Mettre à jour' : 'Confirmer',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
