@@ -282,58 +282,40 @@ class _StatsStrip extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, UserProfile p, int pending, int pitches) {
-    // Labels et valeurs adaptés à chaque rôle
-    final List<_MiniStat> items;
-
     if (p.role == 'Mentor') {
-      // Mentor : uniquement la carte Années d'expérience, redessinée
       return _MentorExperienceCard(years: p.yearsExperience);
     } else if (p.role == 'Investisseur') {
       return const SizedBox.shrink();
-    } else {
-      // Entrepreneur / Entrepreneure — cartes dédiées (design amélioré)
-      return Row(
-        children: [
-          Expanded(
-            child: _EntrepreneurStatCard(
-              icon: Icons.rocket_launch_rounded,
-              color: AppColors.amber,
-              value: '$pitches',
-              label: 'Projets',
-              subtitle: 'pitch decks publiés',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _EntrepreneurStatCard(
-              icon: Icons.check_circle_rounded,
-              color: AppColors.green,
-              value: '$pitches',
-              label: 'Terminés',
-              subtitle: 'projets clôturés',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-              ),
-            ),
-          ),
-        ],
-      );
     }
-    return SizedBox(
-      height: 74,
-      child: Row(
-        children: List.generate(items.length, (i) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: i < items.length - 1 ? 8 : 0),
-              child: items[i],
+    // Entrepreneur / Entrepreneure — cartes dédiées
+    return Row(
+      children: [
+        Expanded(
+          child: _EntrepreneurStatCard(
+            icon: Icons.rocket_launch_rounded,
+            color: AppColors.amber,
+            value: '$pitches',
+            label: 'Projets',
+            subtitle: 'pitch decks publiés',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MesPitchsPage()),
             ),
-          );
-        }),
-      ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _EntrepreneurStatCard(
+            icon: Icons.check_circle_rounded,
+            color: AppColors.green,
+            value: '$pitches',
+            label: 'Terminés',
+            subtitle: 'projets clôturés',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
