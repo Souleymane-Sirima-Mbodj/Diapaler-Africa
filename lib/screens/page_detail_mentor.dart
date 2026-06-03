@@ -5,6 +5,7 @@ import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_favoris.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
@@ -383,6 +384,11 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               Builder(builder: (context) {
                 // Profil statique → pas de section disponibilités
                 if (mentor.uid.isEmpty) return const SizedBox.shrink();
+                // Les Entrepreneurs ne donnent pas leurs disponibilités
+                if (mentor.role == 'Entrepreneur' ||
+                    mentor.role == 'Entrepreneure') {
+                  return const SizedBox.shrink();
+                }
 
                 final myRole = UserProfileController.profile.value.role;
                 final needsAcceptance =
@@ -402,10 +408,70 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   ],
                 );
               }),
+              // ── Pitchs de l'entrepreneur (visible par Mentor / Investisseur) ──
+              Builder(builder: (context) {
+                if (mentor.uid.isEmpty) return const SizedBox.shrink();
+                final isEntrepreneur = mentor.role == 'Entrepreneur' ||
+                    mentor.role == 'Entrepreneure';
+                if (!isEntrepreneur) return const SizedBox.shrink();
+                final myRole = UserProfileController.profile.value.role;
+                if (myRole != 'Mentor' && myRole != 'Investisseur') {
+                  return const SizedBox.shrink();
+                }
+                return _EntrepreneurPitchesSection(uid: mentor.uid);
+              }),
               Builder(
                 builder: (context) {
                   final myRole = UserProfileController.profile.value.role;
-                  // Affiché uniquement pour Entrepreneur et Investisseur
+                  final isViewingEntrepreneur = mentor.role == 'Entrepreneur' ||
+                      mentor.role == 'Entrepreneure';
+
+                  // ─── Mentor → Entrepreneur : bouton Message ──────────
+                  if (myRole == 'Mentor' &&
+                      isViewingEntrepreneur &&
+                      mentor.uid.isNotEmpty) {
+                    if (_requestAccepted == null) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (!_requestAccepted!) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final myUid = AuthService.currentUid ??
+                                UserProfileController.profile.value.email;
+                            final convId =
+                                InteractionsService.generateConversationId(
+                                    myUid, mentor.uid);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                  conversationId: convId,
+                                  otherUserName: mentor.name,
+                                  otherUserId: mentor.uid,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline_rounded,
+                              size: 18),
+                          label: const Text('Envoyer un message'),
+                          style: OutlinedButton.styleFrom(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // ─── Cas général : Entrepreneur ou Investisseur ──────
                   if (myRole != 'Entrepreneur' && myRole != 'Investisseur') {
                     return const SizedBox.shrink();
                   }
@@ -1202,6 +1268,185 @@ class _BookingSheetState extends State<_BookingSheet> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Pitchs publiés par l'entrepreneur (visible Mentor / Investisseur)
+// ─────────────────────────────────────────────────────────────────
+class _EntrepreneurPitchesSection extends StatelessWidget {
+  final String uid;
+  const _EntrepreneurPitchesSection({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: DatabaseService.getMyPitches(uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        final pitches = snapshot.data ?? [];
+        if (pitches.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 22),
+            _SectionTitle('Pitchs publiés (${pitches.length})'),
+            const SizedBox(height: 10),
+            for (final pitch in pitches)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: _PitchPreviewCard(pitch: pitch),
+              ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PitchPreviewCard extends StatelessWidget {
+  final Map<String, dynamic> pitch;
+  const _PitchPreviewCard({required this.pitch});
+
+  String get _title => pitch['title']?.toString() ?? 'Sans titre';
+  String get _sector => pitch['sector']?.toString() ?? '';
+  String get _amount => pitch['amount']?.toString() ?? '';
+  String get _description => pitch['description']?.toString() ?? '';
+
+  String get _summary {
+    if (_description.isEmpty) return '';
+    return _description.length > 100
+        ? '${_description.substring(0, 100)}…'
+        : _description;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.upload_file_rounded,
+                    color: AppColors.amber, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_sector.isNotEmpty || _amount.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                if (_sector.isNotEmpty)
+                  _MiniTag(
+                    label: _sector,
+                    color: AppColors.blue,
+                    icon: Icons.category_rounded,
+                  ),
+                if (_amount.isNotEmpty)
+                  _MiniTag(
+                    label: '$_amount FCFA',
+                    color: AppColors.green,
+                    icon: Icons.payments_rounded,
+                  ),
+              ],
+            ),
+          ],
+          if (_summary.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              _summary,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.muted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniTag extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _MiniTag(
+      {required this.label, required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
