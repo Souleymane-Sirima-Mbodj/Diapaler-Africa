@@ -287,35 +287,16 @@ class _StatsStrip extends StatelessWidget {
     } else if (p.role == 'Investisseur') {
       return const SizedBox.shrink();
     }
-    // Entrepreneur / Entrepreneure — cartes dédiées
-    return Row(
-      children: [
-        Expanded(
-          child: _EntrepreneurStatCard(
-            icon: Icons.rocket_launch_rounded,
-            color: AppColors.amber,
-            value: '$pitches',
-            label: 'Projets',
-            subtitle: 'pitch decks publiés',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _EntrepreneurStatCard(
-            icon: Icons.check_circle_rounded,
-            color: AppColors.green,
-            value: '$pitches',
-            label: 'Terminés',
-            subtitle: 'projets clôturés',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-            ),
-          ),
-        ),
-      ],
+    // Entrepreneur / Entrepreneure — carte pleine largeur
+    return _EntrepreneurStatCard(
+      icon: Icons.rocket_launch_rounded,
+      color: AppColors.amber,
+      value: '$pitches',
+      label: 'Projets',
+      subtitle: 'pitch decks publiés',
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+      ),
     );
   }
 }
@@ -436,7 +417,7 @@ class _EntrepreneurStatCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -449,53 +430,56 @@ class _EntrepreneurStatCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-                if (onTap != null)
-                  Icon(Icons.arrow_forward_ios_rounded,
-                      size: 11, color: AppColors.subtle),
-              ],
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
                 color: AppColors.navyDeep,
                 height: 1,
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.navyDeep,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 10.5,
-                color: AppColors.muted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 12, color: AppColors.subtle),
+            ],
           ],
         ),
       ),
