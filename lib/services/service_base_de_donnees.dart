@@ -18,17 +18,21 @@ class DatabaseService {
   // ───────────────────────────── Pitchs publics ────────────────────────────
 
   /// Publie un pitch dans le nœud global `pitches/` — visible par tous.
+  /// [pitchId] doit être pré-généré (pour permettre l'upload Cloudinary avant publication).
   static Future<void> publishPitch({
+    required String pitchId,
     required String userId,
     required String userName,
     required String title,
     required String sector,
     required String description,
     required String amount,
+    String? businessPlanUrl,
+    String? videoUrl,
+    String? deckUrl,
   }) async {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    await _db.ref('pitches/$id').set({
-      'id': id,
+    await _db.ref('pitches/$pitchId').set({
+      'id': pitchId,
       'userId': userId,
       'userName': userName,
       'title': title,
@@ -36,6 +40,9 @@ class DatabaseService {
       'description': description,
       'amount': amount,
       'createdAt': ServerValue.timestamp,
+      if (businessPlanUrl != null) 'businessPlanUrl': businessPlanUrl,
+      if (videoUrl != null)        'videoUrl':        videoUrl,
+      if (deckUrl != null)         'deckUrl':         deckUrl,
     });
   }
 

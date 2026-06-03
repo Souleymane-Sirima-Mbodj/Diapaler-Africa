@@ -704,34 +704,6 @@ class _ProjectTile extends StatelessWidget {
                 );
               },
             ),
-            if (!project.isCompleted)
-              ListTile(
-                leading: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.green.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.trending_up_rounded,
-                      color: AppColors.green, size: 20),
-                ),
-                title: const Text(
-                  'Avancer d\'une étape',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                ),
-                subtitle: Text(
-                  'Étape ${project.step} → ${project.step + 1} / '
-                  '${project.totalSteps}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                onTap: () {
-                  Navigator.of(sheetCtx).pop();
-                  UserProfileController.updateProject(
-                    project.copyWith(step: project.step + 1),
-                  );
-                },
-              ),
             ListTile(
               leading: Container(
                 width: 38,
