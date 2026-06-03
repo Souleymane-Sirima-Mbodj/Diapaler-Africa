@@ -17,3 +17,8 @@ final ValueNotifier<int> unreadMessagesCount = ValueNotifier<int>(0);
 /// Mis à jour en temps réel depuis Firebase. Utilisé pour les badges sur les
 /// boutons "Demandes" dans les dashboards Mentor, Investisseur et Profil.
 final ValueNotifier<int> pendingRequestsCount = ValueNotifier<int>(0);
+
+/// Nombre de pitchs publiés par l'entrepreneur connecté.
+/// Mis à jour en temps réel depuis Firebase (nœud `pitches/`).
+/// Utilisé pour les stats "Projets" et "Terminés" du profil entrepreneur.
+final ValueNotifier<int> pitchCount = ValueNotifier<int>(0);

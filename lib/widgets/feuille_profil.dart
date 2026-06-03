@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
 import '../screens/page_connexion.dart';
 import '../screens/page_mes_favoris.dart';
+import '../screens/page_mes_pitchs.dart';
 import '../screens/page_parametres.dart';
 import '../screens/page_profil.dart';
 import '../services/service_authentification.dart';
@@ -117,39 +118,33 @@ class _ProfileSheet extends StatelessWidget {
                 );
               },
             ),
+            ValueListenableBuilder<int>(
+              valueListenable: pitchCount,
+              builder: (_, count, __) => _Tile(
+                icon: Icons.workspace_premium_outlined,
+                label: 'Mes pitchs déposés',
+                trailing: '$count',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+                  );
+                },
+              ),
+            ),
             ValueListenableBuilder<UserProfile>(
               valueListenable: UserProfileController.profile,
-              builder: (_, p, __) {
-                return Column(
-                  children: [
-                    _Tile(
-                      icon: Icons.workspace_premium_outlined,
-                      label: 'Mes pitchs déposés',
-                      trailing: '${p.projects.length}',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Consulte la section "Mes projets" sur ton profil.'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
-                    _Tile(
-                      icon: Icons.bookmark_border_rounded,
-                      label: 'Mentors favoris',
-                      trailing: '${p.favoritesCount}',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const MesFavorisPage()),
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
+              builder: (_, p, __) => _Tile(
+                icon: Icons.bookmark_border_rounded,
+                label: 'Mentors favoris',
+                trailing: '${p.favoritesCount}',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MesFavorisPage()),
+                  );
+                },
+              ),
             ),
             _Tile(
               icon: Icons.language_rounded,
