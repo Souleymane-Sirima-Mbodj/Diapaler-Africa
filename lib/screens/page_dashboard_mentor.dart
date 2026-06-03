@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
+import '../services/service_interactions.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
@@ -17,6 +20,62 @@ class MentorDashboard extends StatefulWidget {
 }
 
 class _MentorDashboardState extends State<MentorDashboard> {
+  // ── Suppression d'un entrepreneur ───────────────────────────────
+  Future<void> _confirmDeleteEntrepreneur(
+      BuildContext context, MentorRequest req) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Retirer cet entrepreneur ?'),
+        content: Text(
+            '${req.fromName} sera retiré(e) de votre liste d\'entrepreneurs mentorés.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Retirer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await InteractionsService.cancelRequest(
+        requestId: req.id,
+        fromUserId: req.fromUserId,
+        toUserId: req.toUserId,
+      );
+      // Met à jour le compteur local
+      final p = UserProfileController.profile.value;
+      UserProfileController.update(
+          p.copyWith(mentorsActive: (p.mentorsActive - 1).clamp(0, 9999)));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${req.fromName} retiré(e) de vos entrepreneurs.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<UserProfile>(
@@ -324,6 +383,70 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       ),
                     ),
                   ),
+
+                  // ── Mes Entrepreneurs ────────────────────────────
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Mes Entrepreneurs',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  StreamBuilder<List<MentorRequest>>(
+                    stream: InteractionsService.getReceivedRequests(
+                        AuthService.currentUid ?? ''),
+                    builder: (ctx, snap) {
+                      final all = snap.data ?? [];
+                      final entrepreneurs = all
+                          .where((r) =>
+                              r.type == 'mentor' &&
+                              r.status == RequestStatus.accepted)
+                          .toList();
+                      if (snap.connectionState == ConnectionState.waiting &&
+                          all.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (entrepreneurs.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.fieldBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.school_outlined,
+                                  color: AppColors.muted, size: 22),
+                              SizedBox(width: 10),
+                              Text(
+                                'Aucun entrepreneur mentoré pour l\'instant.',
+                                style: TextStyle(
+                                    fontSize: 13, color: AppColors.muted),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: entrepreneurs
+                            .map((req) => _EntrepreneurCard(
+                                  name: req.fromName,
+                                  accentColor: AppColors.roleMentor,
+                                  onDelete: () => _confirmDeleteEntrepreneur(
+                                      context, req),
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ]),
               ),
             ),
@@ -375,6 +498,96 @@ class _StatCard extends StatelessWidget {
               color: AppColors.muted,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte d'un entrepreneur (partagée entre mentor et investisseur)
+// ─────────────────────────────────────────────────────────────────
+class _EntrepreneurCard extends StatelessWidget {
+  final String name;
+  final Color accentColor;
+  final VoidCallback onDelete;
+
+  const _EntrepreneurCard({
+    required this.name,
+    required this.accentColor,
+    required this.onDelete,
+  });
+
+  String get _initials {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: accentColor.withValues(alpha: 0.15),
+            child: Text(
+              _initials,
+              style: TextStyle(
+                color: accentColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.roleEntrepreneur.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Entrepreneur',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.roleEntrepreneur,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_remove_rounded, size: 20),
+            color: AppColors.red.withValues(alpha: 0.7),
+            tooltip: 'Retirer',
+            onPressed: onDelete,
           ),
         ],
       ),
