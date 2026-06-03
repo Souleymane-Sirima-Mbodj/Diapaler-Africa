@@ -73,15 +73,21 @@ class AgendaPage extends StatelessWidget {
             final accepted = sessionReqs
                 .where((r) => r.status == RequestStatus.accepted)
                 .toList();
+            final cancelled = sessionReqs
+                .where((r) => r.status == RequestStatus.cancelled)
+                .toList();
             final upcoming = accepted
                 .where((r) => (r.proposedDate ?? '').compareTo(todayStr) >= 0)
                 .toList();
-            final finished = accepted
-                .where((r) {
-                  final d = r.proposedDate ?? '';
-                  return d.isNotEmpty && d.compareTo(todayStr) < 0;
-                })
-                .toList();
+            final finished = [
+              // Sessions acceptées dont la date est passée
+              ...accepted.where((r) {
+                final d = r.proposedDate ?? '';
+                return d.isNotEmpty && d.compareTo(todayStr) < 0;
+              }),
+              // Sessions annulées (toujours dans Terminés)
+              ...cancelled,
+            ];
 
             final upcomingCount = bookedSessions.length + upcoming.length;
 
@@ -539,8 +545,19 @@ class _AcceptedSessionCard extends StatelessWidget {
   const _AcceptedSessionCard({required this.request});
 
   String get _otherName {
-    final myUid = UserProfileController.profile.value.email;
+    final myUid = AuthService.currentUid ?? '';
     return request.fromUserId == myUid ? request.toName : request.fromName;
+  }
+
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _SessionDetailsSheet(request: request, otherName: _otherName),
+    );
   }
 
   String get _day {
@@ -559,7 +576,9 @@ class _AcceptedSessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HoverGlowCard(
+    return GestureDetector(
+      onTap: () => _showDetails(context),
+      child: HoverGlowCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -663,11 +682,23 @@ class _AcceptedSessionCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const Spacer(),
+              const Icon(Icons.info_outline_rounded,
+                  size: 13, color: AppColors.muted),
+              const SizedBox(width: 3),
+              const Text(
+                'Voir les détails',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -697,9 +728,22 @@ class _FinishedSessionCard extends StatelessWidget {
     return months[(m - 1).clamp(0, 11)];
   }
 
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _SessionDetailsSheet(request: request, otherName: _otherName),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return HoverGlowCard(
+    return GestureDetector(
+      onTap: () => _showDetails(context),
+      child: HoverGlowCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -768,23 +812,335 @@ class _FinishedSessionCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.muted.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'Terminé ✓',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                color: AppColors.muted,
+          Builder(builder: (context) {
+            final isCancelled = request.status == RequestStatus.cancelled;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: isCancelled
+                    ? AppColors.red.withValues(alpha: 0.12)
+                    : AppColors.muted.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
               ),
-            ),
-          ),
+              child: Text(
+                isCancelled ? 'Annulé' : 'Terminé ✓',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: isCancelled ? AppColors.red : AppColors.muted,
+                ),
+              ),
+            );
+          }),
         ],
       ),
+    ));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bottom sheet — détails d'une session (acceptée ou terminée)
+// ─────────────────────────────────────────────────────────────────
+class _SessionDetailsSheet extends StatelessWidget {
+  final MentorRequest request;
+  final String otherName;
+  const _SessionDetailsSheet({required this.request, required this.otherName});
+
+  String get _fullDate {
+    final parts = (request.proposedDate ?? '').split('-');
+    if (parts.length < 3) return '—';
+    const months = [
+      'janvier','février','mars','avril','mai','juin',
+      'juillet','août','septembre','octobre','novembre','décembre'
+    ];
+    final m = int.tryParse(parts[1]) ?? 1;
+    return '${parts[2]} ${months[(m - 1).clamp(0, 11)]} ${parts[0]}';
+  }
+
+  bool get _isDone {
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2,'0')}-${today.day.toString().padLeft(2,'0')}';
+    return (request.proposedDate ?? '').compareTo(todayStr) < 0;
+  }
+
+  bool get _isCancelled => request.status == RequestStatus.cancelled;
+  bool get _canCancel => request.status == RequestStatus.accepted && !_isDone;
+
+  Future<void> _showCancelDialog(BuildContext context) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: const Text('Annuler la session'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Cette session sera marquée comme annulée. Merci de préciser le motif.',
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                maxLength: 200,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Motif d\'annulation…',
+                  filled: true,
+                  fillColor: AppColors.fieldBg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Retour'),
+            ),
+            ElevatedButton(
+              onPressed: reasonCtrl.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirmer l\'annulation'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final myUid = AuthService.currentUid ?? '';
+    final myName = UserProfileController.profile.value.fullName;
+    final otherUid =
+        request.fromUserId == myUid ? request.toUserId : request.fromUserId;
+
+    await InteractionsService.cancelConfirmedSession(
+      requestId: request.id,
+      cancellerName: myName,
+      otherUid: otherUid,
+      reason: reasonCtrl.text.trim(),
+    );
+    if (context.mounted) {
+      Navigator.of(context).pop(); // ferme le sheet
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session annulée — notification envoyée.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _isCancelled
+        ? AppColors.red
+        : (_isDone ? AppColors.muted : AppColors.green);
+    final statusLabel = _isCancelled
+        ? 'Annulée'
+        : (_isDone ? 'Terminée' : 'Confirmée ✓');
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Poignée
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // En-tête
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.event_available_rounded,
+                      color: color, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Session avec $otherName',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.navyDeep,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+
+            // Détails
+            _DetailRow(
+              icon: Icons.calendar_today_rounded,
+              label: 'Date',
+              value: _fullDate,
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Icons.schedule_rounded,
+              label: 'Heure',
+              value: request.proposedTime ?? '—',
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Icons.person_rounded,
+              label: request.fromUserId == (AuthService.currentUid ?? '')
+                  ? 'Mentor'
+                  : 'Entrepreneur',
+              value: otherName,
+            ),
+            if (request.sessionTheme != null &&
+                request.sessionTheme!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _DetailRow(
+                icon: Icons.lightbulb_rounded,
+                label: 'Objectif',
+                value: request.sessionTheme!,
+              ),
+            ],
+            if (_isCancelled &&
+                request.cancellationReason != null &&
+                request.cancellationReason!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _DetailRow(
+                icon: Icons.cancel_outlined,
+                label: 'Motif d\'annulation',
+                value: request.cancellationReason!,
+              ),
+            ],
+            const SizedBox(height: 16),
+
+            // Bouton annuler (uniquement si session confirmée et future)
+            if (_canCancel) ...[
+              const Divider(height: 1),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showCancelDialog(context),
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text(
+                    'Annuler la session',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.red,
+                    side: const BorderSide(color: AppColors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _DetailRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.fieldBg,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.navy),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyDeep,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

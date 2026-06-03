@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../data/profil_utilisateur.dart';
+import '../data/donnees_mentors.dart';
 import '../services/service_base_de_donnees.dart';
 import '../theme/theme_app.dart';
-import '../widgets/avatar.dart';
+import 'page_detail_mentor.dart';
 
-/// Page publique du profil d'un utilisateur Firebase (entrepreneur, etc.)
-/// chargé par son UID.
-class ProfilPublicPage extends StatelessWidget {
+/// Pont de chargement : charge le profil Firebase puis redirige vers MentorDetailPage.
+class ProfilPublicPage extends StatefulWidget {
   final String uid;
   final String name;
 
@@ -17,231 +16,82 @@ class ProfilPublicPage extends StatelessWidget {
   });
 
   @override
+  State<ProfilPublicPage> createState() => _ProfilPublicPageState();
+}
+
+class _ProfilPublicPageState extends State<ProfilPublicPage> {
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await DatabaseService.readUserProfile(widget.uid);
+    if (!mounted) return;
+
+    if (p == null) {
+      // Profil introuvable — on reste sur cette page avec un message
+      setState(() => _notFound = true);
+      return;
+    }
+
+    final mentor = Mentor(
+      uid: widget.uid,
+      initials: p.initials,
+      name: p.fullName,
+      title: p.sector.isNotEmpty ? p.sector : p.role,
+      city: p.city,
+      sectors: p.interests.isNotEmpty
+          ? p.interests
+          : (p.sector.isNotEmpty ? [p.sector] : []),
+      companies: const [],
+      rating: p.score,
+      reviews: 0,
+      years: p.yearsExperience,
+      compatibility: 0,
+      role: p.role,
+      gender: p.gender,
+      bio: p.bio,
+      photoBase64: p.photoBase64,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => MentorDetailPage(mentor: mentor)),
+    );
+  }
+
+  bool _notFound = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: FutureBuilder<UserProfile?>(
-        future: DatabaseService.readUserProfile(uid),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final p = snap.data;
-          if (p == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.person_off_outlined,
-                        size: 56, color: AppColors.subtle),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Profil non disponible',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 13, color: AppColors.muted),
-                    ),
-                  ],
+    if (_notFound) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.name)),
+        body: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.person_off_outlined, size: 56, color: AppColors.subtle),
+              SizedBox(height: 14),
+              Text(
+                'Profil non disponible',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.navyDeep,
                 ),
               ),
-            );
-          }
-          return _ProfileBody(profile: p);
-        },
-      ),
-    );
-  }
-}
-
-class _ProfileBody extends StatelessWidget {
-  final UserProfile profile;
-  const _ProfileBody({required this.profile});
-
-  Color get _roleColor {
-    switch (profile.role) {
-      case 'Mentor':
-        return AppColors.roleMentor;
-      case 'Investisseur':
-        return AppColors.blue;
-      default:
-        return AppColors.roleEntrepreneur;
+            ],
+          ),
+        ),
+      );
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final p = profile;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-      children: [
-        // ── Avatar + nom ─────────────────────────────────────────
-        Row(
-          children: [
-            Avatar(
-              initials: p.initials,
-              size: 64,
-              background: _roleColor,
-              photoBase64: p.photoBase64,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p.fullName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _roleColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      p.role,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _roleColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // ── Infos rapides ─────────────────────────────────────────
-        if (p.sector.isNotEmpty)
-          _InfoRow(Icons.category_rounded, 'Secteur', p.sector),
-        if (p.city.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _InfoRow(Icons.place_outlined, 'Ville', p.city),
-        ],
-
-        // ── Bio ───────────────────────────────────────────────────
-        if (p.bio.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Text(
-            'À propos',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.navyDeep,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.fieldBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              p.bio,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.navyDeep,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-
-        // ── Domaines / intérêts ───────────────────────────────────
-        if (p.interests.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Text(
-            'Domaines',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.navyDeep,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: p.interests
-                .map((s) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _roleColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _roleColor.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Text(
-                        s,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _roleColor,
-                        ),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _InfoRow(this.icon, this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.muted),
-        const SizedBox(width: 8),
-        Text(
-          '$label : ',
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.muted,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.navyDeep,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.name)),
+      body: const Center(child: CircularProgressIndicator()),
     );
   }
 }

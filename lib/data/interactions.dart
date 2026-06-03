@@ -122,6 +122,10 @@ class MentorRequest {
   final String? proposedTime;
   /// Raison de refus (optionnelle, renseignée lors d'un rejet).
   final String? rejectionReason;
+  /// Thème / objectif de la session (renseigné par l'entrepreneur lors de la réservation).
+  final String? sessionTheme;
+  /// Motif d'annulation d'une session confirmée.
+  final String? cancellationReason;
 
   const MentorRequest({
     required this.id,
@@ -137,6 +141,8 @@ class MentorRequest {
     this.proposedDate,
     this.proposedTime,
     this.rejectionReason,
+    this.sessionTheme,
+    this.cancellationReason,
   });
 
   Map<String, dynamic> toJson() => {
@@ -153,6 +159,8 @@ class MentorRequest {
     if (proposedDate != null) 'proposedDate': proposedDate,
     if (proposedTime != null) 'proposedTime': proposedTime,
     if (rejectionReason != null) 'rejectionReason': rejectionReason,
+    if (sessionTheme != null) 'sessionTheme': sessionTheme,
+    if (cancellationReason != null) 'cancellationReason': cancellationReason,
   };
 
   factory MentorRequest.fromJson(Map<String, dynamic> json) => MentorRequest(
@@ -169,6 +177,8 @@ class MentorRequest {
     proposedDate: json['proposedDate']?.toString(),
     proposedTime: json['proposedTime']?.toString(),
     rejectionReason: json['rejectionReason']?.toString(),
+    sessionTheme: json['sessionTheme']?.toString(),
+    cancellationReason: json['cancellationReason']?.toString(),
   );
 }
 

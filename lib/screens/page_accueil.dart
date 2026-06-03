@@ -365,14 +365,17 @@ class _ProjectHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<UserProfile>(
-      valueListenable: UserProfileController.profile,
-      builder: (_, p, __) {
-        if (p.currentProject == null) {
-          return const _EmptyProjectHero();
-        }
-        return _ProgressCard(profile: p);
-      },
+    return ValueListenableBuilder<int>(
+      valueListenable: pitchCount,
+      builder: (_, count, __) => ValueListenableBuilder<UserProfile>(
+        valueListenable: UserProfileController.profile,
+        builder: (_, p, __) {
+          if (count == 0 || p.currentProject == null) {
+            return const _EmptyProjectHero();
+          }
+          return _ProgressCard(profile: p);
+        },
+      ),
     );
   }
 }
@@ -808,61 +811,64 @@ class _StatsStrip extends StatelessWidget {
       valueListenable: UserProfileController.profile,
       builder: (_, p, __) => ValueListenableBuilder<List<Mentor>>(
         valueListenable: FavoriteService.favorites,
-        builder: (_, favs, __) {
-          final items = <_StatPill>[
-            _StatPill(
-              icon: Icons.handshake_rounded,
-              color: AppColors.blue,
-              label: 'Mentors',
-              value: p.mentorsActive,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MesMentorsPage()),
-              ),
-            ),
-            _StatPill(
-              icon: Icons.calendar_month_rounded,
-              color: AppColors.green,
-              label: 'Sessions',
-              value: p.sessionsCount,
-            ),
-            if (p.score > 0)
+        builder: (_, favs, __) => ValueListenableBuilder<int>(
+          valueListenable: pitchCount,
+          builder: (_, pitches, __) {
+            final items = <_StatPill>[
               _StatPill(
-                icon: Icons.star_rounded,
-                color: AppColors.amber,
-                label: 'Score',
-                value: p.score,
-                decimals: 1,
-                suffix: '★',
+                icon: Icons.handshake_rounded,
+                color: AppColors.blue,
+                label: 'Mentors',
+                value: p.mentorsActive,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesMentorsPage()),
+                ),
               ),
-            _StatPill(
-              icon: Icons.upload_file_rounded,
-              color: AppColors.purple,
-              label: 'Pitchs',
-              value: p.projects.length,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+              _StatPill(
+                icon: Icons.calendar_month_rounded,
+                color: AppColors.green,
+                label: 'Sessions',
+                value: p.sessionsCount,
               ),
-            ),
-            _StatPill(
-              icon: Icons.bookmark_rounded,
-              color: AppColors.red,
-              label: 'Favoris',
-              value: favs.length,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MesFavorisPage()),
+              if (p.score > 0)
+                _StatPill(
+                  icon: Icons.star_rounded,
+                  color: AppColors.amber,
+                  label: 'Score',
+                  value: p.score,
+                  decimals: 1,
+                  suffix: '★',
+                ),
+              _StatPill(
+                icon: Icons.upload_file_rounded,
+                color: AppColors.purple,
+                label: 'Pitchs',
+                value: pitches,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+                ),
               ),
-            ),
-          ];
-          return SizedBox(
-            height: 64,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => items[i],
-            ),
-          );
-        },
+              _StatPill(
+                icon: Icons.bookmark_rounded,
+                color: AppColors.red,
+                label: 'Favoris',
+                value: favs.length,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
+                ),
+              ),
+            ];
+            return SizedBox(
+              height: 64,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => items[i],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -126,6 +126,7 @@ class InteractionsService {
     required String message,
     required String proposedDate,
     required String proposedTime,
+    String? sessionTheme,
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final request = MentorRequest(
@@ -140,6 +141,7 @@ class InteractionsService {
       type: 'session',
       proposedDate: proposedDate,
       proposedTime: proposedTime,
+      sessionTheme: sessionTheme,
     );
     await _db.child('mentorRequests/$id').set(request.toJson());
     return id;
@@ -178,6 +180,26 @@ class InteractionsService {
       title: 'Session refusée',
       message: '$mentorName n\'a pas pu accepter ta demande de session.',
       type: 'session_rejected',
+    );
+  }
+
+  /// Annule une session CONFIRMÉE avec un motif justificatif, notifie l'autre partie.
+  static Future<void> cancelConfirmedSession({
+    required String requestId,
+    required String cancellerName,
+    required String otherUid,
+    required String reason,
+  }) async {
+    await _db.child('mentorRequests/$requestId').update({
+      'status': RequestStatus.cancelled.name,
+      'cancellationReason': reason,
+      'respondedAt': DateTime.now().toIso8601String(),
+    });
+    await NotificationService.notifyUser(
+      uid: otherUid,
+      title: 'Session annulée',
+      message: '$cancellerName a annulé la session — motif : $reason',
+      type: 'session_cancelled',
     );
   }
 

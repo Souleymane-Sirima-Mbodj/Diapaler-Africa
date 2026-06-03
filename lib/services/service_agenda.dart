@@ -122,7 +122,7 @@ class AgendaController {
         final m = Map<String, dynamic>.from(v);
         if (m['type'] != 'session') continue;
         final status = m['status']?.toString() ?? '';
-        if (status != 'pending' && status != 'accepted') continue;
+        if (status != 'pending' && status != 'accepted' && status != 'cancelled') continue;
         final from = m['fromUserId']?.toString() ?? '';
         final to   = m['toUserId']?.toString() ?? '';
         if (from != userId && to != userId) continue;

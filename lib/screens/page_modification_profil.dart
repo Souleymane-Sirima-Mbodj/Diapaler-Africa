@@ -416,21 +416,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _save,
-              child: const Text(
-                'ENREGISTRER',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     ),
