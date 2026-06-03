@@ -89,6 +89,33 @@ class InteractionsService {
     });
   }
 
+  /// Annule une relation acceptée (mentorat ou investissement) et décrémente
+  /// le compteur [mentorsActive] des deux parties dans Firebase.
+  static Future<void> cancelRequest({
+    required String requestId,
+    required String fromUserId,
+    required String toUserId,
+  }) async {
+    await _db.child('mentorRequests/$requestId').update({
+      'status': 'cancelled',
+      'cancelledAt': DateTime.now().toIso8601String(),
+    });
+    await Future.wait([
+      _decrementMentorsActive(fromUserId),
+      _decrementMentorsActive(toUserId),
+    ]);
+  }
+
+  static Future<void> _decrementMentorsActive(String uid) async {
+    try {
+      final snap = await _db.child('users/$uid/mentorsActive').get();
+      final current = (snap.value as num?)?.toInt() ?? 0;
+      if (current > 0) {
+        await _db.child('users/$uid').update({'mentorsActive': current - 1});
+      }
+    } catch (_) {}
+  }
+
   /// Envoie une demande de session au mentor/investisseur avec date et heure proposées.
   static Future<String> sendSessionRequest({
     required String fromUserId,
