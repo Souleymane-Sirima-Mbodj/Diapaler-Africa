@@ -28,18 +28,6 @@ class MesPitchsPage extends StatelessWidget {
           ),
         ),
         foregroundColor: AppColors.navyDeep,
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                fullscreenDialog: true,
-                builder: (_) => const PitchPage(),
-              ),
-            ),
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Nouveau pitch',
-          ),
-        ],
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: DatabaseService.getMyPitches(myUid),
