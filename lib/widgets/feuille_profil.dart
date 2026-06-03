@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
 import '../screens/page_connexion.dart';
 import '../screens/page_mes_favoris.dart';
-import '../screens/page_mes_pitchs.dart';
 import '../screens/page_parametres.dart';
 import '../screens/page_profil.dart';
 import '../services/service_authentification.dart';
@@ -117,20 +116,6 @@ class _ProfileSheet extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const ProfilePage()),
                 );
               },
-            ),
-            ValueListenableBuilder<int>(
-              valueListenable: pitchCount,
-              builder: (_, count, __) => _Tile(
-                icon: Icons.workspace_premium_outlined,
-                label: 'Mes pitchs déposés',
-                trailing: '$count',
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MesPitchsPage()),
-                  );
-                },
-              ),
             ),
             ValueListenableBuilder<UserProfile>(
               valueListenable: UserProfileController.profile,
