@@ -866,6 +866,18 @@ class _BookingSheetState extends State<_BookingSheet> {
   bool      _sending = false;
   final TextEditingController _themeCtrl = TextEditingController();
 
+  /// Stream mis en cache pour éviter de recréer l'abonnement Firebase à
+  /// chaque rebuild (ex : ouverture du clavier → MediaQuery change → build()
+  /// rappelé → nouveau Stream → StreamBuilder repasse en "waiting" → le
+  /// TextField disparaît et le clavier se ferme immédiatement).
+  late final Stream<Availability?> _availabilityStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _availabilityStream = InteractionsService.getAvailability(widget.mentor.uid);
+  }
+
   /// Les 14 prochains jours à partir de demain.
   List<DateTime> get _next14 {
     final list = <DateTime>[];
@@ -952,7 +964,7 @@ class _BookingSheetState extends State<_BookingSheet> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Availability?>(
-      stream: InteractionsService.getAvailability(widget.mentor.uid),
+      stream: _availabilityStream,
       builder: (ctx, snap) {
         final avail = snap.data;
         final dates = _next14;
