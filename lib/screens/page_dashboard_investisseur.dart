@@ -19,6 +19,17 @@ class InvestorDashboard extends StatefulWidget {
 }
 
 class _InvestorDashboardState extends State<InvestorDashboard> {
+  Stream<Map<String, int>>? _ratingsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = AuthService.currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      _ratingsStream = InteractionsService.getRatings(uid);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<UserProfile>(
@@ -62,9 +73,9 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const Text(
-                            'Investisseur',
-                            style: TextStyle(
+                          Text(
+                            profile.role,
+                            style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.muted,
                               fontWeight: FontWeight.w600,
@@ -132,14 +143,6 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                     children: [
                       Expanded(
                         child: _StatCard(
-                          icon: Icons.trending_up_rounded,
-                          label: 'Opportunités',
-                          value: '${profile.mentorsActive}',
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatCard(
                           icon: Icons.people_rounded,
                           label: 'Entrepreneurs',
                           value: '${profile.mentorsActive}',
@@ -156,6 +159,28 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                           icon: Icons.bookmark_rounded,
                           label: 'Favoris',
                           value: '${profile.favoritesCount}',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: StreamBuilder<Map<String, int>>(
+                          stream: _ratingsStream,
+                          builder: (ctx, snap) {
+                            final ratings = snap.data ?? {};
+                            final avg = ratings.isEmpty
+                                ? 0.0
+                                : ratings.values
+                                        .fold(0, (a, b) => a + b) /
+                                    ratings.length;
+                            final display = ratings.isEmpty
+                                ? '—'
+                                : avg.toStringAsFixed(1);
+                            return _StatCard(
+                              icon: Icons.star_rounded,
+                              label: 'Note moy.',
+                              value: display,
+                            );
+                          },
                         ),
                       ),
                     ],

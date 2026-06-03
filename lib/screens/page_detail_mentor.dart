@@ -1785,9 +1785,11 @@ class _RatingSheetState extends State<_RatingSheet> {
     if (_selected == 0) return;
     setState(() => _saving = true);
     try {
+      final myName = UserProfileController.profile.value.fullName;
       await InteractionsService.setRating(
         toUid: widget.mentor.uid,
         fromUid: widget.fromUid,
+        fromName: myName,
         value: _selected,
       );
       if (mounted) Navigator.of(context).pop();

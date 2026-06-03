@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../data/donnees_mentors.dart';
+import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
 import '../services/service_cache.dart';
 import '../services/service_navigation.dart';
+import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_avis.dart';
 import 'page_connexion.dart';
 import 'page_mes_pitchs.dart';
 import 'page_modification_profil.dart';
@@ -261,8 +265,27 @@ class _IdentityCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 // Stats strip — compacte
 // ─────────────────────────────────────────────────────────────────
-class _StatsStrip extends StatelessWidget {
+class _StatsStrip extends StatefulWidget {
   const _StatsStrip();
+
+  @override
+  State<_StatsStrip> createState() => _StatsStripState();
+}
+
+class _StatsStripState extends State<_StatsStrip> {
+  late final String _uid;
+  Stream<List<Review>>? _reviewsStream;
+  Stream<Map<String, int>>? _ratingsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _uid = AuthService.currentUid ?? '';
+    if (_uid.isNotEmpty) {
+      _reviewsStream = InteractionsService.getReviews(_uid);
+      _ratingsStream = InteractionsService.getRatings(_uid);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -281,11 +304,10 @@ class _StatsStrip extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, UserProfile p, int pending, int pitches) {
-    if (p.role == 'Mentor') {
-      return _MentorExperienceCard(years: p.yearsExperience);
-    } else if (p.role == 'Investisseur') {
-      return const SizedBox.shrink();
+  Widget _buildContent(
+      BuildContext context, UserProfile p, int pending, int pitches) {
+    if (p.role == 'Mentor' || p.role == 'Investisseur') {
+      return _buildMentorInvestorStats(context, p);
     }
     // Entrepreneur / Entrepreneure — carte pleine largeur
     return _EntrepreneurStatCard(
@@ -296,6 +318,183 @@ class _StatsStrip extends StatelessWidget {
       subtitle: 'pitch decks publiés',
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+      ),
+    );
+  }
+
+  Widget _buildMentorInvestorStats(BuildContext context, UserProfile p) {
+    return Column(
+      children: [
+        // Carte expérience uniquement pour les Mentors
+        if (p.role == 'Mentor') ...[
+          _MentorExperienceCard(years: p.yearsExperience),
+          const SizedBox(height: 10),
+        ],
+        // Ligne Note moy. + Avis reçus (live Firebase)
+        Row(
+          children: [
+            Expanded(
+              child: StreamBuilder<Map<String, int>>(
+                stream: _ratingsStream,
+                builder: (ctx, snap) {
+                  final ratings = snap.data ?? {};
+                  final avg = ratings.isEmpty
+                      ? 0.0
+                      : ratings.values.fold(0, (a, b) => a + b) /
+                          ratings.length;
+                  final display =
+                      ratings.isEmpty ? '—' : avg.toStringAsFixed(1);
+                  return _StatTile(
+                    icon: Icons.star_rounded,
+                    color: AppColors.amber,
+                    value: display,
+                    label: 'Note moy.',
+                    subtitle:
+                        '${ratings.length} vote${ratings.length != 1 ? 's' : ''}',
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: StreamBuilder<List<Review>>(
+                stream: _reviewsStream,
+                builder: (ctx, snap) {
+                  final reviews = snap.data ?? [];
+                  return _StatTile(
+                    icon: Icons.reviews_outlined,
+                    color: AppColors.purple,
+                    value: '${reviews.length}',
+                    label: 'Avis reçus',
+                    subtitle: reviews.isEmpty ? 'Aucun avis' : 'au total',
+                    onTap: _uid.isNotEmpty
+                        ? () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReviewsPage(
+                                  mentor: _mentorFromProfile(p),
+                                  canReview: false,
+                                ),
+                              ),
+                            )
+                        : null,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Construit un objet [Mentor] depuis le profil courant pour accéder
+  /// à la page d'avis en lecture seule (propre profil).
+  Mentor _mentorFromProfile(UserProfile p) {
+    return Mentor(
+      initials: p.initials,
+      name: p.fullName,
+      title: p.sector.isNotEmpty ? p.sector : p.role,
+      city: p.city,
+      sectors: p.interests.isNotEmpty
+          ? p.interests
+          : (p.sector.isNotEmpty ? [p.sector] : ['—']),
+      companies: const [],
+      rating: p.score.toDouble(),
+      reviews: 0,
+      years: p.yearsExperience,
+      compatibility: 0,
+      role: p.role,
+      bio: p.bio,
+      uid: _uid,
+      photoBase64: p.photoBase64,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tuile de stat compacte (Note moy. / Avis reçus)
+// ─────────────────────────────────────────────────────────────────
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  const _StatTile({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+    required this.subtitle,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: onTap != null
+                ? color.withValues(alpha: 0.35)
+                : AppColors.border,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 18),
+                if (onTap != null) ...[
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 14, color: AppColors.subtle),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: AppColors.navyDeep,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: AppColors.muted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
