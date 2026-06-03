@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_geolocation.dart';
+import '../services/service_navigation.dart';
 import '../services/service_utilisateurs.dart';
 import '../theme/theme_app.dart';
 import '../widgets/carte_mentor.dart';
@@ -75,6 +76,19 @@ class _MatchingPageState extends State<MatchingPage> {
     final myRole = UserProfileController.profile.value.role;
     if (myRole == 'Investisseur' || myRole == 'Mentor') _role = 'Entrepreneur';
     _loadMembers();
+    matchingFilterRequest.addListener(_onFilterRequest);
+  }
+
+  /// Applique le filtre rôle demandé depuis l'extérieur (ex. accueil → "Mentor").
+  void _onFilterRequest() {
+    final req = matchingFilterRequest.value;
+    if (req.isEmpty) return;
+    final pills = _rolePills(UserProfileController.profile.value.role);
+    if (pills.contains(req)) {
+      setState(() => _role = req);
+    }
+    // Consomme la demande pour éviter les re-déclenchements
+    matchingFilterRequest.value = '';
   }
 
   int _computeCompatibility(Mentor m) {
@@ -125,6 +139,7 @@ class _MatchingPageState extends State<MatchingPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    matchingFilterRequest.removeListener(_onFilterRequest);
     super.dispose();
   }
 
