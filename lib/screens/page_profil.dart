@@ -9,9 +9,8 @@ import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
-import '../widgets/carte_lumineuse.dart';
 import 'page_connexion.dart';
-import 'page_nouveau_projet.dart';
+import 'page_mes_pitchs.dart';
 import 'page_modification_profil.dart';
 import 'page_agenda.dart';
 import 'page_mes_favoris.dart';
@@ -60,7 +59,6 @@ class ProfilePage extends StatelessWidget {
                   role: p.role,
                   sector: p.sector,
                   city: p.city,
-                  projectName: p.projects.isNotEmpty ? p.projects.first.name : null,
                 ),
                 icon: const Icon(Icons.share_rounded),
               ),
@@ -98,12 +96,7 @@ class ProfilePage extends StatelessWidget {
               _CompactCoordsCard(profile: p),
               const SizedBox(height: 12),
               _InterestsCard(interests: p.interests),
-              // 4. Projets (Entrepreneur uniquement)
-              if (p.role == 'Entrepreneur' || p.role == 'Entrepreneure') ...[
-                const SizedBox(height: 16),
-                _ProjectsSection(profile: p),
-              ],
-              // 5. Boutons d'actions rapides (Entrepreneur uniquement)
+              // 4. Boutons d'actions rapides (Entrepreneur uniquement)
               if (p.role == 'Entrepreneur' || p.role == 'Entrepreneure') ...[
                 const SizedBox(height: 16),
                 const _InteractionsSection(),
@@ -279,15 +272,16 @@ class _StatsStrip extends StatelessWidget {
       valueListenable: UserProfileController.profile,
       builder: (context, p, _) => ValueListenableBuilder<int>(
         valueListenable: pendingRequestsCount,
-        builder: (context, pending, _) => _buildContent(context, p, pending),
+        builder: (context, pending, _) => ValueListenableBuilder<int>(
+          valueListenable: pitchCount,
+          builder: (context, pitches, _) =>
+              _buildContent(context, p, pending, pitches),
+        ),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, UserProfile p, int pending) {
-    final pitchsTotal = p.projects.length;
-    final completed = p.projects.where((x) => x.isCompleted).length;
-
+  Widget _buildContent(BuildContext context, UserProfile p, int pending, int pitches) {
     // Labels et valeurs adaptés à chaque rôle
     final List<_MiniStat> items;
 
@@ -364,43 +358,37 @@ class _StatsStrip extends StatelessWidget {
       // Entrepreneur / Entrepreneure
       items = [
         _MiniStat(
-            icon: Icons.workspace_premium_rounded,
+            icon: Icons.rocket_launch_rounded,
             color: AppColors.amber,
-            value: '$pitchsTotal',
+            value: '$pitches',
             label: 'Projets',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Consulte la section "Mes projets" ci-dessous.'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesPitchsPage()),
                 )),
         _MiniStat(
             icon: Icons.check_circle_rounded,
             color: AppColors.green,
-            value: '$completed',
+            value: '$pitches',
             label: 'Terminés',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Consulte la section "Mes projets" ci-dessous.'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MesPitchsPage()),
+                )),
+        _MiniStat(
+            icon: Icons.mark_chat_unread_rounded,
+            color: AppColors.red,
+            value: '$pending',
+            label: 'Demandes',
+            badge: pending,
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RequestsPage()),
                 )),
         _MiniStat(
             icon: Icons.handshake_rounded,
             color: AppColors.blue,
             value: '${p.mentorsActive}',
             label: 'Mentors',
-            badge: pending,
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const MesMentorsPage()),
-                )),
-        _MiniStat(
-            icon: Icons.bookmark_rounded,
-            color: AppColors.red,
-            value: '${p.favoritesCount}',
-            label: 'Favoris',
-            onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MesFavorisPage()),
                 )),
       ];
     }
@@ -582,409 +570,6 @@ class _CompactRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Mes projets — liste + bouton Nouveau
-// ─────────────────────────────────────────────────────────────────
-class _ProjectsSection extends StatelessWidget {
-  final UserProfile profile;
-  const _ProjectsSection({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              '🚀  Mes projets',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppColors.muted,
-                letterSpacing: 0.4,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              '${profile.projects.length}',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppColors.muted,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (profile.projects.isEmpty)
-          const _EmptyProjects()
-        else ...[
-          ...profile.projects.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _ProjectTile(project: p),
-            ),
-          ),
-          _NewProjectButton(canStart: profile.canStartNewProject),
-        ],
-      ],
-    );
-  }
-}
-
-class _ProjectTile extends StatelessWidget {
-  final Project project;
-  const _ProjectTile({required this.project});
-
-  /// Affiche les actions disponibles pour le projet (avancer / supprimer).
-  void _showActions(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  project.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            // Modifier
-            ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.edit_rounded,
-                    color: AppColors.blue, size: 20),
-              ),
-              title: const Text(
-                'Modifier le projet',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              ),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    fullscreenDialog: true,
-                    builder: (_) => AddProjectPage(existingProject: project),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    color: AppColors.red, size: 20),
-              ),
-              title: const Text(
-                'Supprimer le projet',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: AppColors.red,
-                ),
-              ),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                _confirmDelete(context);
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Demande confirmation avant de supprimer définitivement le projet.
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Supprimer ce projet ?'),
-        content: Text(
-          '« ${project.name} » sera définitivement supprimé de ton profil.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              UserProfileController.deleteProject(project.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final completed = project.isCompleted;
-    final accent = completed ? AppColors.green : AppColors.amber;
-
-    return HoverGlowCard(
-      onTap: () => _showActions(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  completed
-                      ? Icons.check_circle_rounded
-                      : Icons.workspace_premium_rounded,
-                  color: Colors.white,
-                  size: 19,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                    Text(
-                      project.sector,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _StatusBadge(completed: completed),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                'Étape ${project.step} / ${project.totalSteps}',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.muted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${(project.progress * 100).round()} %',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w900,
-                  color: accent,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: project.progress,
-              minHeight: 5,
-              backgroundColor: AppColors.fieldBg,
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final bool completed;
-  const _StatusBadge({required this.completed});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = completed ? AppColors.green : AppColors.amber;
-    final label = completed ? 'TERMINÉ' : 'EN COURS';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-          color: color,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyProjects extends StatelessWidget {
-  const _EmptyProjects();
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => const AddProjectPage(),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: AppColors.amber.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppColors.amber.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.amber,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.amber.withValues(alpha: 0.45),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.add_rounded,
-                  color: Colors.white, size: 32),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Démarre ton premier projet',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.navyDeep,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Tape ici pour créer ton projet entrepreneurial.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: AppColors.muted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NewProjectButton extends StatelessWidget {
-  final bool canStart;
-  const _NewProjectButton({required this.canStart});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: canStart
-          ? 'Démarrer un nouveau projet'
-          : 'Termine ton projet en cours (5/5) avant d\'en créer un nouveau',
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: canStart
-              ? () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      fullscreenDialog: true,
-                      builder: (_) => const AddProjectPage(),
-                    ),
-                  )
-              : null,
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text(
-            'Nouveau projet',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: canStart ? AppColors.navy : AppColors.subtle,
-            side: BorderSide(
-              color: canStart ? AppColors.border : AppColors.border,
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-        ),
-      ),
     );
   }
 }

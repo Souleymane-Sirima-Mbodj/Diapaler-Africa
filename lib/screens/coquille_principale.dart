@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_agenda.dart';
 import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_favoris.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
@@ -99,6 +100,7 @@ class _RootShellState extends State<RootShell> {
   int _index = 0;
   StreamSubscription? _pendingRequestsSub;
   StreamSubscription? _mentorsActiveSub;
+  StreamSubscription? _pitchSub;
 
   @override
   void initState() {
@@ -110,6 +112,7 @@ class _RootShellState extends State<RootShell> {
       NotificationService.init(uid);
       _listenPendingRequests(uid);
       _listenMentorsActive(uid);
+      _listenPitchCount(uid);
     }
     AgendaController.sessions.addListener(_onSessionsChanged);
     FavoriteService.favorites.addListener(_onFavoritesChanged);
@@ -175,6 +178,15 @@ class _RootShellState extends State<RootShell> {
     }, onError: (_) {});
   }
 
+  /// Écoute en temps réel le nombre de pitchs publiés par l'utilisateur.
+  void _listenPitchCount(String uid) {
+    _pitchSub?.cancel();
+    _pitchSub = DatabaseService.getMyPitches(uid).listen(
+      (pitches) => pitchCount.value = pitches.length,
+      onError: (_) => pitchCount.value = 0,
+    );
+  }
+
   void _applyMentorsActive(int count) {
     if (!mounted) return;
     final current = UserProfileController.profile.value;
@@ -216,7 +228,9 @@ class _RootShellState extends State<RootShell> {
     FavoriteService.favorites.removeListener(_onFavoritesChanged);
     _pendingRequestsSub?.cancel();
     _mentorsActiveSub?.cancel();
+    _pitchSub?.cancel();
     pendingRequestsCount.value = 0;
+    pitchCount.value = 0;
     super.dispose();
   }
 
