@@ -312,6 +312,7 @@ class InteractionsService {
   // ────── REVIEWS ──────
 
   /// Publie un avis sur [toUid]. Nœud Firebase : `reviews/{toUid}/{id}`.
+  /// Notifie automatiquement le destinataire.
   static Future<void> addReview({
     required String toUid,
     required String fromUid,
@@ -326,6 +327,12 @@ class InteractionsService {
       'text': text,
       'createdAt': DateTime.now().millisecondsSinceEpoch,
     });
+    await NotificationService.notifyUser(
+      uid: toUid,
+      title: 'Nouvel avis reçu 💬',
+      message: '$fromName a laissé un avis sur votre profil.',
+      type: 'new_review',
+    );
   }
 
   /// Écoute en temps réel tous les avis laissés sur [targetUid],
@@ -347,13 +354,24 @@ class InteractionsService {
   /// Enregistre (ou met à jour) la note 1–5 de [fromUid] sur [toUid].
   /// Nœud Firebase : `ratings/{toUid}/{fromUid}` → entier 1-5.
   /// Un utilisateur ne peut laisser qu'une seule note par profil (écrasement).
+  /// Notifie le destinataire uniquement lors d'une première note (pas lors d'une mise à jour).
   static Future<void> setRating({
     required String toUid,
     required String fromUid,
     required int value,
+    String fromName = '',
   }) async {
     assert(value >= 1 && value <= 5, 'La note doit être comprise entre 1 et 5');
+    final isNew = !(await _db.child('ratings/$toUid/$fromUid').get()).exists;
     await _db.child('ratings/$toUid/$fromUid').set(value);
+    if (isNew && fromName.isNotEmpty) {
+      await NotificationService.notifyUser(
+        uid: toUid,
+        title: 'Nouvelle note reçue ⭐',
+        message: '$fromName vous a attribué $value étoile${value > 1 ? 's' : ''}.',
+        type: 'new_rating',
+      );
+    }
   }
 
   /// Écoute en temps réel toutes les notes laissées sur [targetUid].

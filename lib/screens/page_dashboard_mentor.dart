@@ -21,6 +21,17 @@ class MentorDashboard extends StatefulWidget {
 }
 
 class _MentorDashboardState extends State<MentorDashboard> {
+  Stream<Map<String, int>>? _ratingsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = AuthService.currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      _ratingsStream = InteractionsService.getRatings(uid);
+    }
+  }
+
   // ── Suppression d'un entrepreneur ───────────────────────────────
   Future<void> _confirmDeleteEntrepreneur(
       BuildContext context, MentorRequest req) async {
@@ -120,9 +131,9 @@ class _MentorDashboardState extends State<MentorDashboard> {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const Text(
-                            'Mentor',
-                            style: TextStyle(
+                          Text(
+                            profile.role,
+                            style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.muted,
                               fontWeight: FontWeight.w600,
@@ -185,7 +196,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // Stats
+                  // Stats (grille 2×2)
                   Row(
                     children: [
                       Expanded(
@@ -208,14 +219,42 @@ class _MentorDashboardState extends State<MentorDashboard> {
                           value: '${profile.sessionsCount}',
                         ),
                       ),
-                      const SizedBox(width: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
                       Expanded(
                         child: _StatCard(
                           icon: Icons.workspace_premium_rounded,
-                          label: profile.yearsExperience > 1 ? 'Années expé.' : 'Année expé.',
+                          label: profile.yearsExperience > 1
+                              ? 'Années expé.'
+                              : 'Année expé.',
                           value: profile.yearsExperience > 0
                               ? '${profile.yearsExperience}'
                               : '—',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: StreamBuilder<Map<String, int>>(
+                          stream: _ratingsStream,
+                          builder: (ctx, snap) {
+                            final ratings = snap.data ?? {};
+                            final avg = ratings.isEmpty
+                                ? 0.0
+                                : ratings.values
+                                        .fold(0, (a, b) => a + b) /
+                                    ratings.length;
+                            final display = ratings.isEmpty
+                                ? '—'
+                                : avg.toStringAsFixed(1);
+                            return _StatCard(
+                              icon: Icons.star_rounded,
+                              label: 'Note moy.',
+                              value: display,
+                            );
+                          },
                         ),
                       ),
                     ],
