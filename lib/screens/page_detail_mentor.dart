@@ -76,6 +76,43 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
   // BookingSheet dispose géré dans _BookingSheetState
 
+  /// Calcule le score de compatibilité en temps réel à partir du profil
+  /// de l'utilisateur connecté et des secteurs du mentor/investisseur.
+  /// Fonctionne pour les profils statiques ET les comptes Firebase réels.
+  int _computeCompatibility(Mentor m) {
+    final profile = UserProfileController.profile.value;
+    final userInterests =
+        profile.interests.map((s) => s.toLowerCase().trim()).toSet();
+    final mentorSectors =
+        m.sectors.map((s) => s.toLowerCase().trim()).toSet();
+    // Base légèrement plus haute pour les membres Firebase réels
+    int score = m.uid.isNotEmpty ? 30 : 22;
+    if (userInterests.isEmpty) return score.clamp(10, 40);
+    if (mentorSectors.isEmpty) return score.clamp(10, 40);
+    // Correspondance exacte entre secteurs d'intérêt et secteurs du mentor
+    final exact = userInterests.intersection(mentorSectors);
+    if (exact.isNotEmpty) {
+      final depth = (exact.length / mentorSectors.length * 45).round();
+      score += 25 + depth;
+      return score.clamp(60, 97);
+    }
+    // Correspondance partielle (ex: "Agriculture" ↔ "Agro-industrie")
+    final partial = userInterests.any((ui) =>
+        mentorSectors.any((ms) => ms.contains(ui) || ui.contains(ms)));
+    if (partial) {
+      score += 20;
+      return score.clamp(45, 72);
+    }
+    // Secteur principal commun
+    final userSector = profile.sector.toLowerCase().trim();
+    if (mentorSectors.any(
+        (ms) => ms.contains(userSector) || userSector.contains(ms))) {
+      score += 12;
+      return score.clamp(35, 55);
+    }
+    return score.clamp(10, 35);
+  }
+
   Future<void> _checkRequestStatus() async {
     final mentor = widget.mentor;
 
@@ -298,7 +335,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                             Expanded(child: _HeroStat(
                               icon: Icons.bolt_rounded,
                               color: AppColors.green,
-                              value: '${mentor.compatibility} %',
+                              value: '${_computeCompatibility(mentor)} %',
                               label: 'Match',
                             )),
                             _HeroDivider(),
