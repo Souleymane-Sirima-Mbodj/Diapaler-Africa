@@ -30,19 +30,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool _loading = true;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _loading = false);
-    });
   }
 
   Future<void> _refresh() async {
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 300));
     if (mounted) setState(() => _loading = false);
   }
 
@@ -262,9 +259,12 @@ class _NavyHero extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // Barre de recherche → bascule sur l'onglet Matching
+                  // Barre de recherche → bascule sur l'onglet Matching + focus auto
                   GestureDetector(
-                    onTap: () => appTabIndex.value = 1,
+                    onTap: () {
+                      matchingFocusSearch.value = true;
+                      appTabIndex.value = 1;
+                    },
                     child: Container(
                       height: 44,
                       padding:
@@ -278,13 +278,17 @@ class _NavyHero extends StatelessWidget {
                           Icon(Icons.search_rounded,
                               color: AppColors.subtle, size: 20),
                           SizedBox(width: 8),
-                          Text(
-                            'Rechercher un mentor, secteur…',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.subtle,
+                          Expanded(
+                            child: Text(
+                              'Rechercher un mentor, secteur…',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.subtle,
+                              ),
                             ),
                           ),
+                          Icon(Icons.arrow_forward_ios_rounded,
+                              color: AppColors.subtle, size: 13),
                         ],
                       ),
                     ),
@@ -429,7 +433,7 @@ class _EmptyProjectHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Aucun projet en cours',
+                      'Crée ton projet',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -438,7 +442,7 @@ class _EmptyProjectHero extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Tape ici pour démarrer ton premier projet entrepreneurial.',
+                      'Nom, secteur, description — ensuite dépose ton pitch pour les investisseurs.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 12.5,
@@ -832,6 +836,7 @@ class _StatsStrip extends StatelessWidget {
                 color: AppColors.green,
                 label: 'Sessions',
                 value: p.sessionsCount,
+                onTap: () => appTabIndex.value = 3,
               ),
               if (p.score > 0)
                 _StatPill(
@@ -898,54 +903,83 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(icon, color: color, size: 17),
+    final interactive = onTap != null;
+    return Tooltip(
+      message: interactive ? '' : 'Bientôt disponible',
+      triggerMode:
+          interactive ? TooltipTriggerMode.manual : TooltipTriggerMode.tap,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Opacity(
+          opacity: interactive ? 1.0 : 0.6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
             ),
-            const SizedBox(width: 9),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
               children: [
-                AnimatedCounter(
-                  value: value,
-                  decimals: decimals,
-                  suffix: suffix,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.navyDeep,
-                    height: 1,
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(9),
                   ),
+                  child: Icon(icon, color: color, size: 17),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: AppColors.muted,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 9),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedCounter(
+                      value: value,
+                      decimals: decimals,
+                      suffix: suffix,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.navyDeep,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: AppColors.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                if (!interactive) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.muted.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'soon',
+                      style: TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.muted,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

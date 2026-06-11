@@ -615,7 +615,7 @@ class _LoginPageState extends State<LoginPage> {
 | Consigne | Implémentation |
 |---|---|
 | Nom | Champ "Nom complet" (prénom + nom, min 2 mots, min 4 chars) |
-| Téléphone | Champ téléphone +221 fixe + auto-format "77 123 45 67" |
+| Téléphone | Préfixe **dynamique** selon le pays (🇸🇳 +221 Sénégal / 🇬🇲 +220 Gambie / 🇲🇱 +223 Mali) + longueur adaptée (9/7/8 chiffres) |
 | Email | Validation regex `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$` |
 | Mot de passe | Min 6 caractères + jauge de force + confirmation |
 | Redirection vers connexion | Lien "J'ai déjà un compte → Se connecter" |
@@ -743,13 +743,17 @@ TextField(
 ### 4.5 Étape 4 — Sécurité du compte
 
 **Champs :**
-- Téléphone sénégalais : préfixe +221 fixe + champ digits auto-formaté (77 123 45 67)
+- Téléphone avec **préfixe dynamique** selon le pays choisi à l'étape 2 :
+  - 🇸🇳 **Sénégal** → `+221` (9 chiffres)
+  - 🇬🇲 **Gambie** → `+220` (7 chiffres)
+  - 🇲🇱 **Mali** → `+223` (8 chiffres)
+  - Le préfixe et la validation de longueur s'adaptent automatiquement via les maps `countryDialCode` et `countryPhoneLength` dans `lib/data/pays.dart`
 - Mot de passe (min 6 caractères, bouton œil)
 - Jauge de force du mot de passe (5 niveaux : Trop court / Faible / Moyen / Bon / Excellent)
 - Confirmation du mot de passe (indicateur correspondance ✓/✗)
 - Case à cocher CGU (obligatoire pour valider)
 
-Le téléphone est auto-formaté via un `TextInputFormatter` custom en format `77 123 45 67`. La force du mot de passe est calculée sur 5 niveaux (longueur, majuscule, chiffre, caractère spécial) et affichée via des segments `AnimatedContainer` colorés.
+Le téléphone est auto-formaté via un `TextInputFormatter` custom adapté à la longueur du pays. La force du mot de passe est calculée sur 5 niveaux (longueur, majuscule, chiffre, caractère spécial) et affichée via des segments `AnimatedContainer` colorés.
 
 ```dart
 // Calcul de la force (0 → 4) : longueur, casse, chiffre, caractère spécial
@@ -787,13 +791,29 @@ Future<void> _submit() async {
     );
     final uid = cred.user!.uid;
 
-    // ── 2. Construction du profil complet
+    // ── 2. Upload photo vers Cloudinary (si disponible), sinon fallback base64
+    String photoData = _photoBase64;
+    if (_photoBytes != null && _photoBytes!.isNotEmpty) {
+      try {
+        photoData = await CloudinaryService.uploadBytes(
+          bytes: _photoBytes!,
+          filename: 'avatar_$uid.jpg',
+        );
+        // photoData contient maintenant une URL HTTPS Cloudinary
+      } catch (_) {
+        // En cas d'erreur réseau, on garde le base64 temporairement
+      }
+    }
+
+    // ── 3. Construction du profil complet
     final parts = _name.text.trim().split(RegExp(r'\s+'));
+    // Préfixe dynamique selon le pays choisi à l'étape 2
+    final dialCode = countryDialCode[_country] ?? '+221';
     final profile = UserProfile(
       firstName:       parts.first,
       lastName:        parts.length > 1 ? parts.sublist(1).join(' ') : '',
       email:           _email.text.trim(),
-      phone:           '+221 ${_phone.text.trim()}',
+      phone:           '$dialCode ${_phone.text.trim()}',
       gender:          _gender,
       birthDate:       _birthDate,
       address:         _address.text.trim(),
@@ -807,7 +827,7 @@ Future<void> _submit() async {
                          ? _investmentRange.text.trim() : '',
       bio:             _bio.text.trim(),
       linkedin:        _linkedin.text.trim(),
-      photoBase64:     _photoBase64,
+      photoBase64:     photoData,   // URL Cloudinary ou base64 selon disponibilité
       interests:       _interests.toList()..sort(),
       projects:        const [],
     );
@@ -1043,4 +1063,5 @@ static void reset() {
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
 | Déconnexion | Dialog + 6 étapes (cache + notifs + agenda + profil + tab + Auth) | ✅ |
 | Jauge de force mot de passe | 5 niveaux animés + indicateurs couleur | ✅ (bonus) |
-| Auto-format téléphone | `_PhoneFormatter` format sénégalais +221 XX XXX XX XX | ✅ (bonus) |
+| Auto-format téléphone | `_PhoneFormatter` format adaptatif selon le pays | ✅ (bonus) |
+| Préfixe téléphone dynamique | `countryDialCode` / `countryPhoneLength` — +221 SN / +220 GM / +223 ML | ✅ (bonus) |

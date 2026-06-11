@@ -507,13 +507,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                     mentor.role == 'Entrepreneure') {
                   return const SizedBox.shrink();
                 }
-
-                final myRole = UserProfileController.profile.value.role;
-                final needsAcceptance =
-                    myRole == 'Entrepreneur' || myRole == 'Investisseur';
-                // Masqué si la demande n'est pas encore acceptée
-                final canSee = !needsAcceptance || _requestAccepted == true;
-                if (!canSee) return const SizedBox.shrink();
+                // Disponibilités visibles uniquement après acceptation (tous rôles)
+                if (_requestAccepted != true) return const SizedBox.shrink();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1793,8 +1788,16 @@ class _RatingSheetState extends State<_RatingSheet> {
         value: _selected,
       );
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d\'enregistrer la note. Vérifie ta connexion.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

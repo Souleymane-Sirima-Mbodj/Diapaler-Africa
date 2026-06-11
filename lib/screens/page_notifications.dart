@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
@@ -29,7 +30,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         appTabIndex.value = 3; // onglet Agenda
         Navigator.of(ctx).pop();
       case 'mentor_request':
-        // Reçu par le mentor/investisseur → onglet "Reçues" (défaut)
+        // Géré via les boutons inline — fallback si la notif est déjà lue
         Navigator.of(ctx).push(
           MaterialPageRoute(builder: (_) => const RequestsPage()),
         );
@@ -269,45 +270,172 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _acceptMentorRequest(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    try {
+      await InteractionsService.acceptRequest(notif.requestId);
+      final myUid = AuthService.currentUid;
+      if (myUid != null) {
+        final profile = UserProfileController.profile.value;
+        final updated = profile.copyWith(mentorsActive: profile.mentorsActive + 1);
+        UserProfileController.update(updated);
+        await DatabaseService.updateUserProfile(myUid, updated);
+      }
+      if (notif.fromUserId.isNotEmpty) {
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Demande acceptée 🎉',
+          message: 'Votre demande de mentorat a été acceptée.',
+          type: 'mentor_request_accepted',
+          fromUserId: AuthService.currentUid ?? '',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      if (notif.fromUserId.isNotEmpty) {
+        final myUid2 = AuthService.currentUid ?? '';
+        final convId = InteractionsService.generateConversationId(myUid2, notif.fromUserId);
+        Navigator.of(ctx).push(MaterialPageRoute(
+          builder: (_) => ChatPage(
+            conversationId: convId,
+            otherUserName: notif.fromName.isNotEmpty ? notif.fromName : 'Entrepreneur',
+            otherUserId: notif.fromUserId,
+          ),
+        ));
+      }
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Demande acceptée — conversation ouverte.'),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Erreur lors de l\'acceptation.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  Future<void> _rejectMentorRequest(BuildContext ctx, NotificationItem notif) async {
+    if (notif.requestId.isEmpty) return;
+    String? reason;
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Refuser la demande'),
+          content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(hintText: 'Raison (optionnelle)'),
+            maxLines: 2,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dCtx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () { reason = ctrl.text.trim(); Navigator.of(dCtx).pop(true); },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+              child: const Text('Refuser'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !ctx.mounted) return;
+    try {
+      await InteractionsService.rejectRequest(notif.requestId, reason: reason);
+      if (notif.fromUserId.isNotEmpty) {
+        final msg = reason != null && reason!.isNotEmpty
+            ? 'Votre demande a été refusée. Motif : $reason'
+            : 'Votre demande de mentorat a été refusée.';
+        await NotificationService.notifyUser(
+          uid: notif.fromUserId,
+          title: 'Demande refusée',
+          message: msg,
+          type: 'mentor_request_rejected',
+        );
+      }
+      if (!ctx.mounted) return;
+      NotificationService.markAsRead(notif.id);
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Demande refusée.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Erreur lors du refus.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   Widget _buildInlineActions(BuildContext ctx, NotificationItem notif) {
     final isInvestment = notif.type == 'investment_offer';
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => isInvestment
-                  ? _rejectInvestment(ctx, notif)
-                  : _rejectSession(ctx, notif),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.red,
-                side: const BorderSide(color: AppColors.red),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              child: const Text('Refuser', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: () => isInvestment
-                  ? _acceptInvestment(ctx, notif)
-                  : _acceptSession(ctx, notif),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              child: Text(
-                isInvestment ? 'Accepter & Contacter' : 'Accepter',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
-            ),
-          ),
+    final isMentorRequest = notif.type == 'mentor_request';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Détails de session uniquement pour session_request
+        if (!isInvestment && !isMentorRequest) ...[
+          const SizedBox(height: 10),
+          _SessionDetailCard(requestId: notif.requestId),
         ],
-      ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  if (isInvestment) {
+                    _rejectInvestment(ctx, notif);
+                  } else if (isMentorRequest) {
+                    _rejectMentorRequest(ctx, notif);
+                  } else {
+                    _rejectSession(ctx, notif);
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.red,
+                  side: const BorderSide(color: AppColors.red),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text('Refuser',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (isInvestment) {
+                    _acceptInvestment(ctx, notif);
+                  } else if (isMentorRequest) {
+                    _acceptMentorRequest(ctx, notif);
+                  } else {
+                    _acceptSession(ctx, notif);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: Text(
+                  isInvestment ? 'Accepter & Contacter' : 'Accepter',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -417,7 +545,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
               final showInlineActions =
                   notif.requestId.isNotEmpty &&
                   !notif.isRead &&
-                  (notif.type == 'investment_offer' || notif.type == 'session_request');
+                  (notif.type == 'investment_offer' ||
+                   notif.type == 'session_request' ||
+                   notif.type == 'mentor_request');
               return _NotificationTile(
                 notification: notif,
                 onTap: () {
@@ -602,5 +732,139 @@ class _NotificationTile extends StatelessWidget {
     } else {
       return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Carte des détails de session (date, heure, objectif)
+// ─────────────────────────────────────────────────────────────────
+class _SessionDetailCard extends StatelessWidget {
+  final String requestId;
+  const _SessionDetailCard({required this.requestId});
+
+  static const _monthFr = [
+    'janvier','février','mars','avril','mai','juin',
+    'juillet','août','septembre','octobre','novembre','décembre',
+  ];
+  static const _dayFrLong = [
+    'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche',
+  ];
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '–';
+    final parts = dateStr.split('-');
+    if (parts.length != 3) return dateStr;
+    final year  = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day   = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return dateStr;
+    final dt = DateTime(year, month, day);
+    return '${_dayFrLong[dt.weekday - 1]} $day ${_monthFr[month - 1]} $year';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<MentorRequest?>(
+      future: InteractionsService.fetchRequest(requestId),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 24,
+            child: Center(
+              child: SizedBox(
+                width: 16, height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        final req = snap.data;
+        if (req == null) return const SizedBox.shrink();
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.blueTint,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: AppColors.blue.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DetailRow(
+                icon: Icons.calendar_today_rounded,
+                color: AppColors.blue,
+                label: 'Date',
+                value: _formatDate(req.proposedDate),
+              ),
+              if (req.proposedTime != null) ...[
+                const SizedBox(height: 6),
+                _DetailRow(
+                  icon: Icons.access_time_rounded,
+                  color: AppColors.blue,
+                  label: 'Heure',
+                  value: req.proposedTime!,
+                ),
+              ],
+              if (req.sessionTheme != null &&
+                  req.sessionTheme!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                _DetailRow(
+                  icon: Icons.flag_rounded,
+                  color: AppColors.amber,
+                  label: 'Objectif',
+                  value: req.sessionTheme!,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String value;
+  const _DetailRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 7),
+        Text(
+          '$label : ',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.navyDeep,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

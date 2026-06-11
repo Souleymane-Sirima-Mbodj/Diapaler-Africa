@@ -6,6 +6,7 @@ import '../services/service_base_de_donnees.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
+import '../services/service_pitch_favoris.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_chat.dart';
@@ -404,7 +405,7 @@ class _PitchCard extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => _PitchDetailSheet(
+      builder: (_) => PitchDetailSheet(
         pitch: pitch,
         onInvest: (budget, message) =>
             _sendInvestmentRequest(context, pitch, budget: budget, message: message),
@@ -421,7 +422,29 @@ class _PitchCard extends StatelessWidget {
     final amount = pitch['amount']?.toString() ?? '';
     final isInvestor =
         UserProfileController.profile.value.role == 'Investisseur';
+    final myUid = AuthService.currentUid ?? '';
 
+    return ValueListenableBuilder<List<Map<String, dynamic>>>(
+      valueListenable: PitchFavoriteService.pitchFavorites,
+      builder: (context, _, __) {
+        final isBookmarked = PitchFavoriteService.isFavorite(pitch);
+        return _buildCard(context, title, userName, sector, description,
+            amount, isInvestor, myUid, isBookmarked);
+      },
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context,
+    String title,
+    String userName,
+    String sector,
+    String description,
+    String amount,
+    bool isInvestor,
+    String myUid,
+    bool isBookmarked,
+  ) {
     return GestureDetector(
       onTap: () => _showDetail(context),
       child: Container(
@@ -578,6 +601,26 @@ class _PitchCard extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
+                  // Bookmark (investisseur uniquement)
+                  if (isInvestor) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: () =>
+                          PitchFavoriteService.toggle(myUid, pitch),
+                      icon: Icon(
+                        isBookmarked
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        size: 20,
+                      ),
+                      color: isBookmarked ? AppColors.blue : AppColors.muted,
+                      tooltip: isBookmarked
+                          ? 'Retirer des favoris'
+                          : 'Sauvegarder',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                   const SizedBox(width: 8),
                   // Contacter — masqué pour les Investisseurs (contact via Messages après acceptation)
                   if (!isInvestor)
@@ -644,13 +687,14 @@ class _PitchCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Fiche détail pitch (bottom sheet)
+// Fiche détail pitch (bottom sheet) — publique pour réutilisation
+
 // ─────────────────────────────────────────────────────────────────
-class _PitchDetailSheet extends StatelessWidget {
+class PitchDetailSheet extends StatelessWidget {
   final Map<String, dynamic> pitch;
   final void Function(String budget, String message) onInvest;
 
-  const _PitchDetailSheet({required this.pitch, required this.onInvest});
+  const PitchDetailSheet({super.key, required this.pitch, required this.onInvest});
 
   String _formatAmount(String raw) {
     final digits = raw.replaceAll(RegExp(r'[^\d]'), '');

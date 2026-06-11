@@ -27,3 +27,8 @@ final ValueNotifier<int> pitchCount = ValueNotifier<int>(0);
 /// Quand une valeur non vide est émise (ex. 'Mentor'), MatchingPage applique
 /// ce filtre puis remet la valeur à '' pour éviter les re-déclenchements.
 final ValueNotifier<String> matchingFilterRequest = ValueNotifier<String>('');
+
+/// Déclenche le focus automatique sur le champ de recherche de MatchingPage.
+/// Émis à true quand l'utilisateur tape sur la barre de recherche de l'accueil,
+/// consommé par MatchingPage qui remet la valeur à false.
+final ValueNotifier<bool> matchingFocusSearch = ValueNotifier<bool>(false);

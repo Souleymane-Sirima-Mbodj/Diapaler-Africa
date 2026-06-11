@@ -161,16 +161,24 @@ diapaler_africa/
 │   │   ├── pays.dart
 │   │   ├── citations.dart
 │   │   └── interactions.dart
-│   ├── screens/                         # 26 écrans (auth, dashboard, matching, chat…)
+│   ├── screens/                         # 34 écrans (auth, dashboard, matching, chat…)
 │   │   ├── page_demarrage.dart          # Splash + bootstrap Firebase
 │   │   ├── coquille_principale.dart     # RootShell : IndexedStack 5 onglets + FAB
 │   │   ├── page_accueil.dart            # Dashboard adaptatif (3 rôles)
 │   │   ├── page_matching.dart           # Explorer + recherche + GPS
 │   │   ├── page_messages.dart / page_chat.dart
 │   │   ├── page_profil.dart / page_modification_profil.dart
+│   │   ├── page_profil_public.dart      # Profil public consultable par tous
 │   │   ├── page_pitch.dart / page_pitches_publics.dart
+│   │   ├── page_detail_pitch.dart       # Détail complet d'un pitch (bottom sheet étendu)
+│   │   ├── page_avis.dart               # Système d'avis et notation étoiles 1–5
+│   │   ├── page_mes_pitchs_favoris.dart # Pitchs sauvegardés (bookmark — Investisseur)
+│   │   ├── page_mes_pitchs.dart         # Mes pitchs publiés (Entrepreneur)
+│   │   ├── page_mes_favoris.dart        # Profils mis en favori
+│   │   ├── page_mes_mentors.dart        # Mes mentors actifs
 │   │   └── … (19 autres écrans)
-│   ├── services/                        # 12 services métier (auth, RTDB, GPS, cache…)
+│   ├── services/                        # 14 services métier (auth, RTDB, GPS, cache…)
+│   │   ├── service_pitch_favoris.dart   # Pitchs favoris (bookmark temps réel)
 │   ├── theme/theme_app.dart             # Palette couleurs + ThemeData
 │   └── widgets/                         # 13 composants réutilisables (avatar, nav, squelette…)
 ├── pubspec.yaml
@@ -406,7 +414,7 @@ class AppColors {
 - Étape 1 — Identité : nom complet (prénom + nom obligatoires), email (regex), sexe (pills), date naissance (DatePicker)
 - Étape 2 — Localisation : pays (dropdown Afrique de l'Ouest), ville (filtrée par pays), adresse
 - Étape 3 — Profil pro : secteur d'activité (dropdown, **adapté selon le rôle**), photo (galerie, redim 512×512, base64), biographie, LinkedIn, intérêts/domaines (chips multi-sélection) + années d'expérience (Mentor) + ticket d'investissement (Investisseur)
-- Étape 4 — Sécurité : téléphone +221 auto-format, mot de passe (jauge de force 5 niveaux), confirmation, CGU
+- Étape 4 — Sécurité : téléphone avec **préfixe dynamique** selon le pays (🇸🇳 +221 Sénégal · 🇬🇲 +220 Gambie · 🇲🇱 +223 Mali), validation longueur adaptée (9/7/8 chiffres), mot de passe (jauge de force 5 niveaux), confirmation, CGU
 - Validation temps réel : icônes ✓/✗ colorées + messages d'aide sur chaque champ
 - Bouton CONTINUER désactivé si étape invalide
 - Transitions FadeTransition + SlideTransition entre étapes
@@ -423,15 +431,18 @@ class AppColors {
 
 **Fonctionnalités :**
 - En-tête gradient navy (`_NavyHero`) : avatar amber + "Bonjour 🇸🇳 + Nom complet" + cloche notifications (badge rouge dynamique via `NotificationService.notifications`)
-- Barre de recherche dans l'en-tête → bascule sur l'onglet Matching (`appTabIndex.value = 1`)
+- Barre de recherche dans l'en-tête → **auto-focus sur le champ de recherche de `MatchingPage`** via `matchingFocusSearch` ValueNotifier (pas de rechargement de page)
 - Skeleton loading (`squelette.dart`) pendant 900ms au démarrage
 - `_ProjectHero` : si aucun projet → carte "Aucun projet en cours" → `AddProjectPage` ; si projet existant → carte de progression avec barre animée (`TweenAnimationBuilder`)
-- Section "Actions rapides" — grille 2×2 (`_QuickActionsGrid`) :
-  - "Trouver un mentor" → onglet Matching (`appTabIndex.value = 1`)
+- Section "Actions rapides" — grille 2×2 (`_QuickActionsGrid`) — **visible pour tous les rôles** :
+  - "Trouver un mentor" → onglet Matching (`appTabIndex.value = 1`) avec filtre Mentor pré-activé
   - "Déposer un pitch" → `PitchPage`
-  - "DER / FJ Orientation" → bottom sheet d'orientation financement
-  - "CIS Investisseurs" → bottom sheet CIS
-- `_StatsStrip` — bande horizontale scrollable : Mentors actifs / Sessions / Score / Pitchs / Favoris (`AnimatedCounter`)
+  - "DER / FJ Orientation" → bottom sheet d'orientation financement DER/FJ
+  - "CIS Investisseurs" → bottom sheet Club des Investisseurs du Sénégal
+- `_StatsStrip` — bande horizontale scrollable avec pills interactives :
+  - **Sessions → cliquable** : navigue vers l'onglet Agenda (`appTabIndex.value = 3`)
+  - Pills non encore navigables → badge `soon` + opacité 0.6 (indicateur visuel)
+  - Mentors actifs / Sessions / Score / Pitchs / Favoris (`AnimatedCounter`)
 - Section "Mentors pour toi" → bandeau "Recommandations bientôt disponibles" (fonctionnalité prévue)
 - Pull-to-refresh (RefreshIndicator)
 
@@ -633,7 +644,9 @@ La page Messages est organisée en **2 onglets** :
 - **Bouton "Réinitialiser"** visible si un filtre est actif
 - Chaque carte : avatar entrepreneur, nom, secteur (chip amber), titre, description (3 lignes max), montant FCFA
 - Bouton "Contacter →" → Messagerie
+- **Icône bookmark 🔖** : sauvegarde le pitch dans `pitchFavorites/` Firebase (Investisseur uniquement) — feedback visuel instantané
 - **Bouton "💰 Proposer un investissement"** visible uniquement pour les Investisseurs → crée un `MentorRequest` de type `'investment'` dans Firebase + notification automatique à l'entrepreneur
+- Tap sur la carte → **`_PitchDetailSheet`** (bottom sheet `DraggableScrollableSheet`) : détails complets + actions
 - État vide illustré si aucun pitch publié
 
 > **📸 CAPTURE D'ÉCRAN — Liste des Pitchs Publiés**
@@ -677,6 +690,37 @@ La page Messages est organisée en **2 onglets** :
 
 > **📸 CAPTURE D'ÉCRAN — Chatbot DIALI IA**
 > *(Insérer ici la capture d'écran)*
+
+**Système d'Avis et Notation — `page_avis.dart`**
+- Page dédiée aux avis laissés sur un profil (mentor, investisseur, entrepreneur)
+- **Notation étoiles 1–5** : sélecteur interactif + calcul de la moyenne live Firebase
+- **Accès restreint** : uniquement les membres connectés ayant une relation acceptée peuvent laisser un avis
+- Lecture lecture seule sur son propre profil (`showLockedBanner: false`)
+- Bannière "Demande requise" pour les membres sans relation établie
+- StreamBuilder sur `reviews/{toUid}` — mises à jour en temps réel
+- Affichage de la moyenne et du compteur d'avis sur les profils et dashboards
+
+> **📸 CAPTURE D'ÉCRAN — Page Avis (liste des avis + sélecteur étoiles)**
+> *(Insérer ici la capture d'écran)*
+
+**Pitchs Sauvegardés (Favoris) — `page_mes_pitchs_favoris.dart`**
+- Liste des pitchs bookmarkés par l'Investisseur
+- Réactive : ValueNotifier mis à jour en temps réel via `PitchFavoriteService`
+- Actions : consulter le pitch en détail, contacter l'entrepreneur, proposer un investissement
+- État vide illustré si aucun pitch sauvegardé
+
+> **📸 CAPTURE D'ÉCRAN — Pitchs Sauvegardés (liste des bookmarks)**
+> *(Insérer ici la capture d'écran)*
+
+**Profil Public — `page_profil_public.dart`**
+- Consultation du profil d'un autre membre DIAPALER (vue lecture seule)
+- Accessible depuis le Matching, les notifications, les messages
+- Affiche : photo, nom, rôle, secteur, bio, stats, avis/notation
+- Boutons d'action contextuels selon la relation existante
+
+**Paramètres — `page_parametres.dart`**
+- Accès aux paramètres de l'application
+- Thème, notifications, confidentialité
 
 ---
 
@@ -829,11 +873,16 @@ class _FadeThroughBuilder extends PageTransitionsBuilder {
 | Boutons retour | Sur tous les écrans, multi-étapes pour les steppers | ✅ |
 | Accès aux détails | `page_detail_mentor.dart` depuis `MatchingPage` | ✅ |
 | Navigation fluide | IndexedStack, AnimatedSwitcher, `appTabIndex` global | ✅ |
-| Bonus — 26 écrans | Bien au-delà du minimum requis | ✅ |
-| Bonus — 12 services métier | Architecture professionnelle couche services | ✅ |
+| Bonus — 34 écrans | Bien au-delà du minimum requis (vs 26 attendus) | ✅ |
+| Bonus — 14 services métier | Architecture professionnelle couche services | ✅ |
 | Bonus — 13 widgets réutilisables | Composants partagés dans toute l'app | ✅ |
 | Bonus — Matching rôle-adaptatif | Titre et contenu selon le rôle connecté | ✅ |
 | Bonus — Système de Contacts | Onglet Contacts dans Messages (relations acceptées) | ✅ |
 | Bonus — Flux investisseur | Proposer un investissement + acceptation + relation Contacts | ✅ |
 | Bonus — Filtres pitchs | Barre de recherche + pills secteur dynamiques dans Pitchs Publiés | ✅ |
 | Bonus — Annulation session | Bouton "Annuler" avec confirmation dans l'Agenda | ✅ |
+| Bonus — Avis et notation | Système d'étoiles 1–5, moyenne live Firebase, accès restreint par relation | ✅ |
+| Bonus — Pitchs Favoris | Bookmark investisseur, liste réactive ValueNotifier, Firebase temps réel | ✅ |
+| Bonus — Recherche auto-focus | `matchingFocusSearch` ValueNotifier → focus instantané sans rechargement de page | ✅ |
+| Bonus — Préfixe téléphone dynamique | 🇸🇳 +221 / 🇬🇲 +220 / 🇲🇱 +223, validation longueur adaptée par pays | ✅ |
+| Bonus — Actions rapides tous rôles | `_QuickActionsGrid` visible pour Entrepreneur, Mentor et Investisseur | ✅ |
