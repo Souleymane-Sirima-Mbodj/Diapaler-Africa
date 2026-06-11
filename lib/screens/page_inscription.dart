@@ -9,6 +9,7 @@ import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
+import '../services/service_cloudinary.dart';
 import '../theme/theme_app.dart';
 import 'page_decouverte.dart';
 import 'page_choix_role.dart';
@@ -88,7 +89,8 @@ class _SignUpPageState extends State<SignUpPage> {
       _name.text.trim().length >= 4;
   bool get _emailValid => _emailRegex.hasMatch(_email.text.trim());
   String get _phoneDigits => _phone.text.replaceAll(RegExp(r'\D'), '');
-  bool get _phoneValid => _phoneDigits.length == 9;
+  int get _expectedPhoneLength => countryPhoneLength[_country] ?? 9;
+  bool get _phoneValid => _phoneDigits.length == _expectedPhoneLength;
   bool get _passwordsMatch =>
       _password.text.isNotEmpty && _password.text == _confirm.text;
   int get _passwordStrength => _computeStrength(_password.text);
@@ -147,7 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
         final bytes = await image.readAsBytes();
         setState(() {
           _photoBytes = bytes;
-          _photoBase64 = base64Encode(bytes);
+          _photoBase64 = base64Encode(bytes); // temporaire, remplacé par URL au submit
         });
       }
     } catch (e) {
@@ -188,11 +190,24 @@ class _SignUpPageState extends State<SignUpPage> {
       final firstName = parts.first;
       final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
+      // Upload photo vers Cloudinary si disponible, sinon garder base64 local
+      String photoData = _photoBase64;
+      if (_photoBytes != null && _photoBytes!.isNotEmpty) {
+        try {
+          photoData = await CloudinaryService.uploadBytes(
+            bytes: _photoBytes!,
+            filename: 'avatar_$uid.jpg',
+          );
+        } catch (_) {
+          // En cas d'erreur Cloudinary, on garde le base64 temporairement
+        }
+      }
+
       final profile = UserProfile(
         firstName: firstName,
         lastName: lastName,
         email: _email.text.trim(),
-        phone: '+221 ${_phone.text.trim()}',
+        phone: '${countryDialCode[_country] ?? '+221'} ${_phone.text.trim()}',
         gender: _gender,
         birthDate: _birthDate,
         address: _address.text.trim(),
@@ -208,7 +223,7 @@ class _SignUpPageState extends State<SignUpPage> {
             : '',
         bio: _bio.text.trim(),
         linkedin: _linkedin.text.trim(),
-        photoBase64: _photoBase64,
+        photoBase64: photoData,
         interests: _interests.toList()..sort(),
         projects: const [],
       );
@@ -780,9 +795,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 color: AppColors.fieldBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text(
-                '🇸🇳  +221',
-                style: TextStyle(
+              child: Text(
+                '${countryFlag[_country] ?? '🌍'}  ${countryDialCode[_country] ?? '+?'}',
+                style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   color: AppColors.navy,
                   fontSize: 13,
@@ -796,11 +811,11 @@ class _SignUpPageState extends State<SignUpPage> {
                 keyboardType: TextInputType.phone,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(9),
+                  LengthLimitingTextInputFormatter(_expectedPhoneLength),
                   _PhoneFormatter(),
                 ],
                 decoration: InputDecoration(
-                  hintText: '77 123 45 67',
+                  hintText: _country == 'Sénégal' ? '77 123 45 67' : 'Numéro local',
                   suffixIcon: _phone.text.isEmpty
                       ? null
                       : _ValidIcon(ok: _phoneValid),
@@ -810,7 +825,7 @@ class _SignUpPageState extends State<SignUpPage> {
           ],
         ),
         if (_phone.text.isNotEmpty && !_phoneValid)
-          const _Hint(text: 'Numéro sénégalais à 9 chiffres (ex. 77 123 45 67).'),
+          _Hint(text: 'Numéro à $_expectedPhoneLength chiffres pour $_country.'),
         const SizedBox(height: 14),
         const _LabelRequired('Mot de passe'),
         const SizedBox(height: 6),

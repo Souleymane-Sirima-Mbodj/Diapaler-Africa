@@ -10,14 +10,18 @@ import 'page_profil_public.dart';
 
 /// Page listant tous les avis d'un profil (mentor, investisseur ou entrepreneur).
 /// [canReview] = la relation est acceptée ET ce n'est pas son propre profil.
+/// [showLockedBanner] = affiche la bannière "demande requise" si canReview=false.
+///   Mettre à false sur son propre profil (lecture seule silencieuse).
 class ReviewsPage extends StatefulWidget {
   final Mentor mentor;
   final bool canReview;
+  final bool showLockedBanner;
 
   const ReviewsPage({
     super.key,
     required this.mentor,
     required this.canReview,
+    this.showLockedBanner = true,
   });
 
   @override
@@ -152,9 +156,10 @@ class _ReviewsPageState extends State<ReviewsPage> {
             ),
           ),
 
-          // ── Zone basse : saisie ou message verrouillé ──────────
+          // ── Zone basse : saisie, bannière verrouillée, ou rien ──
           _BottomArea(
             canReview: widget.canReview,
+            showLockedBanner: widget.showLockedBanner,
             ctrl: _ctrl,
             sending: _sending,
             onSubmit: _submit,
@@ -257,12 +262,14 @@ class _ReviewCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 class _BottomArea extends StatelessWidget {
   final bool canReview;
+  final bool showLockedBanner;
   final TextEditingController ctrl;
   final bool sending;
   final VoidCallback onSubmit;
 
   const _BottomArea({
     required this.canReview,
+    required this.showLockedBanner,
     required this.ctrl,
     required this.sending,
     required this.onSubmit,
@@ -270,6 +277,9 @@ class _BottomArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Propre profil : rien à afficher en bas
+    if (!canReview && !showLockedBanner) return const SizedBox.shrink();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

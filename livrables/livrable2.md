@@ -247,18 +247,41 @@ diapaler-africa-default-rtdb/
 │           ├── scheduledAt     → "2025-06-15T10:00:00.000"
 │           └── otherUid        → "uid_mentor" (vide si mentor statique)
 │
-└── notifications/
-    └── {uid}/
-        └── {notifId}/
-            ├── id          → "1748123456789"
-            ├── title       → "Nouveau rendez-vous"
-            ├── message     → "Ibrahima a réservé une session..."
-            ├── type        → "session_booked" | "session_cancelled" | "investment_offer" | "session_request" | "info"
-            ├── timestamp   → "2025-05-24T10:00:00.000"
-            ├── isRead      → false
-            ├── requestId   → "1748123456789" (optionnel — ID du mentorRequest pour actions inline Accept/Decline)
-            ├── fromUserId  → "uid_expediteur" (optionnel — pour ouvrir le chat après acceptation)
-            └── fromName    → "Mariéme Tine" (optionnel — nom affiché dans la notification)
+├── notifications/
+│   └── {uid}/
+│       └── {notifId}/
+│           ├── id          → "1748123456789"
+│           ├── title       → "Nouveau rendez-vous"
+│           ├── message     → "Ibrahima a réservé une session..."
+│           ├── type        → "session_booked" | "session_cancelled" | "investment_offer" | "session_request" | "info"
+│           ├── timestamp   → "2025-05-24T10:00:00.000"
+│           ├── isRead      → false
+│           ├── requestId   → "1748123456789" (optionnel — ID du mentorRequest pour actions inline Accept/Decline)
+│           ├── fromUserId  → "uid_expediteur" (optionnel — pour ouvrir le chat après acceptation)
+│           └── fromName    → "Mariéme Tine" (optionnel — nom affiché dans la notification)
+│
+├── reviews/
+│   └── {toUid}/
+│       └── {reviewId}/
+│           ├── id          → "1748123456789"
+│           ├── fromUid     → "uid_auteur"
+│           ├── fromName    → "Mariéme Tine"
+│           ├── text        → "Excellent mentor, très disponible"
+│           ├── rating      → 5   (entier 1–5)
+│           └── createdAt   → "2025-05-24T10:00:00.000"
+│
+└── pitchFavorites/
+    └── {userId}/
+        └── {pitchId}/
+            ├── id          → "1748123456789"  (ID du pitch)
+            ├── userId      → "uid_entrepreneur"
+            ├── userName    → "Mariéme Tine"
+            ├── title       → "Téranga Mode"
+            ├── sector      → "Mode & Textile"
+            ├── description → "Plateforme de vente..."
+            ├── amount      → "5000000"
+            ├── createdAt   → 1748123456789
+            └── savedAt     → 1748567890123  (timestamp de sauvegarde — tri décroissant)
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : nœud users/ avec un profil**
@@ -295,11 +318,13 @@ Future<void> _submit() async {
 
   // 2. Construction du profil complet
   final parts = _name.text.trim().split(RegExp(r'\s+'));
+  // Préfixe dynamique selon le pays choisi (🇸🇳 +221 / 🇬🇲 +220 / 🇲🇱 +223)
+  final dialCode = countryDialCode[_country] ?? '+221';
   final profile = UserProfile(
     firstName: parts.first,
     lastName: parts.length > 1 ? parts.sublist(1).join(' ') : '',
     email: _email.text.trim(),
-    phone: '+221 ${_phone.text.trim()}',
+    phone: '$dialCode ${_phone.text.trim()}',
     role: _roleLabel(_role),       // "Entrepreneur" | "Mentor" | "Investisseur"
     photoBase64: _photoBase64,
     interests: _interests.toList()..sort(),
@@ -1098,6 +1123,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
 | **UPDATE** statut demande | `InteractionsService` | `mentorRequests/{id}.update()` | Accepter/Refuser |
 | **UPDATE** disponibilités | `InteractionsService` | `availability/{uid}.set()` | Planning mentor |
 | **UPDATE** conversation (nb non lus) | `InteractionsService` | `conversations/{id}.update()` | Lecture message |
+| **CREATE** avis (review) | `InteractionsService` | `reviews/{toUid}/{id}.set()` | Laisser un avis étoilé |
+| **CREATE** pitch favori | `PitchFavoriteService` | `pitchFavorites/{userId}/{pitchId}.set()` | Bookmark investisseur |
+| **READ** avis (stream) | `InteractionsService` | `reviews/{toUid}.onValue` | Page Avis / Profil |
+| **READ** pitchs favoris (stream) | `PitchFavoriteService` | `pitchFavorites/{userId}.onValue` | Mes Pitchs Sauvegardés |
+| **DELETE** pitch favori | `PitchFavoriteService` | `pitchFavorites/{userId}/{pitchId}.remove()` | Retirer un bookmark |
 | **DELETE** session réservée | `AgendaController` | `bookedSessions/{uid}/{id}.remove()` | Annulation rendez-vous |
 | **DELETE** déconnexion | `AuthService` | `signOut()` | Déconnexion |
 | **DELETE** cache local | `CacheService` | `prefs.remove(key)` | Déconnexion |
@@ -1126,3 +1156,6 @@ DIAPALER AFRICA consomme pleinement des API externes avec toutes les opérations
 | Chatbot IA | Llama 3.1 8B via Groq — HTTP REST + proxy Cloudflare | ✅ (bonus) |
 | Flux investisseur | `mentorRequests` type `'investment'` + notification + acceptation dans `RequestsPage` | ✅ (bonus) |
 | Fix path Firebase | `generateConversationId` sanitize les caractères interdits (`.#$[]/@` → `_`) | ✅ (bonus) |
+| Système d'avis (reviews) | CREATE + READ stream `reviews/` — notation 1–5, accès restreint, moyenne live | ✅ (bonus) |
+| Pitchs favoris (bookmark) | CREATE + READ + DELETE stream `pitchFavorites/` — ValueNotifier temps réel | ✅ (bonus) |
+| Préfixe téléphone dynamique | `countryDialCode` map — +221 SN / +220 GM / +223 ML à l'inscription | ✅ (bonus) |

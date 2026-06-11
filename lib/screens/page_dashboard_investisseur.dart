@@ -5,8 +5,10 @@ import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
+import '../services/service_pitch_favoris.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_mes_pitchs_favoris.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_profil_public.dart';
@@ -155,10 +157,18 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _StatCard(
-                          icon: Icons.bookmark_rounded,
-                          label: 'Favoris',
-                          value: '${profile.favoritesCount}',
+                        child: ValueListenableBuilder<List<Map<String, dynamic>>>(
+                          valueListenable: PitchFavoriteService.pitchFavorites,
+                          builder: (context, saved, _) => _StatCard(
+                            icon: Icons.bookmark_rounded,
+                            label: 'Favoris',
+                            value: '${saved.length}',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MesPitchsFavorisPage(),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),

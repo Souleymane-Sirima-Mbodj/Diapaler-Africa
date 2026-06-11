@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -25,8 +26,7 @@ class _PitchPageState extends State<PitchPage> {
 
   /// ID stable généré au chargement de la page — utilisé pour Cloudinary
   /// avant même la publication Firebase.
-  final String _pitchId =
-      DateTime.now().millisecondsSinceEpoch.toString();
+  late final String _pitchId;
 
   // ── Étapes 0-2 ──────────────────────────────────────────────────
   final _title = TextEditingController();
@@ -69,9 +69,16 @@ class _PitchPageState extends State<PitchPage> {
     }
   }
 
+  static String _generateId() {
+    final r = Random.secure();
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    return List.generate(20, (_) => chars[r.nextInt(chars.length)]).join();
+  }
+
   @override
   void initState() {
     super.initState();
+    _pitchId = _generateId();
     for (final c in [_title, _description, _detailDescription, _amount]) {
       c.addListener(() => setState(() {}));
     }

@@ -183,6 +183,20 @@ class InteractionsService {
     );
   }
 
+  /// Récupère une demande (mentor, session, investissement) par son ID Firebase.
+  /// Retourne null si introuvable ou en cas d'erreur.
+  static Future<MentorRequest?> fetchRequest(String requestId) async {
+    if (requestId.isEmpty) return null;
+    try {
+      final snap = await _db.child('mentorRequests/$requestId').get();
+      if (!snap.exists || snap.value == null) return null;
+      return MentorRequest.fromJson(
+          Map<String, dynamic>.from(snap.value as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Annule une session CONFIRMÉE avec un motif justificatif, notifie l'autre partie.
   static Future<void> cancelConfirmedSession({
     required String requestId,
@@ -327,12 +341,15 @@ class InteractionsService {
       'text': text,
       'createdAt': DateTime.now().millisecondsSinceEpoch,
     });
-    await NotificationService.notifyUser(
-      uid: toUid,
-      title: 'Nouvel avis reçu 💬',
-      message: '$fromName a laissé un avis sur votre profil.',
-      type: 'new_review',
-    );
+    // Notification non critique : ne pas bloquer si elle échoue
+    try {
+      await NotificationService.notifyUser(
+        uid: toUid,
+        title: 'Nouvel avis reçu 💬',
+        message: '$fromName a laissé un avis sur votre profil.',
+        type: 'new_review',
+      );
+    } catch (_) {}
   }
 
   /// Écoute en temps réel tous les avis laissés sur [targetUid],
@@ -364,13 +381,16 @@ class InteractionsService {
     assert(value >= 1 && value <= 5, 'La note doit être comprise entre 1 et 5');
     final isNew = !(await _db.child('ratings/$toUid/$fromUid').get()).exists;
     await _db.child('ratings/$toUid/$fromUid').set(value);
+    // Notification non critique : ne pas bloquer si elle échoue
     if (isNew && fromName.isNotEmpty) {
-      await NotificationService.notifyUser(
-        uid: toUid,
-        title: 'Nouvelle note reçue ⭐',
-        message: '$fromName vous a attribué $value étoile${value > 1 ? 's' : ''}.',
-        type: 'new_rating',
-      );
+      try {
+        await NotificationService.notifyUser(
+          uid: toUid,
+          title: 'Nouvelle note reçue ⭐',
+          message: '$fromName vous a attribué $value étoile${value > 1 ? 's' : ''}.',
+          type: 'new_rating',
+        );
+      } catch (_) {}
     }
   }
 

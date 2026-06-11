@@ -51,7 +51,7 @@
 
 ## Résumé exécutif
 
-**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée avec système de Contacts, un flux investisseur complet (propositions + acceptation), un matching rôle-adaptatif avec compatibilité dynamique, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, et une gestion complète de profils avec synchronisation cloud. L'application compte **26 écrans**, **12 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
+**DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée avec système de Contacts, un flux investisseur complet (propositions + acceptation), un matching rôle-adaptatif avec compatibilité dynamique, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, une gestion complète de profils avec synchronisation cloud, un **système d'avis et notation étoiles 1–5** avec accès restreint, et un **système de pitchs favoris** (bookmark investisseur) temps réel. L'application compte **34 écrans**, **14 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
 
 ---
 
@@ -126,7 +126,7 @@ Le Sénégal connaît une dynamique entrepreneuriale forte, portée par les prog
 | Géographie | 40+ villes sénégalaises dans les menus |
 | Monnaie | Montants de financement en FCFA |
 | Programmes | DER/FJ, BNDE, FONGIP dans le contexte IA |
-| Téléphone | Préfixe +221 fixe avec auto-format sénégalais |
+| Téléphone | Préfixe **dynamique** selon le pays : 🇸🇳 +221 Sénégal / 🇬🇲 +220 Gambie / 🇲🇱 +223 Mali — validation longueur adaptée (9/7/8 chiffres) |
 
 ---
 
@@ -172,6 +172,8 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 | Partage social | Pitchs, profils, conseils DIALI sur WhatsApp, Facebook, Telegram, X, LinkedIn | Tous |
 | Paiement Premium | Abonnement Wave (3 plans) + badge ⭐ + activation Firebase immédiate | Tous |
 | Bouton CIS | Bottom sheet informatif : Club des Investisseurs du Sénégal | Entrepreneur |
+| Avis et notation ⭐ | Étoiles 1–5, moyenne live Firebase, accès restreint par relation acceptée | Tous |
+| Pitchs favoris 🔖 | Bookmark investisseur, ValueNotifier temps réel, nœud `pitchFavorites/` Firebase | Investisseur |
 
 ---
 
@@ -215,7 +217,9 @@ diapaler-africa-default-rtdb/
 ├── mentorRequests/ → demandes de mentorat (statut pending/accepted/rejected)
 ├── availability/   → créneaux disponibles (mentor)
 ├── bookedSessions/ → sessions réservées par utilisateur (CRUD bilatéral)
-└── notifications/  → notifications in-app par utilisateur
+├── notifications/  → notifications in-app par utilisateur
+├── reviews/        → avis et notations par profil (étoiles 1–5)
+└── pitchFavorites/ → pitchs sauvegardés par investisseur (bookmark)
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Console Firebase : projet DIAPALER AFRICA**
@@ -266,16 +270,17 @@ lib/
 ├── main.dart                        ← Point d'entrée + firebaseReady (non bloquant)
 ├── theme/theme_app.dart             ← Couleurs, typographies, styles globaux
 ├── data/                            ← Modèles de données (UserProfile, Project, interactions…)
-├── services/                        ← 12 services métier
+├── services/                        ← 14 services métier
 │   ├── service_authentification.dart   ← Firebase Auth
 │   ├── service_base_de_donnees.dart    ← Firebase DB : profils, pitchs, agenda
-│   ├── service_interactions.dart       ← Messages, conversations, demandes, planning
+│   ├── service_interactions.dart       ← Messages, conversations, demandes, planning, avis
 │   ├── service_notifications.dart      ← Centre de notifications réactif
 │   ├── service_cache.dart              ← SharedPreferences offline-first
 │   ├── service_chatbot.dart            ← API REST Groq (DIALI IA)
 │   ├── service_navigation.dart         ← appTabIndex + unreadMessagesCount
-│   └── … (5 autres services)
-├── screens/                         ← 26 écrans
+│   ├── service_pitch_favoris.dart      ← Pitchs favoris (bookmark temps réel)
+│   └── … (6 autres services)
+├── screens/                         ← 34 écrans
 └── widgets/                         ← 13 widgets réutilisables
 ```
 
@@ -941,7 +946,7 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 
 | Livrable | Contenu | Fonctionnalités clés | Statut |
 |---|---|---|---|
-| **L1** | Architecture Flutter + Navigation | 26 écrans, IndexedStack, ValueNotifier | ✅ Complet |
+| **L1** | Architecture Flutter + Navigation | 34 écrans, IndexedStack, ValueNotifier | ✅ Complet |
 | **L2** | Consommation API | Firebase CRUD + Interactions + Groq REST | ✅ Complet |
 | **L3** | Authentification | Connexion, Inscription 4 étapes, Reset, Cache session | ✅ Complet |
 | **L4** | Gestion de profil | Modification + Photo + Projets CRUD + UsersService | ✅ Complet |
@@ -954,16 +959,16 @@ Cela permet la **visibilité croisée** sans exposer les données privées du pr
 
 | Indicateur | Valeur |
 |---|---|
-| Lignes de code Dart | ~10 500 lignes |
-| Fichiers Dart | ~57 fichiers |
-| Écrans | 26 écrans |
+| Lignes de code Dart | ~11 500 lignes |
+| Fichiers Dart | ~62 fichiers |
+| Écrans | 34 écrans |
 | Widgets réutilisables | 13+ widgets |
-| Services | 12 services |
-| Modèles de données | 6 classes de données |
+| Services | 14 services |
+| Modèles de données | 7 classes de données |
 | Packages Flutter | 11 packages |
-| Commits git documentés | 12+ commits |
+| Commits git documentés | 15+ commits |
 | API externes | 2 (Firebase + Groq) |
-| Nœuds Firebase | 8 nœuds (users, pitches, messages, conversations, mentorRequests, availability, bookedSessions, notifications) |
+| Nœuds Firebase | 10 nœuds (users, pitches, messages, conversations, mentorRequests, availability, bookedSessions, notifications, reviews, pitchFavorites) |
 | Profils mentors pré-chargés | 112 profils sénégalais |
 | Villes sénégalaises (GPS) | 40+ villes avec coordonnées |
 | Secteurs d'activité | 10 secteurs porteurs |
@@ -1031,12 +1036,12 @@ Si DIAPALER AFRICA devait évoluer vers un produit commercial, les priorités se
 
 | Livrable | Fonctionnalités minimales | Fonctionnalités bonus |
 |---|---|---|
-| L1 | Navigation + 26 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique, matching rôle-adaptatif, système de Contacts, bouton Annuler session |
-| L2 | Firebase CRUD (4 ops) | 21+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId`, type `'investment'`, sanitize Firebase path |
-| L3 | Connexion + Inscription | 4 étapes rôle-adaptées, jauge MDP, `AutofillGroup` sauvegarde MDP, `_bootstrap()` offline-first |
-| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, "Mes contacts" Entrepreneur, `BoxFit.cover` Avatar, projets CRUD + **mode édition** `AddProjectPage(existingProject:)` + boutons rôle-adaptatifs |
-| L5 | Notifs + Recherche + GPS | Filtres pitchs dynamiques, DIALI IA, flux investisseur complet, système de Contacts, compatibilité dynamique, bouton Annuler agenda, CIS, Wave Premium, **déploiement APK**, booking Firebase réel (`_BookingSheet`), notifications inline Accept/Decline, `_AvailabilityPreview` |
-| L6 | Rapport | 27 bugs documentés, métriques complètes, qualité du code, **APK signé déployé (58.3 MB)** |
+| L1 | Navigation + 34 écrans | `IndexedStack`, `ValueNotifier`, FAB pulsant, agenda rôle-spécifique, matching rôle-adaptatif, système de Contacts, bouton Annuler session |
+| L2 | Firebase CRUD (4 ops) | 26+ opérations CRUD, `InteractionsService`, `UsersService`, cache offline, `lastSenderId`, type `'investment'`, sanitize Firebase path, nœuds `reviews/` + `pitchFavorites/` |
+| L3 | Connexion + Inscription | 4 étapes rôle-adaptées, jauge MDP, `AutofillGroup` sauvegarde MDP, `_bootstrap()` offline-first, préfixe téléphone dynamique (+221/+220/+223) |
+| L4 | Profil + Photo | Stats rôle-spécifiques, LinkedIn cliquable, "Mes contacts" Entrepreneur, `BoxFit.cover` Avatar, projets CRUD + **mode édition** `AddProjectPage(existingProject:)` + boutons rôle-adaptatifs, avis/notation live |
+| L5 | Notifs + Recherche + GPS | Filtres pitchs dynamiques, DIALI IA, flux investisseur complet, système de Contacts, compatibilité dynamique, bouton Annuler agenda, CIS, Wave Premium, **déploiement APK**, booking Firebase réel (`_BookingSheet`), notifications inline Accept/Decline, `_AvailabilityPreview`, **avis ⭐ + pitchs favoris 🔖** |
+| L6 | Rapport | 27+ bugs documentés, métriques complètes (34 écrans / 14 services), qualité du code, **APK signé déployé (58.3 MB)** |
 
 Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur ajoutée** à l'écosystème entrepreneurial sénégalais, en connectant entrepreneurs, mentors et investisseurs dans une plateforme unifiée, moderne et accessible, avec :
 - Un **chatbot IA** (DIALI) contextuelisé à l'écosystème sénégalais
@@ -1046,7 +1051,7 @@ Au-delà des critères académiques, DIAPALER AFRICA apporte une **vraie valeur 
 
 Ce projet démontre qu'il est possible, avec Flutter, Firebase et l'API Groq, de concevoir en quelques semaines une application mobile de **qualité professionnelle**, complète, réactive et prête pour la mise sur le marché africain.
 
-Les dernières itérations ont enrichi la plateforme avec un **flux investisseur complet** (propositions d'investissement, acceptation, relation de Contacts), un **système de Contacts** centralisant toutes les relations acceptées, un **matching rôle-adaptatif** (Mentor/Investisseur voient les Entrepreneurs), une **compatibilité dynamique** synchronisée entre affichage et tri, et des **filtres avancés** dans la page Pitchs Publiés. Des corrections ciblées ont également renforcé la robustesse : **navigation contextuelle** depuis le centre de notifications, **anti-doublon** sur les demandes de mentorat via `hasPendingRequest()`, **genre par défaut neutre** ("Non précisé"), **suppression des sessions statiques** de l'agenda au profit d'un rendu purement Firebase, et **parser chatbot cascadant** supportant les formats Groq/OpenAI et Anthropic. Ces évolutions confirment la maturité et l'extensibilité de l'architecture choisie.
+Les dernières itérations ont enrichi la plateforme avec un **flux investisseur complet** (propositions d'investissement, acceptation, relation de Contacts), un **système de Contacts** centralisant toutes les relations acceptées, un **matching rôle-adaptatif** (Mentor/Investisseur voient les Entrepreneurs), une **compatibilité dynamique** synchronisée entre affichage et tri, des **filtres avancés** dans la page Pitchs Publiés, un **système d'avis et notation étoiles 1–5** (`page_avis.dart`) avec moyenne live Firebase et accès restreint par relation acceptée, un **système de pitchs favoris** (`PitchFavoriteService` + `page_mes_pitchs_favoris.dart`) avec bookmark temps réel pour les investisseurs, et un **préfixe téléphone dynamique** (🇸🇳 +221 / 🇬🇲 +220 / 🇲🇱 +223) adapté au pays à l'inscription. Des corrections ciblées ont également renforcé la robustesse : **navigation contextuelle** depuis le centre de notifications, **anti-doublon** sur les demandes de mentorat via `hasPendingRequest()`, **genre par défaut neutre** ("Non précisé"), **suppression des sessions statiques** de l'agenda au profit d'un rendu purement Firebase, et **parser chatbot cascadant** supportant les formats Groq/OpenAI et Anthropic. Ces évolutions confirment la maturité et l'extensibilité de l'architecture choisie.
 
 ---
 

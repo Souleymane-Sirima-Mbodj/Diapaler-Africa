@@ -373,6 +373,7 @@ class _StatsStripState extends State<_StatsStrip> {
                                 builder: (_) => ReviewsPage(
                                   mentor: _mentorFromProfile(p),
                                   canReview: false,
+                                  showLockedBanner: false,
                                 ),
                               ),
                             )

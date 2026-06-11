@@ -48,6 +48,25 @@ const countriesAndCities = <String, List<String>>{
 
 const supportedCountries = ['Sénégal', 'Gambie', 'Mali'];
 
+const countryDialCode = <String, String>{
+  'Sénégal': '+221',
+  'Gambie': '+220',
+  'Mali': '+223',
+};
+
+const countryFlag = <String, String>{
+  'Sénégal': '🇸🇳',
+  'Gambie': '🇬🇲',
+  'Mali': '🇲🇱',
+};
+
+/// Nombre de chiffres attendus après l'indicatif (hors espaces).
+const countryPhoneLength = <String, int>{
+  'Sénégal': 9,
+  'Gambie': 7,
+  'Mali': 8,
+};
+
 List<String> citiesOf(String country) =>
     countriesAndCities[country] ?? const ['Dakar'];
 

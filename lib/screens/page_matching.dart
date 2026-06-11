@@ -40,6 +40,7 @@ class MatchingPage extends StatefulWidget {
 
 class _MatchingPageState extends State<MatchingPage> {
   final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
   String _sector = 'Tous';
   String _city = 'Toutes';
@@ -77,6 +78,13 @@ class _MatchingPageState extends State<MatchingPage> {
     if (myRole == 'Investisseur' || myRole == 'Mentor') _role = 'Entrepreneur';
     _loadMembers();
     matchingFilterRequest.addListener(_onFilterRequest);
+    matchingFocusSearch.addListener(_onFocusRequest);
+  }
+
+  void _onFocusRequest() {
+    if (!matchingFocusSearch.value) return;
+    matchingFocusSearch.value = false;
+    _searchFocus.requestFocus();
   }
 
   /// Applique le filtre rôle demandé depuis l'extérieur (ex. accueil → "Mentor").
@@ -95,31 +103,23 @@ class _MatchingPageState extends State<MatchingPage> {
     final profile = UserProfileController.profile.value;
     final userInterests = profile.interests.map((s) => s.toLowerCase().trim()).toSet();
     final mentorSectors = m.sectors.map((s) => s.toLowerCase().trim()).toSet();
-    // Score de base : légèrement supérieur pour les membres Firebase réels
-    int score = m.uid.isNotEmpty ? 30 : 22;
-    if (userInterests.isEmpty) return score.clamp(10, 40);
-    if (mentorSectors.isEmpty) return score.clamp(10, 40);
-    // Correspondance exacte
+    if (userInterests.isEmpty || mentorSectors.isEmpty) return 0;
+    // Correspondance exacte sur au moins un secteur commun
     final exact = userInterests.intersection(mentorSectors);
     if (exact.isNotEmpty) {
       final depth = (exact.length / mentorSectors.length * 45).round();
-      score += 25 + depth;
-      return score.clamp(60, 97);
+      return (50 + depth).clamp(50, 95);
     }
     // Correspondance partielle (ex: "Agriculture" ↔ "Agro-industrie")
     final partial = userInterests.any((ui) =>
         mentorSectors.any((ms) => ms.contains(ui) || ui.contains(ms)));
-    if (partial) {
-      score += 20;
-      return score.clamp(45, 72);
-    }
+    if (partial) return 32;
     // Secteur principal commun
     final userSector = profile.sector.toLowerCase().trim();
     if (mentorSectors.any((ms) => ms.contains(userSector) || userSector.contains(ms))) {
-      score += 12;
-      return score.clamp(35, 55);
+      return 18;
     }
-    return score.clamp(10, 35);
+    return 0;
   }
 
   Future<void> _loadMembers() async {
@@ -139,7 +139,9 @@ class _MatchingPageState extends State<MatchingPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     matchingFilterRequest.removeListener(_onFilterRequest);
+    matchingFocusSearch.removeListener(_onFocusRequest);
     super.dispose();
   }
 
@@ -260,6 +262,7 @@ class _MatchingPageState extends State<MatchingPage> {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
             child: TextField(
               controller: _searchCtrl,
+              focusNode: _searchFocus,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search_rounded,
                     color: AppColors.subtle),

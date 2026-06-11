@@ -316,7 +316,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 10),
-          _PhoneField(controller: _phone),
+          _PhoneField(controller: _phone, country: _country),
           const SizedBox(height: 12),
           const _SubLabel('Sexe'),
           const SizedBox(height: 6),
@@ -498,10 +498,14 @@ class _Field extends StatelessWidget {
 
 class _PhoneField extends StatelessWidget {
   final TextEditingController controller;
-  const _PhoneField({required this.controller});
+  final String country;
+  const _PhoneField({required this.controller, required this.country});
 
   @override
   Widget build(BuildContext context) {
+    final flag = countryFlag[country] ?? '🌍';
+    final dial = countryDialCode[country] ?? '+?';
+    final hint = country == 'Sénégal' ? '77 123 45 67' : 'Numéro local';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -517,9 +521,9 @@ class _PhoneField extends StatelessWidget {
                 color: AppColors.fieldBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text(
-                '🇸🇳  +221',
-                style: TextStyle(
+              child: Text(
+                '$flag  $dial',
+                style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   color: AppColors.navy,
                   fontSize: 13,
@@ -531,9 +535,7 @@ class _PhoneField extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  hintText: '77 123 45 67',
-                ),
+                decoration: InputDecoration(hintText: hint),
               ),
             ),
           ],

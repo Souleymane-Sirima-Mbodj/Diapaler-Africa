@@ -34,9 +34,11 @@ class Avatar extends StatelessWidget {
     this.tappable = false,
   });
 
-  /// Décode la photo en octets, ou renvoie `null` si absente / invalide.
+  bool get _isUrl => photoBase64.startsWith('http://') || photoBase64.startsWith('https://');
+
+  /// Décode la photo en octets, ou renvoie `null` si absente / invalide / URL.
   Uint8List? get _photoBytes {
-    if (photoBase64.isEmpty) return null;
+    if (photoBase64.isEmpty || _isUrl) return null;
     try {
       return base64Decode(photoBase64);
     } catch (_) {
@@ -47,14 +49,24 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = _photoBytes;
-    final canZoom = tappable && bytes != null;
+    final canZoom = tappable && (bytes != null || _isUrl);
     final avatar = SizedBox(
       width: size,
       height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (bytes != null)
+          if (_isUrl)
+            ClipOval(
+              child: Image.network(
+                photoBase64,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _initialsCircle(),
+              ),
+            )
+          else if (bytes != null)
             ClipOval(
               child: Image.memory(
                 bytes,
@@ -88,7 +100,13 @@ class Avatar extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.zoomIn,
       child: GestureDetector(
-        onTap: () => _openPhotoViewer(context, bytes),
+        onTap: () {
+          if (_isUrl) {
+            _openUrlViewer(context, photoBase64);
+          } else if (bytes != null) {
+            _openPhotoViewer(context, bytes);
+          }
+        },
         child: avatar,
       ),
     );
@@ -100,6 +118,18 @@ class Avatar extends StatelessWidget {
         opaque: false,
         barrierColor: Colors.black87,
         pageBuilder: (_, __, ___) => _PhotoViewer(bytes: bytes),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
+  void _openUrlViewer(BuildContext context, String url) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        pageBuilder: (_, __, ___) => _PhotoViewerUrl(url: url),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
       ),
@@ -123,6 +153,57 @@ class Avatar extends StatelessWidget {
           fontSize: size * 0.36,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Visionneuse plein écran zoomable pour une photo chargée depuis une URL.
+class _PhotoViewerUrl extends StatelessWidget {
+  final String url;
+  const _PhotoViewerUrl({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).maybePop(),
+                child: InteractiveViewer(
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white54,
+                        size: 60,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  tooltip: 'Fermer',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

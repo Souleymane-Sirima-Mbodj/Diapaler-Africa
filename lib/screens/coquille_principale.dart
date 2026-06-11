@@ -9,6 +9,7 @@ import '../services/service_base_de_donnees.dart';
 import '../services/service_favoris.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
+import '../services/service_pitch_favoris.dart';
 import '../theme/theme_app.dart';
 import '../widgets/barre_navigation.dart';
 import 'page_accueil.dart';
@@ -100,6 +101,7 @@ class _RootShellState extends State<RootShell> {
   int _index = 0;
   StreamSubscription? _pendingRequestsSub;
   StreamSubscription? _mentorsActiveSub;
+  StreamSubscription? _mentorsActiveSub2;
   StreamSubscription? _pitchSub;
 
   @override
@@ -109,6 +111,7 @@ class _RootShellState extends State<RootShell> {
     if (uid != null && uid.isNotEmpty) {
       AgendaController.load(uid);
       FavoriteService.load(uid);
+      PitchFavoriteService.load(uid);
       NotificationService.init(uid);
       _listenPendingRequests(uid);
       _listenMentorsActive(uid);
@@ -142,42 +145,78 @@ class _RootShellState extends State<RootShell> {
     }, onError: (_) => pendingRequestsCount.value = 0);
   }
 
-  /// Écoute en temps réel et calcule le compteur `mentorsActive`
-  /// directement depuis les demandes acceptées — jamais de désynchronisation.
+  /// Écoute en temps réel les demandes acceptées en filtrant côté Firebase
+  /// (orderByChild) pour éviter de charger l'intégralité de mentorRequests.
   ///
-  /// - Mentor       : demandes reçues, type='mentor',      status='accepted'
-  /// - Investisseur : demandes reçues, type='investment',  status='accepted'
-  /// - Entrepreneur : demandes envoyées, type='mentor',    status='accepted'
+  /// - Mentor       : reçues où toUserId==uid, type='mentor',      acceptées
+  /// - Entrepreneur : envoyées où fromUserId==uid, type='mentor',  acceptées
+  /// - Investisseur : deux streams (toUserId + fromUserId), type='investment'
   void _listenMentorsActive(String uid) {
     _mentorsActiveSub?.cancel();
-    _mentorsActiveSub = FirebaseDatabase.instance
-        .ref('mentorRequests')
-        .onValue
-        .listen((event) {
-      final data = event.snapshot.value as Map?;
-      final role = UserProfileController.profile.value.role;
+    _mentorsActiveSub2?.cancel();
+    final role = UserProfileController.profile.value.role;
 
-      if (data == null) {
-        _applyMentorsActive(0);
-        return;
-      }
-
-      int count = 0;
-      for (final v in data.values) {
-        if (v is! Map) continue;
-        final status = v['status']?.toString();
-        final type = v['type']?.toString() ?? 'mentor';
-        final from = v['fromUserId']?.toString() ?? '';
-        final to = v['toUserId']?.toString() ?? '';
-        if (status != 'accepted') continue;
-
-        if (role == 'Mentor' && type == 'mentor' && to == uid) count++;
-        // Investisseur : compte les deux sens (proposition envoyée OU reçue, acceptée)
-        if (role == 'Investisseur' && type == 'investment' && (to == uid || from == uid)) count++;
-        if (role == 'Entrepreneur' && type == 'mentor' && from == uid) count++;
-      }
-      _applyMentorsActive(count);
-    }, onError: (_) {});
+    if (role == 'Mentor') {
+      _mentorsActiveSub = FirebaseDatabase.instance
+          .ref('mentorRequests')
+          .orderByChild('toUserId')
+          .equalTo(uid)
+          .onValue
+          .listen((event) {
+        final data = event.snapshot.value as Map?;
+        if (data == null) { _applyMentorsActive(0); return; }
+        final count = data.values.where((v) =>
+          v is Map &&
+          v['type']?.toString() == 'mentor' &&
+          v['status']?.toString() == 'accepted').length;
+        _applyMentorsActive(count);
+      }, onError: (_) {});
+    } else if (role == 'Entrepreneur') {
+      _mentorsActiveSub = FirebaseDatabase.instance
+          .ref('mentorRequests')
+          .orderByChild('fromUserId')
+          .equalTo(uid)
+          .onValue
+          .listen((event) {
+        final data = event.snapshot.value as Map?;
+        if (data == null) { _applyMentorsActive(0); return; }
+        final count = data.values.where((v) =>
+          v is Map &&
+          v['type']?.toString() == 'mentor' &&
+          v['status']?.toString() == 'accepted').length;
+        _applyMentorsActive(count);
+      }, onError: (_) {});
+    } else if (role == 'Investisseur') {
+      // Deux streams indépendants : propositions reçues + propositions envoyées
+      int toCount = 0;
+      int fromCount = 0;
+      _mentorsActiveSub = FirebaseDatabase.instance
+          .ref('mentorRequests')
+          .orderByChild('toUserId')
+          .equalTo(uid)
+          .onValue
+          .listen((event) {
+        final data = event.snapshot.value as Map?;
+        toCount = data == null ? 0 : data.values.where((v) =>
+          v is Map &&
+          v['type']?.toString() == 'investment' &&
+          v['status']?.toString() == 'accepted').length;
+        _applyMentorsActive(toCount + fromCount);
+      }, onError: (_) {});
+      _mentorsActiveSub2 = FirebaseDatabase.instance
+          .ref('mentorRequests')
+          .orderByChild('fromUserId')
+          .equalTo(uid)
+          .onValue
+          .listen((event) {
+        final data = event.snapshot.value as Map?;
+        fromCount = data == null ? 0 : data.values.where((v) =>
+          v is Map &&
+          v['type']?.toString() == 'investment' &&
+          v['status']?.toString() == 'accepted').length;
+        _applyMentorsActive(toCount + fromCount);
+      }, onError: (_) {});
+    }
   }
 
   /// Écoute en temps réel le nombre de pitchs publiés par l'utilisateur.
@@ -230,7 +269,9 @@ class _RootShellState extends State<RootShell> {
     FavoriteService.favorites.removeListener(_onFavoritesChanged);
     _pendingRequestsSub?.cancel();
     _mentorsActiveSub?.cancel();
+    _mentorsActiveSub2?.cancel();
     _pitchSub?.cancel();
+    PitchFavoriteService.reset();
     pendingRequestsCount.value = 0;
     pitchCount.value = 0;
     super.dispose();

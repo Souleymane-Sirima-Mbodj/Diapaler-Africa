@@ -128,7 +128,8 @@ class MentorCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _CompatibilityPill(value: compatibilityScore ?? mentor.compatibility),
+                  if ((compatibilityScore ?? mentor.compatibility) > 0)
+                    _CompatibilityPill(value: compatibilityScore ?? mentor.compatibility),
                   if (distanceKm != null) ...[
                     const SizedBox(width: 8),
                     _DistancePill(km: distanceKm!),

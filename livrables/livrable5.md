@@ -124,6 +124,8 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | **Dashboard Mentor** | `SliverAppBar` + stats + raccourcis | ✅ (bonus) |
 | **Dashboard Investisseur** | Header + accès Pitchs + Matching "Entrepreneurs à financer" | ✅ (bonus) |
 | **Détail mentor** | Réservation session + favori + bouton adapté rôle (mentorat/investissement) | ✅ (bonus) |
+| **Avis et notation ⭐** | `page_avis.dart` — étoiles 1–5, moyenne live Firebase, accès restreint par relation acceptée | ✅ (bonus) |
+| **Pitchs favoris 🔖** | `PitchFavoriteService` — bookmark investisseur, ValueNotifier temps réel, `page_mes_pitchs_favoris.dart` | ✅ (bonus) |
 
 ---
 
@@ -356,7 +358,7 @@ ValueListenableBuilder<List<NotificationItem>>(
 
 La page utilise un `ValueListenableBuilder` sur `NotificationService.notifications` et affiche soit un état vide illustré, soit une `ListView` de tuiles. Chaque tuile (`_NotificationTile`) déduit icône et couleur du champ `type` (String : `mentor_request`, `session_booked`, `session_cancelled`, `message`, `investment_offer`, `session_request`…). Tap → `markAsRead()` + navigation contextuelle, bouton "Effacer tout" → `clearAll()`.
 
-**Actions inline Accept/Decline :** pour les types `investment_offer` et `session_request`, deux boutons "Accepter" / "Refuser" s'affichent directement dans la tuile. L'acceptation appelle `InteractionsService.acceptRequest(requestId)` et ouvre le chat avec `fromUserId`. Le refus ouvre un dialog pour saisir une raison, puis appelle `InteractionsService.rejectRequest(requestId, reason: raison)`.
+**Actions inline Accept/Decline :** pour les types `investment_offer`, `session_request` **et `mentor_request`**, deux boutons "Accepter" / "Refuser" s'affichent directement dans la tuile — sans quitter la page. L'acceptation d'une demande de mentorat incrémente `mentorsActive` dans le profil, ouvre le chat avec l'expéditeur, et envoie une notification de confirmation. Le refus ouvre un `AlertDialog` pour saisir une raison optionnelle, puis appelle `InteractionsService.rejectRequest(requestId, reason: raison)` et notifie l'expéditeur du refus.
 
 ```dart
 // Tuile — couleur et icône selon le type de notification
@@ -1743,6 +1745,115 @@ L'onglet "Contacts" dans `page_messages.dart` centralise toutes les **relations 
 
 ---
 
+## 10.4 Système d'Avis et Notation ⭐
+
+### Description
+
+Le système d'avis permet aux membres ayant une **relation acceptée** de laisser une note (1 à 5 étoiles) et un commentaire sur le profil d'un autre membre.
+
+**Fonctionnalités de `page_avis.dart` :**
+- StreamBuilder sur `reviews/{toUid}` — mises à jour en temps réel
+- Sélecteur d'étoiles interactif (1–5) avec animation
+- Calcul de la **moyenne live** — affichée avec icône ⭐ sur le profil et les dashboards
+- **Accès restreint par relation** :
+  - Relation acceptée → peut laisser un avis
+  - Propre profil → lecture seule
+  - Aucune relation → bannière "Relation requise pour laisser un avis"
+- Affichage chronologique (plus récents en premier)
+- Compteur d'avis mis à jour en temps réel
+
+```dart
+// service_interactions.dart
+static Future<void> addReview({
+  required String toUid,
+  required String fromUid,
+  required String fromName,
+  required String text,
+  required int rating,
+}) async {
+  final id = DateTime.now().millisecondsSinceEpoch.toString();
+  await _db.child('reviews/$toUid/$id').set({
+    'id': id, 'fromUid': fromUid, 'fromName': fromName,
+    'text': text, 'rating': rating,
+    'createdAt': DateTime.now().toIso8601String(),
+  });
+}
+
+static Stream<List<Review>> getReviews(String targetUid) =>
+    _db.child('reviews/$targetUid').onValue.map((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) return [];
+      return data.values
+          .map<Review>((v) => Review.fromJson(Map<String, dynamic>.from(v as Map)))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
+```
+
+> **📸 CAPTURE D'ÉCRAN — Page Avis (liste des avis + sélecteur étoiles)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Note moyenne ⭐ sur le profil d'un mentor**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 10.5 Pitchs Favoris (Bookmark Investisseur) 🔖
+
+### Description
+
+Les investisseurs peuvent **sauvegarder des pitchs** d'un simple tap sur l'icône 🔖 dans la liste des pitchs publiés.
+
+**Fonctionnalités :**
+- `PitchFavoriteService.pitchFavorites` — `ValueNotifier<List<Map<String, dynamic>>>` global
+- **Écoute temps réel** : stream Firebase `pitchFavorites/{userId}` → mise à jour automatique
+- Tri par `savedAt` décroissant (derniers sauvegardés en premier)
+- **Toggle bookmark** : si déjà favori → `.remove()`, sinon → `.set()`
+- Page dédiée `page_mes_pitchs_favoris.dart` — liste réactive avec état vide illustré
+
+```dart
+// service_pitch_favoris.dart
+class PitchFavoriteService {
+  static final _db = FirebaseDatabase.instance.ref();
+  static final pitchFavorites = ValueNotifier<List<Map<String, dynamic>>>([]);
+
+  static Future<void> load(String userId) async {
+    _db.child('pitchFavorites/$userId').onValue.listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) { pitchFavorites.value = []; return; }
+      final list = data.values
+          .map<Map<String, dynamic>>((v) => Map<String, dynamic>.from(v as Map))
+          .toList()
+        ..sort((a, b) {
+          final aT = (a['savedAt'] as num?) ?? 0;
+          final bT = (b['savedAt'] as num?) ?? 0;
+          return bT.compareTo(aT);
+        });
+      pitchFavorites.value = list;
+    });
+  }
+
+  static Future<void> toggleFavorite(String userId, Map<String, dynamic> pitch) async {
+    final pitchId = pitch['id']?.toString() ?? '';
+    final ref = _db.child('pitchFavorites/$userId/$pitchId');
+    final snap = await ref.get();
+    if (snap.exists) {
+      await ref.remove();
+    } else {
+      await ref.set({...pitch, 'savedAt': ServerValue.timestamp});
+    }
+  }
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Icône bookmark 🔖 dans la liste des pitchs (état sauvegardé)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Page Mes Pitchs Sauvegardés (liste des bookmarks)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
 ## 11. Paiement Mobile — Wave Premium
 
 ### 11.1 Architecture simplifiée (lien marchand)
@@ -1973,6 +2084,8 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
 | **Sauvegarde MDP** | `AutofillGroup` + `finishAutofillContext` → Google/Samsung/iCloud Password Manager | ✅ (bonus) |
 | **Déploiement APK signé** | `flutter build apk --release` — APK 58.2 MB disponible en téléchargement | ✅ (bonus) |
+| **Avis et notation ⭐** | `ReviewsPage` + `addReview()` + stream `reviews/` + accès restreint par relation | ✅ (bonus) |
+| **Pitchs favoris 🔖** | `PitchFavoriteService` + `toggleFavorite()` + stream `pitchFavorites/` + `MesPitchsFavorisPage` | ✅ (bonus) |
 
 ---
 

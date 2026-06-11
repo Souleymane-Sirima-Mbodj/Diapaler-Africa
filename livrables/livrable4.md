@@ -695,7 +695,84 @@ class _ProjectTile extends StatelessWidget {
 
 ---
 
-## 5. Propagation réactive des modifications
+## 5. Système d'Avis et Notation sur les profils
+
+### 5.1 Accès depuis le profil
+
+Chaque profil DIAPALER affiche un compteur d'avis et la note moyenne. Un bouton "Voir les avis" ouvre la `ReviewsPage` en navigation push.
+
+```dart
+// page_profil.dart / page_detail_mentor.dart
+StreamBuilder<List<Review>>(
+  stream: InteractionsService.getReviews(mentor.uid),
+  builder: (context, snapshot) {
+    final reviews = snapshot.data ?? [];
+    final avg = reviews.isEmpty
+        ? 0.0
+        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    return Row(children: [
+      const Icon(Icons.star_rounded, color: AppColors.amber, size: 16),
+      Text(avg == 0 ? 'Aucun avis' : avg.toStringAsFixed(1),
+          style: const TextStyle(fontWeight: FontWeight.w700)),
+      Text(' (${reviews.length} avis)', style: const TextStyle(color: AppColors.muted)),
+    ]);
+  },
+)
+```
+
+### 5.2 Règles d'accès
+
+| Cas | Comportement |
+|---|---|
+| Propre profil | Lecture seule — `showLockedBanner: false` |
+| Relation acceptée (demande acceptée) | Peut laisser un avis ⭐ |
+| Aucune relation établie | Bannière "Relation requise pour laisser un avis" |
+| Non connecté | Bannière de blocage |
+
+### 5.3 Laisser un avis — `page_avis.dart`
+
+```dart
+// InteractionsService.addReview
+static Future<void> addReview({
+  required String toUid,
+  required String fromUid,
+  required String fromName,
+  required String text,
+  required int rating,       // 1 à 5
+}) async {
+  final id = DateTime.now().millisecondsSinceEpoch.toString();
+  await _db.child('reviews/$toUid/$id').set({
+    'id': id,
+    'fromUid': fromUid,
+    'fromName': fromName,
+    'text': text,
+    'rating': rating,
+    'createdAt': DateTime.now().toIso8601String(),
+  });
+}
+
+// Stream des avis (temps réel)
+static Stream<List<Review>> getReviews(String targetUid) {
+  return _db.child('reviews/$targetUid').onValue.map((event) {
+    final data = event.snapshot.value as Map?;
+    if (data == null) return [];
+    return data.values
+        .map<Review>((v) => Review.fromJson(Map<String, dynamic>.from(v as Map)))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  });
+}
+```
+
+> **📸 CAPTURE D'ÉCRAN — Page Avis : liste des avis + sélecteur étoiles 1–5**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Détail profil : compteur d'avis + note moyenne**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+## 6. Propagation réactive des modifications
 
 Chaque appel à `UserProfileController.update()` se propage **instantanément** à tous les écrans abonnés via `ValueListenableBuilder` :
 
@@ -721,9 +798,24 @@ UserProfileController.update(updated)
 
 ---
 
-## 6. Widget Avatar réutilisable (`widgets/avatar.dart`)
+## 7. Widget Avatar réutilisable (`widgets/avatar.dart`)
 
-Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` dans un `ClipOval`), soit un cercle coloré avec les initiales si aucune photo n'est disponible. Il est utilisé à toutes les tailles dans l'app :
+Le widget `Avatar` affiche la photo de profil en gérant **deux formats** : une URL HTTPS (Cloudinary → `Image.network`) ou un blob base64 (`Image.memory`). Dans les deux cas, la photo est rendue dans un `ClipOval`. Si aucune photo n'est disponible, un cercle coloré affiche les initiales. Le widget est zoomable (tap → visionneuse plein écran `InteractiveViewer`) et utilisé à toutes les tailles dans l'app :
+
+```dart
+// Détection automatique du format
+bool get _isUrl =>
+    photoBase64.startsWith('http://') || photoBase64.startsWith('https://');
+
+// Rendu : URL Cloudinary → Image.network  /  base64 → Image.memory
+if (_isUrl)
+  ClipOval(child: Image.network(photoBase64, fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _initialsCircle()))
+else if (bytes != null)
+  ClipOval(child: Image.memory(bytes, fit: BoxFit.cover))
+else
+  _initialsCircle()
+```
 
 **Tailles utilisées dans l'app :**
 
@@ -752,7 +844,7 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 | Modifier son nom | Champs prénom + nom pré-remplis | ✅ |
 | Modifier son téléphone | Champ téléphone +221 modifiable | ✅ |
 | Modifier son email | Champ email modifiable, mis à jour dans Firebase et cache | ✅ |
-| Ajouter une photo de profil | Galerie + caméra → redim 512×512 → base64 | ✅ |
+| Ajouter une photo de profil | Galerie + caméra → redim 512×512 → upload Cloudinary (URL) | ✅ |
 | Changer sa photo de profil | Même flux, remplace la photo existante | ✅ |
 | Persistance Firebase | `UserProfileController.update()` → Firebase + cache | ✅ |
 | Cache offline-first | `CacheService.saveProfile()` dans `update()` | ✅ |
@@ -769,3 +861,6 @@ Le widget `Avatar` affiche soit la photo de profil (base64 → `Image.memory` da
 | Badge ⭐ Premium | Affiché sous le nom si `isPremium = true` — activé via Wave (L5) | ✅ (bonus) |
 | "Mes contacts" (Entrepreneur) | Remplace "Mes demandes" — affiche les relations acceptées (mentorat + investissement) | ✅ (bonus) |
 | Photo membres Firebase | `BoxFit.cover` systématique dans le widget `Avatar` | ✅ (bonus) |
+| Avatar URL Cloudinary | Widget Avatar détecte auto URL vs base64 → `Image.network` vs `Image.memory` | ✅ (bonus) |
+| Système d'avis et notation | `page_avis.dart` — StreamBuilder `reviews/`, étoiles 1–5, moyenne live, accès restreint par relation | ✅ (bonus) |
+| Note moyenne sur profil | Compteur d'avis + moyenne affichés en temps réel sur `page_detail_mentor.dart` et `page_profil.dart` | ✅ (bonus) |
