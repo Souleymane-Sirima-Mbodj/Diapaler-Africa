@@ -51,6 +51,8 @@
 
 ## Résumé exécutif
 
+Ce rapport final synthétise l'ensemble du travail réalisé au cours du semestre sur le projet DIAPALER AFRICA. Il présente non seulement les fonctionnalités implémentées et les choix techniques effectués, mais aussi les obstacles rencontrés et les solutions apportées. Notre objectif est de montrer la cohérence entre la vision initiale du projet, les décisions prises en cours de développement, et le produit livré. Ce document s'adresse à la fois à l'enseignant évaluateur et à tout lecteur souhaitant comprendre notre démarche technique et humaine.
+
 **DIAPALER AFRICA** est une application mobile Flutter connectant entrepreneurs, mentors et investisseurs au Sénégal. Elle intègre Firebase Authentication + Realtime Database (temps réel), un cache offline-first (`SharedPreferences`), la géolocalisation GPS, une messagerie instantanée avec système de Contacts, un flux investisseur complet (propositions + acceptation), un matching rôle-adaptatif avec compatibilité dynamique, un système de notifications réactif, un chatbot d'intelligence artificielle propulsé par Llama 3.1 via Groq, une gestion complète de profils avec synchronisation cloud, un **système d'avis et notation étoiles 1–5** avec accès restreint, et un **système de pitchs favoris** (bookmark investisseur) temps réel. L'application compte **34 écrans**, **14 services**, **13 widgets réutilisables** et couvre l'ensemble des fonctionnalités du cahier des charges avec de nombreux bonus.
 
 ---
@@ -92,6 +94,8 @@
 
 ## 1. Présentation du projet
 
+DIAPALER AFRICA est née d'un constat simple : malgré la dynamique entrepreneuriale croissante au Sénégal et en Afrique de l'Ouest, les jeunes entrepreneurs manquent d'accès à des mentors expérimentés et à des investisseurs sérieux. Notre application mobile répond à ce besoin en créant une plateforme de mise en relation structurée, accessible depuis n'importe quel smartphone Android. Le nom "DIAPALER" est issu du wolof et signifie "avancer ensemble" — une philosophie qui guide l'ensemble de nos choix de conception. Cette section présente le contexte qui a motivé le projet, les rôles d'utilisateurs définis, et l'étendue des fonctionnalités développées.
+
 ### 1.1 Contexte et problématique
 
 Le Sénégal connaît une dynamique entrepreneuriale forte, portée par les programmes publics (DER/FJ, BNDE, FONGIP, FONSIS) et privés. Pourtant, les jeunes entrepreneurs se heurtent à trois obstacles majeurs :
@@ -110,6 +114,8 @@ Le Sénégal connaît une dynamique entrepreneuriale forte, portée par les prog
 ---
 
 ### 1.2 Nom et concept
+
+Le choix du nom et de l'identité culturelle de l'application n'a pas été anodin. Nous voulions que DIAPALER AFRICA soit ressentie comme une application sénégalaise à part entière, et non comme un produit importé adapté au contexte local. Les décisions que nous avons prises — le nom, les couleurs, la langue de l'IA, les villes référencées — reflètent toutes cet ancrage volontaire dans la réalité sénégalaise.
 
 **DIAPALER** est un terme wolof signifiant **"avancer ensemble"** ou **"progresser collectivement"**. Ce nom reflète les valeurs fondamentales :
 - La **solidarité** entre acteurs de l'écosystème entrepreneurial
@@ -132,6 +138,8 @@ Le Sénégal connaît une dynamique entrepreneuriale forte, portée par les prog
 
 ### 1.3 Public cible et rôles
 
+L'une des premières décisions structurantes du projet a été de définir des rôles distincts pour les utilisateurs. Plutôt que de créer une application générique, nous avons conçu trois expériences différentes — Entrepreneur, Mentor, Investisseur — avec des tableaux de bord, des fonctionnalités et des statistiques adaptés à chaque profil. Cette segmentation reflète la réalité de l'écosystème entrepreneurial sénégalais, où les besoins d'un jeune porteur de projet sont fondamentalement différents de ceux d'un expert sectoriel ou d'un business angel.
+
 | Rôle | Profil | Besoins clés |
 |---|---|---|
 | **Entrepreneur** | Porteur de projet, startup, PME | Trouver un mentor, pitcher son projet, créer/suivre ses projets |
@@ -146,6 +154,8 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 ---
 
 ### 1.4 Fonctionnalités complètes
+
+Le tableau ci-dessous recense l'ensemble des fonctionnalités implémentées dans DIAPALER AFRICA. Au fil du développement, le périmètre a évolué au-delà des exigences initiales du cahier des charges : certaines fonctionnalités ont été ajoutées pour répondre à des besoins identifiés en cours de route (le système de contacts, les pitchs favoris, les avis et notations), d'autres pour améliorer l'expérience utilisateur (le chatbot DIALI, la géolocalisation, le paiement Premium). L'ensemble de ces ajouts reste cohérent avec la mission centrale de la plateforme : faciliter les connexions entre acteurs de l'entrepreneuriat sénégalais.
 
 | Fonctionnalité | Description | Rôles |
 |---|---|---|
@@ -179,7 +189,11 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 
 ## 2. Choix Techniques
 
+Les choix techniques de ce projet ont été guidés par trois critères principaux : la productivité de développement, la scalabilité, et la pertinence pour le marché africain. Ces critères nous ont menés vers Flutter, Firebase et Groq — une combinaison que nous justifions en détail dans cette section. Chaque technologie a été choisie pour des raisons concrètes, et non par effet de mode. Cette section est importante car elle montre notre capacité à argumenter des décisions d'ingénierie dans un contexte de contraintes réelles (délais, budget nul, matériel disponible).
+
 ### 2.1 Framework — Flutter
+
+Flutter nous a permis de couvrir Android — la cible principale dans le contexte sénégalais — avec une seule base de code. Ce choix s'est aussi imposé naturellement dans le cadre du module ESP Dakar, mais nous aurions fait le même choix dans un contexte libre : la richesse de l'écosystème Flutter, la performance native, et la qualité du support Firebase officiel en font la meilleure option pour une application mobile de cette envergure développée en équipe restreinte.
 
 | Critère | Détail |
 |---|---|
@@ -199,6 +213,8 @@ Chaque rôle bénéficie d'un **dashboard personnalisé** avec des fonctionnalit
 ---
 
 ### 2.2 Backend — Firebase (Google)
+
+Firebase s'est imposé comme backend pour plusieurs raisons qui vont au-delà de la simple conformité au cahier des charges. Pour une application de mise en relation où la synchronisation en temps réel est essentielle — messages instantanés, notifications réactives, statut des demandes en direct — le Realtime Database avec ses WebSockets natifs est idéalement adapté. Firebase Auth simplifie la gestion des sessions sans nous obliger à maintenir un serveur. Enfin, le plan Spark (gratuit) couvre largement les besoins d'un projet académique avec un nombre d'utilisateurs limité.
 
 **Justification :** Firebase est explicitement listé dans les backends acceptés par le sujet (Firebase, Laravel, Node.js, Spring Boot, Strapi).
 
@@ -232,6 +248,8 @@ diapaler-africa-default-rtdb/
 
 ### 2.3 Intelligence Artificielle — Meta Llama 3.1 via Groq
 
+L'intégration d'un chatbot dans DIAPALER AFRICA n'était pas une exigence du cahier des charges — c'est une innovation que nous avons choisie d'ajouter pour enrichir l'expérience utilisateur. Nous avons opté pour Llama 3.1 via Groq plutôt que OpenAI ou un autre fournisseur pour une raison fondamentale : la gratuité. Groq offre 14 400 requêtes par jour sans coût, ce qui est parfait pour un projet académique. La qualité du modèle et sa latence très faible (< 500ms) en font une solution qui dépasse largement nos attentes. Nous avons nommé ce chatbot "DIALI" — mot wolof signifiant "aller de l'avant" — en cohérence avec l'identité culturelle du projet.
+
 | Paramètre | Valeur |
 |---|---|
 | API | Groq Chat Completions API |
@@ -246,6 +264,8 @@ diapaler-africa-default-rtdb/
 ---
 
 ### 2.4 Dépendances et justifications
+
+Nous avons délibérément limité le nombre de packages tiers au strict nécessaire. Chaque dépendance ajoutée représente un risque : conflits de versions, abandon du package, augmentation de la taille de l'APK. Le tableau ci-dessous recense les 10 packages retenus, avec leur justification. On notera l'absence volontaire de packages de state management (Provider, Riverpod, Bloc) — nous avons préféré le duo natif Flutter `ValueNotifier` + `ValueListenableBuilder`, plus léger et suffisant pour notre architecture.
 
 | Package | Version | Justification |
 |---|---|---|
@@ -263,6 +283,8 @@ diapaler-africa-default-rtdb/
 ---
 
 ### 2.5 Architecture du code
+
+L'architecture du code reflète le principe de séparation des responsabilités : les écrans ne contiennent pas de logique métier, les services ne connaissent pas l'interface utilisateur. Cette séparation stricte a facilité le travail en équipe — chaque membre pouvait travailler sur un écran sans risquer de casser un service partagé. Le choix du pattern "Services + ValueNotifier" s'est révélé efficace pour notre taille de projet : suffisamment structuré pour être maintenable, suffisamment simple pour être compris par toute l'équipe en quelques minutes.
 
 **Structure des dossiers :**
 ```
@@ -305,6 +327,8 @@ lib/
 ---
 
 ## 3. Captures d'écran de l'application
+
+Les captures d'écran présentées dans cette section illustrent le parcours utilisateur complet de DIAPALER AFRICA, de l'onboarding jusqu'aux fonctionnalités avancées. Chaque écran a fait l'objet d'un soin particulier en termes d'expérience utilisateur : cohérence visuelle, retours visuels sur les actions, adaptation aux différents rôles. Les espaces marqués "Insérer ici la capture d'écran" seront complétés avec les captures réelles avant la remise finale.
 
 ### 3.1 Flux d'authentification
 
@@ -428,6 +452,8 @@ lib/
 ---
 
 ## 4. Difficultés rencontrées et solutions
+
+Tout projet de développement mobile rencontre des obstacles. Nous avons documenté ici les 27 bugs majeurs identifiés et résolus au cours du développement, car ces difficultés font partie intégrante du processus d'apprentissage. Chaque bug listé ci-dessous a été l'occasion d'approfondir notre compréhension de Flutter, Firebase, ou des subtilités de l'expérience utilisateur mobile. Certains de ces bugs étaient spectaculaires (crash au démarrage, données non sauvegardées), d'autres plus subtils (casse des filtres, ID de conversation incohérents), mais tous ont requis une analyse rigoureuse avant d'être résolus. Cette section constitue, à notre sens, l'un des témoignages les plus honnêtes du niveau de maturité technique atteint par l'équipe.
 
 ### 4.1 Crash au démarrage — Configuration Firebase Android
 

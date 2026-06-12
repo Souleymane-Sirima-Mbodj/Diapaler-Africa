@@ -104,6 +104,10 @@ coverage/
 # Local IDE / Claude settings
 .claude/
 .idea/
+.agents/
+
+# Firebase CLI cache
+.firebase/
 
 # Local run log
 .flutter_run.log

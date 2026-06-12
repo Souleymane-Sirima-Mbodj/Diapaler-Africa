@@ -116,6 +116,8 @@ Le code d'appel est isolé dans le dossier `lib/services/` pour respecter la sé
 
 ### 1.1 Configuration et initialisation
 
+Pour stocker et synchroniser les données de DIAPALER AFRICA, nous avons retenu Firebase Realtime Database. Ce choix s'explique par trois avantages majeurs : les WebSockets natifs permettent une synchronisation en temps réel sans polling, la structure JSON hiérarchique s'adapte parfaitement à notre modèle de données, et l'intégration Flutter via le package `firebase_database` est très mature. Contrairement à une API REST classique, chaque changement de données est immédiatement répercuté sur tous les appareils connectés, ce qui est indispensable pour la messagerie et les notifications de DIAPALER.
+
 **Backend choisi :** Firebase Realtime Database — API WebSocket temps réel avec synchronisation offline automatique.
 
 ```dart
@@ -137,6 +139,8 @@ class DatabaseService {
 ---
 
 ### 1.2 Structure complète de la base de données
+
+Avant d'écrire une seule ligne de code, nous avons conçu l'arborescence JSON de Firebase en partant des besoins fonctionnels : chaque écran de l'application correspond à un nœud distinct. Cette organisation « a plat » (dénormalisée) est volontaire — Firebase recommande d'éviter les données trop imbriquées pour garantir des requêtes rapides. Par exemple, les pitchs sont séparés des profils utilisateurs pour que la page d'accueil puisse lire `pitches/` sans avoir à parcourir chaque profil.
 
 ```
 diapaler-africa-default-rtdb/
@@ -297,6 +301,8 @@ diapaler-africa-default-rtdb/
 
 ### 1.3 CREATE — Créer un profil utilisateur
 
+L'opération de création du profil est déclenchée à la fin de l'inscription en quatre étapes. Elle consiste à écrire un objet JSON complet dans le nœud `users/{uid}` de Firebase, en une seule requête atomique via `.set()`. Le choix d'utiliser l'UID Firebase comme clé (plutôt qu'un email) garantit l'unicité même si l'utilisateur change d'adresse. Si l'écriture échoue (réseau indisponible), l'application bascule sur le cache local `SharedPreferences` pour rester fonctionnelle.
+
 Appelée lors de l'inscription après la création du compte Firebase Auth.
 
 ```dart
@@ -347,6 +353,8 @@ Future<void> _submit() async {
 
 ### 1.4 READ — Lire un profil (lecture unique)
 
+Lors de la connexion, l'application effectue une lecture unique (one-shot) du profil avec `.get()`. On privilégie ici une lecture ponctuelle plutôt qu'un stream continu, car le profil n'a pas besoin d'être synchronisé en permanence — seule la messagerie et les pitchs nécessitent un flux temps réel. Le résultat est immédiatement désérialisé et stocké dans le `UserProfileController`, accessible depuis toute l'application.
+
 Appelée lors de la connexion pour charger le profil depuis Firebase.
 
 ```dart
@@ -377,6 +385,8 @@ if (uid != null) {
 ---
 
 ### 1.5 READ — Stream temps réel des pitchs
+
+Pour la page des pitchs publics, nous avons besoin que chaque nouveau pitch posté par un entrepreneur apparaisse instantanément chez tous les autres membres sans nécessiter un rechargement manuel. C'est pourquoi on utilise `.onValue` qui maintient une connexion WebSocket ouverte : dès qu'un nœud `pitches/` est modifié côté Firebase, le stream Dart émet une nouvelle liste et le `StreamBuilder` redessine l'interface. Le tri par date décroissante est appliqué côté client pour éviter d'alourdir les règles Firebase.
 
 Utilise le WebSocket Firebase (`.onValue`) pour recevoir les mises à jour en continu.
 
@@ -430,6 +440,8 @@ StreamBuilder<List<Map<String, dynamic>>>(
 
 ### 1.6 UPDATE — Modifier un profil
 
+Quand un utilisateur modifie son profil, on utilise `.update()` au lieu de `.set()`. La différence est importante : `.set()` remplacerait l'intégralité du nœud (et effacerait des champs comme `isPremium` ou `sessionsCount` qu'on ne renvoie pas depuis le formulaire), tandis que `.update()` ne touche que les champs explicitement fournis. Cela garantit une mise à jour partielle et non destructive, même si plusieurs appareils modifient le même profil en parallèle.
+
 Utilise `.update()` (merge partiel) pour ne modifier que les champs envoyés.
 
 ```dart
@@ -475,6 +487,8 @@ Future<void> _save() async {
 ---
 
 ### 1.7 CREATE — Publier un pitch dans le nœud global
+
+Publier un pitch est une double opération : le projet est enregistré dans le profil de l'entrepreneur (nœud `users/{uid}/projects/`) pour son suivi personnel, ET dans le nœud global `pitches/` visible par tous les membres. Ce choix de duplication volontaire évite une jointure coûteuse : la page pitchs publics peut lire `pitches/` sans charger chaque profil utilisateur. L'ID du pitch est généré à partir du timestamp en millisecondes, ce qui garantit l'ordre chronologique et l'unicité sans avoir besoin d'un compteur serveur.
 
 Écriture dans `pitches/` (accessible à tous les utilisateurs, pas seulement au propriétaire).
 
@@ -530,6 +544,8 @@ await DatabaseService.publishPitch(             // Nœud global visible par tous
 
 ### 1.8 UPDATE — Activer le statut Premium (Wave)
 
+Le système Premium de DIAPALER fonctionne avec Wave, le principal service de paiement mobile au Sénégal. Après que l'utilisateur a validé le paiement sur l'application Wave, notre service confirme l'activation en écrivant uniquement trois champs sur le profil Firebase (`isPremium`, `premiumPlan`, `premiumSince`) via `.update()`. Ce choix d'un update partiel est délibéré : on ne veut pas écraser d'autres données du profil. Le badge Premium étoile apparaît instantanément dans l'interface grâce à la mise à jour en mémoire du `UserProfileController`.
+
 Après confirmation du paiement Wave, un `update()` partiel marque l'utilisateur Premium :
 
 ```dart
@@ -569,6 +585,8 @@ static Future<void> activatePremium(PremiumPlan plan) async {
 ---
 
 ### 1.9 DELETE — Suppression d'une session réservée (Firebase `.remove()`)
+
+L'annulation d'un rendez-vous doit être bilatérale : si Mariéme annule sa session avec Ibrahima, la session doit disparaître du calendrier des deux utilisateurs. On utilise `.remove()` plutôt qu'un update de statut car une session annulée ne doit laisser aucune trace dans Firebase — cela évite d'accumuler des données mortes et simplifie les requêtes de lecture. Une notification est automatiquement envoyée à l'autre partie pour l'informer de l'annulation.
 
 L'annulation d'un rendez-vous bilatéral supprime physiquement le nœud Firebase via `.remove()` :
 
@@ -611,6 +629,8 @@ bookedSessions/
 
 ### 1.10 DELETE — Déconnexion et nettoyage du cache local
 
+La déconnexion dans DIAPALER n'est pas un simple `signOut()` — c'est une séquence de six opérations dans un ordre précis. On vide d'abord toutes les couches de cache en mémoire avant de révoquer la session Firebase, pour éviter qu'un état résiduel ne s'affiche brièvement à l'écran lors de la redirection. Le `pushAndRemoveUntil` vide complètement la pile de navigation pour qu'un appui sur le bouton retour ne ramène pas à une page protégée après déconnexion.
+
 ```dart
 // feuille_profil.dart — Déconnexion complète (6 étapes)
 await CacheService.clear();              // 1. Vide le cache SharedPreferences
@@ -634,6 +654,8 @@ Navigator.of(context).pushAndRemoveUntil(
 ---
 
 ### 1.11 Sérialisation JSON ↔ Dart
+
+Firebase Realtime Database ne retourne pas des objets Dart typés mais des `Map<Object?, Object?>` bruts, ce qui impose une couche de sérialisation manuelle. Nous avons délibérément choisi de ne pas utiliser `json_serializable` ou `freezed` pour garder le projet simple et lisible, mais aussi parce que les types retournés par Firebase (`num`, `bool`, `List` ou `Map` selon la valeur) nécessitent des casts personnalisés qu'un générateur automatique gère mal.
 
 La sérialisation manuelle est nécessaire car Firebase Realtime Database retourne des `Map<Object?, Object?>` que Dart ne peut pas caster directement. Un cast sécurisé est appliqué sur chaque champ via l'opérateur `?.toString()` et les casts numériques `(v as num?)?.toInt()`.
 
@@ -676,6 +698,8 @@ static UserProfile _fromMap(Map<String, dynamic> m) => UserProfile(
 L'`InteractionsService` gère toutes les interactions entre utilisateurs : **demandes de mentorat**, **messagerie temps réel** et **disponibilités des mentors**.
 
 ### 2.1 Demandes de mentorat (mentorRequests)
+
+Le nœud `mentorRequests/` centralise deux types d'interactions entre membres : les demandes de mentorat (un entrepreneur sollicite un mentor) et les propositions d'investissement (un investisseur s'intéresse à un entrepreneur). Un seul modèle `MentorRequest` couvre les deux cas grâce au champ `type`, ce qui simplifie le code et la structure Firebase. Le champ `status` suit le cycle de vie de chaque demande, de `pending` à `accepted` ou `rejected`, avec la date de réponse tracée dans `respondedAt` pour l'historique.
 
 **Modèle `MentorRequest`** — le champ `type` distingue les deux types de demandes :
 
@@ -761,6 +785,8 @@ class InteractionsService {
 
 ### 2.2 Messagerie temps réel (messages + conversations)
 
+La messagerie repose sur deux nœuds complémentaires : `messages/` stocke le contenu de chaque échange, et `conversations/` maintient un résumé (dernier message, compteur de non lus) pour afficher la liste des conversations sans avoir à charger tous les messages. L'identifiant de conversation est généré en triant les deux UIDs alphabétiquement et en les concaténant, ce qui garantit que deux utilisateurs partagent toujours le même identifiant de canal quelle que soit la direction du premier message.
+
 L'envoi d'un message écrit dans `messages/{conv}/{id}` puis met à jour le compteur de non lus dans `conversations/{conv}`. La lecture utilise le WebSocket Firebase (`.onValue`) pour une synchronisation instantanée.
 
 ```dart
@@ -823,6 +849,8 @@ static Stream<List<ChatMessage>> getMessages(String conversationId) {
 ---
 
 ### 2.3 Disponibilités mentor (availability)
+
+Chaque mentor peut définir ses créneaux disponibles par jour de la semaine depuis son planning. Ces données sont stockées dans le nœud `availability/{userId}` et lues en temps réel par les entrepreneurs pour savoir quand réserver une session. On utilise `.set()` pour les mises à jour (remplacement complet du planning) plutôt que `.update()`, car modifier partiellement un calendrier hebdomadaire serait plus risqué — il vaut mieux réécrire tout le planning d'un coup pour garantir sa cohérence.
 
 ```dart
 static Stream<Availability?> getAvailability(String userId) =>
@@ -914,6 +942,8 @@ class UsersService {
 
 ### 4.1 Architecture sécurisée — Proxy Cloudflare Worker
 
+Pour le chatbot DIALI IA, nous avons choisi Groq avec le modèle Llama 3.1 8B instant. Groq se distingue par sa vitesse de génération (LPU — Language Processing Unit) qui produit des réponses en moins d'une seconde, bien adapté à une interface de chat mobile. Le modèle `llama-3.1-8b-instant` est suffisamment puissant pour conseiller un entrepreneur sénégalais tout en étant gratuit dans les quotas actuels, ce qui correspond au budget de notre projet académique. Quant au proxy Cloudflare Worker, il résout un problème de sécurité fondamental : une clé API embarquée dans le code d'une application mobile peut être extraite par décompilation.
+
 Pour des raisons de **sécurité**, la clé API Groq n'est **jamais** embarquée dans le code Flutter. L'appel passe par un **Cloudflare Worker** déployé côté serveur qui détient la clé et joue le rôle de proxy.
 
 ```
@@ -941,6 +971,8 @@ Pour des raisons de **sécurité**, la clé API Groq n'est **jamais** embarquée
 | **Package Flutter** | `http: ^1.2.2` |
 
 ### 4.2 Service chatbot (`service_chatbot.dart`)
+
+Le service chatbot construit un prompt système personnalisé à partir du profil de l'utilisateur connecté : son prénom, son rôle (Entrepreneur/Mentor/Investisseur), son secteur d'activité et sa ville. Cette personnalisation rend les réponses de DIALI bien plus pertinentes — un entrepreneur du secteur Mode à Dakar recevra des conseils différents d'un mentor tech à Saint-Louis. L'historique complet de la conversation est envoyé à chaque requête (format `messages[]`) pour que DIALI garde le contexte des échanges précédents.
 
 ```dart
 import 'dart:convert';
@@ -1048,6 +1080,8 @@ Directives :
 
 ### 4.3 Appel depuis `page_chatbot.dart`
 
+La page chatbot gère l'affichage optimiste des messages : le message de l'utilisateur est ajouté immédiatement dans la liste locale (avant même que la requête HTTP parte), ce qui donne l'impression d'une réactivité instantanée. Si l'appel échoue, le dernier message de l'utilisateur est retiré de la liste et une `SnackBar` affiche l'erreur. Ce pattern « affichage optimiste + rollback en cas d'erreur » est courant dans les applications de messagerie modernes.
+
 ```dart
 class _ChatbotPageState extends State<ChatbotPage> {
   final _messages = <ChatbotMessage>[];   // Historique typé
@@ -1101,6 +1135,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
 ---
 
 ## 5. Tableau récapitulatif CRUD complet
+
+Pour récapituler l'ensemble des interactions avec Firebase et l'API Groq, le tableau ci-dessous liste chaque opération CRUD implémentée dans DIAPALER AFRICA. On constate que les opérations READ en mode stream (`.onValue`) sont les plus nombreuses, ce qui reflète bien l'architecture temps réel de l'application. Les opérations DELETE sont plus rares et ciblées : on préfère marquer un élément comme annulé ou lu plutôt que de le supprimer, sauf pour les sessions (données bilatérales) et le cache local à la déconnexion.
 
 | Opération | Service | Nœud Firebase / Endpoint | Déclenché par |
 |---|---|---|---|
