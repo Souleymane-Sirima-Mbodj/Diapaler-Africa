@@ -84,6 +84,8 @@
 
 ## Introduction
 
+Ce livrable porte sur l'une des fonctionnalités les plus importantes de toute application sociale ou professionnelle : la gestion du profil utilisateur. Dans DIAPALER AFRICA, le profil n'est pas un simple formulaire — c'est la carte de visite numérique de l'entrepreneur, du mentor ou de l'investisseur. Nous avons donc accordé une attention particulière à la fluidité de l'expérience, à la réactivité de l'interface et à la robustesse de la persistance des données. Ce livrable détaille les choix techniques retenus, les patterns d'architecture utilisés, et les fonctionnalités livrées.
+
 DIAPALER AFRICA offre une gestion de profil **complète et réactive** permettant à chaque utilisateur de :
 - Consulter son profil avec une **jauge de complétion** animée
 - **Modifier** toutes ses informations personnelles et professionnelles
@@ -98,7 +100,11 @@ Toutes les modifications sont propagées **instantanément** dans toute l'interf
 
 ## 1. Modèle de données utilisateur (`profil_utilisateur.dart`)
 
+Avant de construire les interfaces, nous avons commencé par définir clairement la structure des données. Tout repose sur un modèle de données unique et cohérent, partagé entre toutes les pages de l'application. Ce choix facilite la maintenance : quand on ajoute un champ au profil, il suffit de l'ajouter à un seul endroit.
+
 ### 1.1 La classe `UserProfile`
+
+La conception d'un modèle de données solide est la première étape de tout développement sérieux. Nous avons opté pour une classe immuable annotée `@immutable`, ce qui signifie qu'on ne modifie jamais un objet `UserProfile` directement — on crée toujours une nouvelle copie avec les champs modifiés. C'est le pattern `copyWith`, très utilisé dans l'écosystème Flutter, qui rend cela naturel et sûr. Cette approche évite les bugs liés aux mutations inattendues d'état, surtout quand plusieurs écrans partagent le même profil.
 
 Classe **immuable** (`@immutable`) regroupant tous les champs du profil. Le pattern `copyWith` garantit l'immuabilité lors des mises à jour.
 
@@ -140,6 +146,8 @@ class UserProfile {
 ---
 
 ### 1.2 Contrôleur réactif global — `UserProfileController`
+
+Pour éviter de passer le profil en argument d'un widget à l'autre (ce qu'on appelle le "prop drilling"), nous avons mis en place un contrôleur global basé sur `ValueNotifier`. Le principe est simple : une seule source de vérité pour tout le profil, accessible depuis n'importe quelle page. Quand le profil change, tous les widgets abonnés se reconstruisent automatiquement, sans `setState`, sans `Provider` externe, sans boilerplate. Nous avons choisi ce pattern volontairement léger plutôt que BLoC ou Riverpod, car la gestion de profil ne nécessite pas toute la complexité d'un système de flux bidirectionnel.
 
 Le `UserProfileController` est le **cœur de la réactivité** de DIAPALER AFRICA. Il orchestre :
 1. La mise à jour de l'état en mémoire (`ValueNotifier`)
@@ -234,6 +242,8 @@ class UserProfileController {
 
 ## 2. Consultation du Profil (`page_profil.dart`)
 
+La page de profil est la vitrine de l'utilisateur dans l'application. Nous avons voulu qu'elle soit à la fois complète et agréable à lire, en regroupant les informations par blocs logiques : identité, statistiques, présentation personnelle, centres d'intérêt, et projets pour les entrepreneurs. Un point important de notre conception est que la page s'adapte au rôle de l'utilisateur connecté — un mentor ne voit pas les mêmes statistiques ni les mêmes boutons d'action qu'un investisseur ou qu'un entrepreneur.
+
 ### 2.1 Description complète de l'écran (page allégée et rôle-adaptive)
 
 **Structure de la page (de haut en bas) :**
@@ -268,6 +278,8 @@ class UserProfileController {
 ---
 
 ### 2.2 Jauge de complétion du profil
+
+Un profil incomplet nuit à la qualité des mises en relation. Pour encourager les utilisateurs à renseigner toutes leurs informations, nous avons intégré une jauge de complétion visible dès la carte d'identité. Elle est calculée dynamiquement en évaluant 12 champs clés du profil, et s'affiche sous forme de barre de progression amber animée. L'objectif était de donner un signal visuel clair et motivant, sans être intrusif : si vous avez rempli 10 champs sur 12, la barre affiche 83% et vous voyez immédiatement qu'il reste deux champs à compléter.
 
 ```dart
 // Calcul basé sur 12 champs évalués
@@ -308,6 +320,8 @@ ClipRRect(
 
 ### 2.3 Réactivité avec ValueListenableBuilder
 
+L'un des problèmes courants dans les applications Flutter est la désynchronisation entre les données modifiées et leur affichage. Pour éviter cela, toute la page profil est enveloppée dans un `ValueListenableBuilder`. Ce widget Flutter écoute le `ValueNotifier` du contrôleur et se reconstruit automatiquement chaque fois que le profil change. Ainsi, si l'utilisateur modifie son prénom depuis la page d'édition, la page profil se met à jour instantanément dès qu'il revient, sans aucune logique supplémentaire.
+
 Toute la page est enveloppée dans un `ValueListenableBuilder<UserProfile>` abonné au `UserProfileController.profile`. Chaque appel à `update()` déclenche un rebuild instantané sans `setState` global.
 
 ```dart
@@ -347,6 +361,8 @@ ValueListenableBuilder<UserProfile>(
 
 ### 2.4 Feuille de profil (bottom sheet)
 
+Pour permettre un accès rapide au profil depuis n'importe quel écran de l'application, sans avoir à naviguer jusqu'à la page complète, nous avons développé une feuille de profil accessible depuis l'AppBar des dashboards. C'est un compromis entre accessibilité et encombrement visuel : un simple tap sur l'avatar suffit pour voir son nom, son rôle, et accéder aux actions essentielles.
+
 Un bottom sheet récapitulatif (`feuille_profil.dart`) est accessible depuis l'AppBar de chaque dashboard. Il affiche avatar, nom et rôle, et propose les actions rapides : "Modifier le profil" et "Se déconnecter". Il utilise `ValueListenableBuilder` pour rester synchronisé avec le profil courant, et `showModalBottomSheet` avec `isScrollControlled: true` pour s'adapter à la taille du contenu.
 
 > **📸 CAPTURE D'ÉCRAN — Bottom sheet profil (avatar + actions)**
@@ -355,6 +371,8 @@ Un bottom sheet récapitulatif (`feuille_profil.dart`) est accessible depuis l'A
 ---
 
 ## 3. Modification du profil (`page_modification_profil.dart`)
+
+La modification du profil est la fonctionnalité centrale pour tout utilisateur souhaitant mettre à jour ses informations. Nous avons fait le choix de regrouper tous les champs dans une seule page scrollable, organisée par sections logiques, plutôt que de multiplier les écrans. Cela réduit le nombre de navigations nécessaires et donne à l'utilisateur une vision complète de toutes les informations qu'il peut renseigner ou modifier.
 
 ### 3.1 Tous les champs modifiables
 
@@ -371,6 +389,8 @@ Un bottom sheet récapitulatif (`feuille_profil.dart`) est accessible depuis l'A
 ---
 
 ### 3.2 Pré-remplissage des champs
+
+Nous avons fait le choix de pré-remplir tous les champs avec les données actuelles du profil, pour que l'utilisateur n'ait à modifier que ce qui a changé. Il n'a pas besoin de tout ressaisir depuis le début à chaque ouverture du formulaire. Le pré-remplissage se fait dans `initState()`, en récupérant le profil courant depuis `UserProfileController` et en initialisant chaque `TextEditingController` avec la valeur existante. Pour les dropdowns (pays, ville, secteur), on vérifie que la valeur actuelle est bien dans la liste supportée, et on revient à une valeur par défaut si ce n'est pas le cas.
 
 ```dart
 @override
@@ -407,6 +427,8 @@ void initState() {
 ---
 
 ### 3.3 Modification et changement de la photo de profil
+
+La photo de profil joue un rôle important dans une application de mise en relation : elle humanise le contact entre les membres. Nous avons implémenté deux sources possibles — la galerie photo et l'appareil photo — accessibles depuis un bottom sheet qui s'affiche au tap sur l'avatar. La photo est automatiquement redimensionnée à 512×512 pixels et convertie en base64 pour être stockée dans Firebase, ce qui garantit une URL stable et un chargement rapide partout dans l'application. L'icône caméra superposée en bas à droite de l'avatar indique clairement à l'utilisateur que la photo est modifiable.
 
 ```dart
 // Sélection depuis la galerie
@@ -507,6 +529,8 @@ GestureDetector(
 
 ### 3.4 Détection des changements
 
+Un détail d'expérience utilisateur qui nous tenait à coeur : le bouton "Enregistrer" reste désactivé tant qu'aucune modification réelle n'a été détectée. Cela évite les sauvegardes accidentelles ou inutiles — si l'utilisateur ouvre le formulaire et le ferme sans rien changer, aucun appel réseau n'est déclenché. La détection se fait en comparant chaque champ du formulaire avec la valeur initiale du profil, champ par champ.
+
 ```dart
 // Le bouton Enregistrer est actif uniquement si une modification a été faite
 bool get _hasChanges =>
@@ -529,6 +553,8 @@ bool get _hasChanges =>
 ---
 
 ### 3.5 Sauvegarde avec synchronisation Firebase
+
+La sauvegarde suit une logique en trois temps qui garantit à la fois la réactivité de l'interface et la fiabilité de la persistance. D'abord, le profil est mis à jour en mémoire via le `ValueNotifier`, ce qui provoque un rebuild instantané de tous les écrans abonnés. Ensuite, les données sont sauvegardées dans le cache local `SharedPreferences`, ce qui les rend disponibles même hors connexion. Enfin, la synchronisation vers Firebase se fait de manière asynchrone en arrière-plan, sans jamais bloquer l'interface.
 
 ```dart
 Future<void> _save() async {
@@ -597,6 +623,8 @@ Future<void> _save() async {
 ---
 
 ## 4. Gestion des projets (Entrepreneur)
+
+Dans DIAPALER AFRICA, les entrepreneurs ne sont pas de simples utilisateurs — ils portent des projets concrets qu'ils cherchent à faire connaître auprès de mentors et d'investisseurs. Nous avons donc intégré une gestion de projets directement liée au profil, avec des opérations complètes de création, modification, avancement et suppression. Chaque projet est visualisé dans le profil avec une barre de progression indiquant l'étape courante, ce qui donne une lecture rapide de la maturité du projet.
 
 Les projets sont créés depuis `page_pitch.dart` (dépôt de pitch). Le `UserProfileController` expose des méthodes dédiées pour les opérations CRUD sur les projets :
 
@@ -697,6 +725,8 @@ class _ProjectTile extends StatelessWidget {
 
 ## 5. Système d'Avis et Notation sur les profils
 
+La crédibilité est un enjeu central dans une plateforme de mentorat et d'investissement. Pour aider les utilisateurs à évaluer la qualité d'un mentor ou la sérieux d'un entrepreneur, nous avons développé un système d'avis et de notation complet. Ce système est volontairement sécurisé : seuls les membres ayant une relation établie (demande acceptée des deux côtés) peuvent laisser un avis, ce qui garantit que les notes reflètent de vraies interactions et non des votes anonymes.
+
 ### 5.1 Accès depuis le profil
 
 Chaque profil DIAPALER affiche un compteur d'avis et la note moyenne. Un bouton "Voir les avis" ouvre la `ReviewsPage` en navigation push.
@@ -722,6 +752,8 @@ StreamBuilder<List<Review>>(
 
 ### 5.2 Règles d'accès
 
+Nous avons défini des règles d'accès claires pour éviter les abus. Le principe est simple : on ne peut noter que quelqu'un qu'on connaît réellement via la plateforme. Ces règles s'appliquent côté client via des vérifications d'état de relation, et côté Firebase via les règles de sécurité de la base de données.
+
 | Cas | Comportement |
 |---|---|
 | Propre profil | Lecture seule — `showLockedBanner: false` |
@@ -730,6 +762,8 @@ StreamBuilder<List<Review>>(
 | Non connecté | Bannière de blocage |
 
 ### 5.3 Laisser un avis — `page_avis.dart`
+
+La page d'avis permet à un utilisateur de rédiger un commentaire et de noter son contact de 1 à 5 étoiles. L'avis est écrit dans Firebase sous le nœud `reviews/{uid_du_destinataire}`, ce qui permet un Stream en temps réel : dès qu'un nouvel avis est ajouté, la liste se met à jour automatiquement sur tous les appareils sans rechargement manuel. La moyenne est recalculée côté client à partir du Stream, ce qui évite de stocker une valeur agrégée qui pourrait être désynchronisée.
 
 ```dart
 // InteractionsService.addReview
@@ -773,6 +807,8 @@ static Stream<List<Review>> getReviews(String targetUid) {
 ---
 
 ## 6. Propagation réactive des modifications
+
+L'un des défis les plus concrets du développement de cette fonctionnalité était de s'assurer que toute modification du profil se reflète immédiatement partout dans l'application, y compris dans l'AppBar, le dashboard et la feuille de profil. Sans une architecture réactive, on serait obligé de recharger chaque page manuellement ou de passer des callbacks dans tous les sens. Le `ValueNotifier` résout ce problème élégamment : une seule ligne de code dans `update()` déclenche la reconstruction de tous les écrans abonnés.
 
 Chaque appel à `UserProfileController.update()` se propage **instantanément** à tous les écrans abonnés via `ValueListenableBuilder` :
 

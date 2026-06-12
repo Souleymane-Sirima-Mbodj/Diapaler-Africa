@@ -131,6 +131,8 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 
 ## 1. Système de Notifications
 
+Le système de notifications est l'un des éléments qui rend l'application vraiment interactive. Chaque action importante — réception d'une demande de mentorat, confirmation d'une session, nouveau message — génère une notification visible depuis n'importe quel écran. Nous avons soigné les actions inline dans chaque notification : l'utilisateur peut accepter ou refuser une demande sans même quitter la page de notifications. Toute la logique est construite autour d'un `ValueNotifier` global alimenté par un stream Firebase en temps réel.
+
 ### 1.1 Modèle de données
 
 ```dart
@@ -195,6 +197,8 @@ class NotificationItem {
 ---
 
 ### 1.2 Service de notifications
+
+Le `NotificationService` est le cœur du système. Il initialise une écoute Firebase sur le nœud `notifications/{userId}` dès la connexion de l'utilisateur, et maintient un `ValueNotifier` synchronisé avec les données du serveur. Deux méthodes distinctes permettent d'envoyer une notification à soi-même (`addNotification`) ou à un autre utilisateur (`notifyUser`), ce qui rend les notifications croisées possibles — par exemple quand un mentor confirme une session, l'entrepreneur est notifié automatiquement.
 
 ```dart
 class NotificationService {
@@ -504,6 +508,8 @@ Set<String> get _sectors => {
 
 ## 3. Géolocalisation GPS
 
+La géolocalisation permet aux utilisateurs de trouver des mentors ou investisseurs proches géographiquement. Quand l'utilisateur appuie sur "Près de moi", l'application demande la permission d'accès à sa position, calcule la distance avec chaque profil membre en utilisant la formule Haversine, et trie les résultats du plus proche au plus loin. Cette fonctionnalité est particulièrement utile pour favoriser des rencontres en présentiel au Sénégal. Nous avons cartographié les coordonnées GPS de plus de 40 villes sénégalaises pour que le calcul fonctionne même avec les profils qui n'ont pas de coordonnées exactes.
+
 ### 3.1 Service de géolocalisation (`service_geolocation.dart`)
 
 ```dart
@@ -686,6 +692,8 @@ if (distanceKm != null)
 ---
 
 ## 4. Chatbot IA — DIALI
+
+DIALI est l'assistant intelligent intégré à DIAPALER AFRICA. Il est alimenté par le modèle Llama 3.1-8b-instant de Groq, accessible via un proxy Cloudflare Worker qui protège la clé API côté serveur. DIALI peut répondre aux questions des entrepreneurs sur le financement, la création d'entreprise au Sénégal, et orienter vers les bonnes ressources comme la DER, le FJ ou la BNDE. Son nom vient du wolof "aller de l'avant", ce qui reflète bien son rôle d'encouragement et d'orientation dans l'application.
 
 ### 4.1 Présentation
 
@@ -965,6 +973,8 @@ class _ChatbotPageState extends State<ChatbotPage>
 
 ## 5. Messagerie temps réel
 
+La messagerie est la fonctionnalité qui permet aux membres de DIAPALER AFRICA de communiquer directement après qu'une relation ait été établie. Elle repose entièrement sur Firebase Realtime Database en mode WebSocket, ce qui garantit la livraison instantanée des messages sans polling. Nous avons choisi d'implémenter un système de badge global via `ValueNotifier` pour que le nombre de messages non lus soit visible depuis n'importe quel onglet de l'application, même quand l'utilisateur n'est pas sur la page de messagerie.
+
 ### 5.1 Badge de messages non lus (ValueNotifier global)
 
 Le badge sur l'onglet Messages se met à jour en temps réel grâce à un `ValueNotifier<int>` global dans `service_navigation.dart` :
@@ -1032,6 +1042,8 @@ ValueListenableBuilder<int>(
 
 ### 5.2 Liste des conversations
 
+La liste des conversations affiche toutes les discussions actives de l'utilisateur, triées par date du dernier message. Chaque tuile montre le nom du contact, l'aperçu du dernier message, et le nombre de messages non lus en badge rouge. La liste se met à jour automatiquement grâce au `StreamBuilder` connecté en temps réel à Firebase.
+
 ```dart
 // page_messages.dart — StreamBuilder sur conversations Firebase
 StreamBuilder<List<Conversation>>(
@@ -1063,6 +1075,8 @@ StreamBuilder<List<Conversation>>(
 ---
 
 ### 5.3 Chat individuel
+
+Le chat individuel fonctionne en WebSocket pur : chaque message envoyé est écrit dans Firebase et reçu instantanément par l'autre utilisateur sans délai visible. Les bulles sont alignées à droite pour l'utilisateur connecté et à gauche pour son interlocuteur. Le scroll automatique vers le bas garantit que le dernier message est toujours visible à l'arrivée d'un nouveau message.
 
 ```dart
 // page_chat.dart — WebSocket Firebase en temps réel
@@ -1099,6 +1113,8 @@ StreamBuilder<List<ChatMessage>>(
 ---
 
 ## 6. Fonctionnalités supplémentaires bonus
+
+Ces fonctionnalités ont été développées en dehors du cahier des charges initial pour enrichir l'expérience utilisateur. Elles couvrent la gestion complète du cycle de vie d'une relation de mentorat : de la prise de contact à la réservation de sessions, en passant par la gestion des disponibilités du mentor et l'envoi de demandes formelles. Chacune de ces fonctionnalités est synchronisée avec Firebase en temps réel.
 
 ### 6.1 Agenda Firebase — Réservation bilatérale de sessions
 
@@ -1263,6 +1279,8 @@ class AgendaPage extends StatelessWidget {
 
 ### 6.2 Planning (disponibilités mentor)
 
+La page Planning est accessible uniquement aux mentors depuis leur agenda. Elle leur permet de définir les créneaux horaires où ils sont disponibles pour des sessions. Ces créneaux sont ensuite visibles sur la page de détail du mentor, et c'est à partir de cette liste que l'entrepreneur choisit son créneau lors de la réservation. Toute modification se propage en temps réel grâce au stream Firebase.
+
 ```dart
 // page_planning.dart — Gestion des créneaux disponibles
 StreamBuilder<Availability?>(
@@ -1284,6 +1302,8 @@ StreamBuilder<Availability?>(
 ---
 
 ### 6.3 Demandes de mentorat
+
+Le système de demandes de mentorat gère tout le processus de mise en relation formelle. Un entrepreneur envoie une demande avec un message personnalisé, le mentor la reçoit dans sa liste de demandes et peut accepter ou refuser avec une raison optionnelle. Nous avons implémenté un mécanisme anti-doublon côté Firebase pour éviter qu'un utilisateur envoie plusieurs demandes au même profil tant qu'une est encore en attente. Une notification croisée est envoyée aux deux parties à chaque changement de statut.
 
 ```dart
 // page_send_request.dart — Envoi d'une demande avec vérification anti-doublon
@@ -1346,6 +1366,8 @@ StreamBuilder<List<MentorRequest>>(
 
 ## 7. Système de Pitch Entrepreneurial
 
+Le système de pitch est la fonctionnalité centrale pour les entrepreneurs de DIAPALER AFRICA. Il leur permet de présenter leur projet de façon structurée, de le soumettre à l'attention des mentors et des investisseurs, et de le partager sur les réseaux sociaux. Nous avons conçu un parcours en deux temps : d'abord le dépôt du pitch via un formulaire guidé, puis la publication automatique dans un fil public visible par tous les membres de la plateforme.
+
 ### 7.1 Dépôt de pitch — Formulaire 3 étapes (`page_pitch.dart`)
 
 Les entrepreneurs déposent leur pitch via un **stepper 3 étapes** avec validation obligatoire par étape.
@@ -1388,7 +1410,7 @@ Navigator.of(context).pop();
 
 ### 7.2 Fil des pitchs publics (`page_pitches_publics.dart`)
 
-Les mentors et investisseurs voient tous les pitchs en **temps réel** grâce à `DatabaseService.getPitches()` (stream Firebase WebSocket).
+Le fil des pitchs est la vitrine des projets entrepreneuriaux sur DIAPALER AFRICA. Les mentors et investisseurs y accèdent depuis leur dashboard et voient tous les pitchs en **temps réel** grâce à `DatabaseService.getPitches()` (stream Firebase WebSocket).
 
 **Fonctionnalités complètes de `page_pitches_publics.dart` :**
 - StreamBuilder Firebase — pitchs triés par date décroissante
@@ -1419,6 +1441,8 @@ final convId = InteractionsService.generateConversationId(
 ---
 
 ## 8. Dashboards par rôle
+
+Chaque rôle dans DIAPALER AFRICA dispose d'un dashboard personnalisé qui s'affiche comme écran d'accueil. L'idée est que dès la connexion, chaque utilisateur voit une interface adaptée à ses besoins spécifiques : le mentor voit ses statistiques et demandes en attente, l'investisseur voit les opportunités et ses secteurs d'intérêt. Ces dashboards sont construits avec une `SliverAppBar` pour avoir un effet de scroll élégant, et sont connectés en temps réel à Firebase via `ValueListenableBuilder`.
 
 ### 8.1 Dashboard Mentor (`page_dashboard_mentor.dart`)
 
@@ -1747,6 +1771,8 @@ L'onglet "Contacts" dans `page_messages.dart` centralise toutes les **relations 
 
 ## 10.4 Système d'Avis et Notation ⭐
 
+Le système d'avis et de notation a été ajouté pour renforcer la confiance au sein de la communauté DIAPALER AFRICA. Un entrepreneur peut noter un mentor après avoir travaillé avec lui, et inversement. Nous avons délibérément restreint l'accès à la notation aux membres ayant une relation acceptée — cela évite les avis non pertinents ou malveillants. La note moyenne calculée en temps réel depuis Firebase s'affiche directement sur le profil et les dashboards, donnant à chaque membre une réputation visible et crédible.
+
 ### Description
 
 Le système d'avis permet aux membres ayant une **relation acceptée** de laisser une note (1 à 5 étoiles) et un commentaire sur le profil d'un autre membre.
@@ -1799,6 +1825,8 @@ static Stream<List<Review>> getReviews(String targetUid) =>
 ---
 
 ## 10.5 Pitchs Favoris (Bookmark Investisseur) 🔖
+
+Cette fonctionnalité a été pensée spécifiquement pour les investisseurs qui parcourent de nombreux pitchs et ont besoin de garder une liste de projets qui les intéressent. D'un simple tap sur l'icône de bookmark, ils sauvegardent un pitch dans leur liste personnelle, accessible depuis leur profil à tout moment. Le système est entièrement réactif grâce à un `ValueNotifier` global synchronisé avec Firebase — le bookmark change d'état visuellement sans aucun délai ni rechargement.
 
 ### Description
 
@@ -1855,6 +1883,8 @@ class PitchFavoriteService {
 ---
 
 ## 11. Paiement Mobile — Wave Premium
+
+Pour monétiser l'application, nous avons intégré Wave, le portefeuille mobile le plus utilisé au Sénégal avec plusieurs millions d'utilisateurs actifs. L'approche choisie utilise les liens marchands Wave avec montant dynamique, ce qui évite de déployer un backend complexe pour la phase de démonstration. L'utilisateur est redirigé vers l'application Wave installée sur son téléphone, complète son paiement, puis revient dans DIAPALER AFRICA pour activer son abonnement Premium. Trois plans distincts ciblent chaque type d'utilisateur de la plateforme.
 
 ### 11.1 Architecture simplifiée (lien marchand)
 
@@ -2012,6 +2042,8 @@ await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
 ---
 
 ## 12. Déploiement
+
+Pour rendre l'application testable par les utilisateurs finaux et l'équipe pédagogique, nous avons compilé un APK release signé distribué via Google Drive. La signature avec un keystore RSA 2048 bits garantit l'intégrité de l'application et prépare la base pour une éventuelle publication sur le Play Store. La commande de build Flutter a activé le tree-shaking des icônes Material, ce qui a réduit le poids des assets de 1,6 MB à seulement 16 Ko.
 
 ### 12.1 Build release signé
 

@@ -329,34 +329,47 @@ def parse_md_table(lines, start_idx):
 # ── Screenshot placeholders ────────────────────────────────────────────────────
 
 def add_screenshot_placeholder(doc, text):
-    """Ajoute un placeholder de capture d'écran stylisé avec zone vide pour insertion."""
-    # Ligne de label amber
+    """Ajoute un placeholder de capture d'écran : label amber + boîte bordée 4 côtés."""
+    # ── Label amber ──────────────────────────────────────────────────────────────
     label = doc.add_paragraph()
     label.paragraph_format.left_indent  = Cm(0.0)
     label.paragraph_format.space_before = Pt(10)
     label.paragraph_format.space_after  = Pt(0)
     set_para_shading(label, 'FEF3C7')
     set_para_border(label, 'F59E0B', '8')
-
     run = label.add_run('📸  ' + text)
     run.font.name = 'Calibri'
     run.font.size = Pt(10)
     run.font.bold  = True
     run.font.color.rgb = RGBColor(0x92, 0x40, 0x09)
 
-    # Zone vide (cadre gris clair) pour coller/insérer la capture
-    empty = doc.add_paragraph()
-    empty.paragraph_format.left_indent   = Cm(0.0)
-    empty.paragraph_format.space_before  = Cm(5)   # ~5 cm de hauteur
-    empty.paragraph_format.space_after   = Pt(12)
-    set_para_shading(empty, 'F9FAFB')
-    set_para_border(empty, 'D1D5DB', '6')
+    # ── Boîte rectangulaire (tableau 1×1) ────────────────────────────────────────
+    tbl = doc.add_table(rows=1, cols=1)
+    tbl.style = 'Table Grid'
 
-    run2 = empty.add_run('[ Insérer la capture d\'écran ici ]')
-    run2.font.name = 'Calibri'
-    run2.font.size = Pt(9)
-    run2.font.color.rgb = RGBColor(0xAB, 0xB5, 0xBF)
-    run2.italic = True
+    cell = tbl.cell(0, 0)
+    set_cell_shading(cell, 'F9FAFB')
+
+    # Hauteur fixe : 7 cm = 3969 twips
+    tr = tbl.rows[0]._tr
+    trPr = tr.get_or_add_trPr()
+    trHeight = OxmlElement('w:trHeight')
+    trHeight.set(qn('w:val'), '3969')
+    trHeight.set(qn('w:hRule'), 'exact')
+    trPr.append(trHeight)
+
+    # Texte centré dans la boîte
+    para = cell.paragraphs[0]
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para.paragraph_format.space_before = Cm(2.8)
+    inner = para.add_run('[ Insérer la capture d\'écran ici ]')
+    inner.font.name = 'Calibri'
+    inner.font.size = Pt(9)
+    inner.font.color.rgb = RGBColor(0xAB, 0xB5, 0xBF)
+    inner.italic = True
+
+    # Espace après
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
 # ── Parseur Markdown principal ─────────────────────────────────────────────────
 

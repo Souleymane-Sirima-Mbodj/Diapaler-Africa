@@ -84,6 +84,8 @@
 
 ## Introduction
 
+Ce livrable couvre tout le système d'authentification de DIAPALER AFRICA, de la première ouverture de l'application jusqu'à la déconnexion sécurisée. Nous avons cherché à proposer une expérience fluide et rassurante pour l'utilisateur : une inscription guidée étape par étape, une connexion mémorisée par le gestionnaire de mots de passe du téléphone, et un mode hors-ligne qui évite de se retrouver bloqué faute de réseau. Chaque choix technique — Firebase Auth, cache local, messages d'erreur en français — a été pensé pour correspondre aux habitudes et contraintes du contexte sénégalais.
+
 DIAPALER AFRICA intègre un système d'authentification **complet et sécurisé** basé sur **Firebase Authentication** (provider Email/Password). Il couvre :
 - La connexion avec gestion d'erreurs humanisées
 - L'inscription multi-étapes (4 étapes) avec validation temps réel
@@ -99,6 +101,8 @@ DIAPALER AFRICA intègre un système d'authentification **complet et sécurisé*
 ---
 
 ## 1. Service d'authentification (`service_authentification.dart`)
+
+Plutôt que d'appeler Firebase Auth directement depuis chaque écran, nous avons centralisé tous les appels dans une classe `AuthService` statique. Cela garantit que la logique d'authentification n'est écrite qu'une seule fois, et surtout que la conversion des codes d'erreur Firebase en messages lisibles (en français) est appliquée de façon cohérente partout dans l'application. L'utilisateur ne verra jamais un code cryptique comme `wrong-password` ou `network-request-failed` — il recevra à la place un message humain et actionnable.
 
 Ce service centralise tous les appels Firebase Auth :
 
@@ -352,6 +356,8 @@ class _SplashPageState extends State<SplashPage>
 
 ### 2.3 Flux complet au démarrage
 
+Le schéma ci-dessous résume l'enchaînement des décisions au moment où l'application s'ouvre. L'idée centrale est de ne jamais laisser l'utilisateur sur un écran vide ou bloqué : si le cache local contient un profil, il est affiché immédiatement, et Firebase confirme ou met à jour les données dans un second temps. Les timeouts empêchent un gel infini en cas de réseau lent.
+
 ```
 App lancée (main.dart)
        │
@@ -383,6 +389,8 @@ App lancée (main.dart)
 
 ## 3. Page de Connexion (`page_connexion.dart`)
 
+La page de connexion est le point d'entrée de l'application pour les utilisateurs existants. Nous avons soigné son design — gradient navy, logo DIAPALER, bande aux couleurs du drapeau sénégalais — pour donner dès le premier regard une identité forte à l'application. Les erreurs Firebase (mauvais mot de passe, email inconnu) sont interceptées et traduites en messages compréhensibles par l'utilisateur, sans jargon technique. Un autre point important : la page utilise `AutofillGroup` pour que le gestionnaire de mots de passe du téléphone (Google, Samsung, iCloud) propose de sauvegarder et remplir automatiquement les identifiants à la prochaine connexion.
+
 ### 3.1 Description complète de l'écran
 
 | Élément | Description |
@@ -410,6 +418,8 @@ App lancée (main.dart)
 ---
 
 ### 3.2 Code complet de la connexion
+
+Le code de la page de connexion suit un flux clair en quatre temps : validation locale, appel Firebase, chargement du profil, puis redirection. Le spinner remplace le bouton pendant l'appel réseau pour éviter les doubles soumissions. En cas d'échec, le bandeau rouge s'affiche avec un message en français ; en cas de succès, toute la pile de navigation est effacée pour éviter que l'utilisateur puisse revenir en arrière avec le bouton « retour ».
 
 ```dart
 // page_connexion.dart
@@ -610,6 +620,8 @@ class _LoginPageState extends State<LoginPage> {
 
 ## 4. Page d'Inscription 4 étapes (`page_inscription.dart`)
 
+L'inscription a été conçue en 4 étapes progressives pour ne pas décourager l'utilisateur avec un formulaire trop long d'un seul coup. Chaque étape collecte un ensemble cohérent d'informations, et une barre de progression animée indique visuellement où en est l'utilisateur. Les validations se font en temps réel : l'utilisateur voit immédiatement si son email est valide ou si son mot de passe est suffisamment fort. Le bouton « Suivant » ne s'active que lorsque tous les champs obligatoires de l'étape courante sont correctement remplis, ce qui évite de devoir afficher des messages d'erreur massifs en bas de page.
+
 ### 4.1 Champs requis selon les consignes
 
 | Consigne | Implémentation |
@@ -623,6 +635,8 @@ class _LoginPageState extends State<LoginPage> {
 ---
 
 ### 4.2 Étape 1 — Identité
+
+La première étape réunit les informations de base qui définissent l'identité de l'utilisateur sur la plateforme. Nous avons volontairement regroupé ici le nom, l'email, le sexe et la date de naissance, car ce sont des informations que l'utilisateur connaît par cœur et peut saisir rapidement. Le choix du sexe s'effectue via trois pills animés avec l'option « Non précisé » sélectionnée par défaut, pour ne pas forcer une déclaration. L'âge minimum de 13 ans est imposé par le DatePicker via la contrainte `lastDate`, conformément aux règles Firebase et à la réglementation sur la protection des mineurs.
 
 **Champs :**
 - Nom complet (prénom + nom obligatoires, min 4 caractères)
@@ -664,6 +678,8 @@ await showDatePicker(
 
 ### 4.3 Étape 2 — Localisation
 
+La deuxième étape recueille la localisation de l'utilisateur. Nous avons limité la liste des pays aux marchés cibles de la plateforme — principalement l'Afrique de l'Ouest et la France — pour simplifier l'interface et ne pas noyer l'utilisateur dans un dropdown de 200 pays. La sélection du pays déclenche automatiquement la mise à jour de la liste des villes disponibles : l'utilisateur ne peut choisir une ville que parmi celles qui correspondent au pays sélectionné, ce qui garantit la cohérence des données. L'adresse précise est optionnelle.
+
 **Champs :**
 - Pays (dropdown — liste de pays d'Afrique de l'Ouest + France)
 - Ville (dropdown filtrée selon le pays sélectionné)
@@ -694,6 +710,8 @@ _InlineDropdown(
 ---
 
 ### 4.4 Étape 3 — Profil professionnel
+
+La troisième étape est sans doute la plus riche, car elle construit le profil public de l'utilisateur sur la plateforme. C'est ici qu'il choisit son secteur d'activité, télécharge sa photo de profil, rédige sa biographie et sélectionne ses centres d'intérêt. Nous avons adapté les libellés et les champs selon le rôle : un entrepreneur n'a pas les mêmes besoins qu'un mentor ou un investisseur. La photo est redimensionnée à 512×512 pixels côté client avant envoi, pour limiter la consommation de données — un détail important dans un contexte où la connexion peut être limitée. Les chips de centres d'intérêt permettent une sélection multiple avec un retour visuel immédiat.
 
 **Champs (communs à tous les rôles) :**
 - Secteur d'activité (dropdown obligatoire — libellé adapté : "Secteur d'activité" / "Secteur principal" / "Secteur d'investissement")
@@ -742,6 +760,8 @@ TextField(
 
 ### 4.5 Étape 4 — Sécurité du compte
 
+La quatrième et dernière étape de l'inscription rassemble les informations de sécurité. Le préfixe téléphonique s'adapte automatiquement au pays choisi à l'étape 2 — si l'utilisateur a sélectionné le Sénégal, le préfixe `+221` et la longueur de 9 chiffres sont appliqués sans aucune manipulation de sa part. La jauge de force du mot de passe est animée en temps réel sur 5 niveaux pour aider l'utilisateur à choisir un mot de passe solide sans lui imposer des règles frustrantes. L'acceptation des CGU est obligatoire et visualisée par une case à cocher qui débloque le bouton de validation : l'utilisateur ne peut pas finaliser son inscription sans les avoir acceptées explicitement.
+
 **Champs :**
 - Téléphone avec **préfixe dynamique** selon le pays choisi à l'étape 2 :
   - 🇸🇳 **Sénégal** → `+221` (9 chiffres)
@@ -777,6 +797,8 @@ int _computeStrength(String pwd) {
 ---
 
 ### 4.6 Soumission et création du compte
+
+Une fois les 4 étapes validées, le bouton « S'INSCRIRE » déclenche une séquence de 5 opérations enchaînées. D'abord la création du compte Firebase Auth, ensuite l'upload de la photo vers Cloudinary (avec un fallback en base64 si la connexion échoue), puis la construction du profil complet, sa sauvegarde dans Firebase Database, et enfin la mise en cache local. Si une erreur survient à n'importe quelle étape, le message correspondant est affiché en français. En cas de succès, l'utilisateur est redirigé vers l'onboarding — un écran de bienvenue qui lui présente les grandes fonctionnalités de l'application avant sa première utilisation.
 
 ```dart
 Future<void> _submit() async {
@@ -862,6 +884,8 @@ Future<void> _submit() async {
 ---
 
 ## 5. Page Mot de passe oublié (`page_mot_de_passe_oublie.dart`)
+
+La page de réinitialisation du mot de passe est volontairement simple : un champ email, un bouton, et deux états possibles — le formulaire ou la confirmation. Lorsque l'utilisateur soumet son email, Firebase envoie automatiquement un lien de réinitialisation à l'adresse indiquée. Côté application, on bascule sur un écran de confirmation avec une icône verte et un message rassurant qui indique l'adresse à laquelle le lien a été envoyé. On a fait le choix de ne pas distinguer le cas « email inconnu » du cas « email valide », pour éviter d'exposer la liste des comptes existants — c'est une bonne pratique de sécurité courante.
 
 ```dart
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {

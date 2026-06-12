@@ -93,7 +93,13 @@
 
 ---
 
+Ce livrable documente le travail accompli lors de la première phase du projet DIAPALER AFRICA : la mise en place du projet Flutter, l'intégration de l'ensemble des interfaces utilisateur, et la construction du système de navigation. L'objectif était de passer d'une idée à une application fonctionnelle et navigable, avec un design cohérent pensé pour le contexte sénégalais et ouest-africain. Chaque choix technique présenté ici a été guidé par deux priorités : la fluidité de l'expérience utilisateur et la maintenabilité du code à long terme.
+
+---
+
 ## 1. Création du projet Flutter
+
+Cette première section détaille la fondation technique du projet : comment il a été nommé, quelles bibliothèques ont été sélectionnées et pourquoi, comment le code est organisé, et comment l'application démarre. Ces décisions structurent toute l'architecture de l'app.
 
 ### 1.1 Nom et identité
 
@@ -106,9 +112,11 @@
 | **SDK Flutter** | ≥ 3.5.0 |
 | **Langage** | Dart 3 (null-safe) |
 
-**DIAPALER** est un terme wolof signifiant "avancer ensemble". L'application cible l'écosystème entrepreneurial sénégalais et ouest-africain, en connectant entrepreneurs, mentors et investisseurs.
+**DIAPALER** est un terme wolof signifiant "avancer ensemble" — un nom qui résume l'essence de la plateforme : personne ne réussit seul. Ce choix ancre l'application dans sa culture d'origine et la distingue immédiatement des solutions génériques importées. L'application cible l'écosystème entrepreneurial sénégalais et ouest-africain, en connectant entrepreneurs, mentors et investisseurs.
 
 ### 1.2 Dépendances installées (`pubspec.yaml`)
+
+Chaque package a été choisi pour une raison précise. Firebase assure le backend en temps réel sans serveur à maintenir. `google_fonts` permet d'appliquer une typographie soignée sans aucun asset local. `geolocator` alimente le tri "Près de moi" avec un calcul de distance Haversine. `shared_preferences` garantit une session persistante même hors-ligne, et `http` suffit pour l'intégration du chatbot IA via l'API Groq, sans dépendance lourde à un SDK tiers.
 
 ```yaml
 name: diapaler_africa
@@ -146,6 +154,8 @@ dev_dependencies:
 ---
 
 ### 1.3 Structure complète du projet
+
+Nous avons adopté une séparation stricte entre les données (`data/`), la logique métier (`services/`), les interfaces (`screens/`) et les composants partagés (`widgets/`). Cette organisation — inspirée de l'architecture en couches — rend chaque partie du code indépendante et facilite la collaboration à plusieurs dans l'équipe. Par exemple, un développeur peut travailler sur un écran sans avoir besoin de connaître le détail d'un service Firebase.
 
 ```
 diapaler_africa/
@@ -281,6 +291,8 @@ flutter build apk      # Build APK Android release
 
 ## 2. Intégration des interfaces
 
+Cette section présente les 34 écrans de l'application, du splash screen d'accueil jusqu'aux pages secondaires. Pour chaque écran, nous expliquons ce qu'il fait, ce que l'utilisateur y vit, et les décisions de design ou technique qui ont guidé son implémentation. L'ensemble est pensé pour être cohérent visuellement et adaptatif selon le rôle de l'utilisateur connecté.
+
 ### 2.1 Design System unifié
 
 Toutes les interfaces partagent une **palette de couleurs commune** définie dans `theme_app.dart` :
@@ -343,6 +355,8 @@ class AppColors {
 
 ### 2.2 Écran de démarrage (Splash) — `page_demarrage.dart`
 
+Le splash screen est la toute première chose que l'utilisateur voit. Son rôle est double : afficher l'identité visuelle de l'app pendant que Firebase s'initialise en arrière-plan, puis router automatiquement vers le bon écran selon que l'utilisateur est déjà connecté ou non. Nous avons voulu que cette attente soit une expérience, pas juste un chargement — d'où l'animation en trois orbites aux couleurs du drapeau sénégalais.
+
 **Fonctionnalités :**
 - Logo DIAPALER AFRICA animé : tile central scale 0.5→1.0, 3 orbites colorées (drapeau sénégalais) s'allumant en séquence
 - Fond navy avec motif de points subtils (CustomPainter)
@@ -357,6 +371,8 @@ class AppColors {
 ---
 
 ### 2.3 Onboarding / Découverte — `page_decouverte.dart`
+
+L'onboarding n'apparaît qu'une seule fois, juste après la création d'un compte. L'idée est d'accueillir le nouvel utilisateur en lui montrant en trois slides ce que l'app va lui apporter concrètement, avant qu'il ne plonge dans l'interface. Nous avons volontairement limité à trois slides pour ne pas lasser — les utilisateurs peuvent de toute façon sauter l'écran s'ils le souhaitent.
 
 > ⚠️ **Cet écran apparaît uniquement après une inscription réussie** — pas au premier lancement. Les utilisateurs déjà connectés arrivent directement dans le RootShell (§2.7).
 
@@ -376,6 +392,8 @@ class AppColors {
 
 ### 2.4 Choix du rôle — `page_choix_role.dart`
 
+La page de sélection du rôle est le premier vrai choix que l'utilisateur effectue dans l'application. Nous avons opté pour trois tuiles visuellement distinctes — couleur amber pour l'entrepreneur, vert pour le mentor, bleu pour l'investisseur — afin que chaque utilisateur puisse s'identifier immédiatement à son profil. Cette convention de couleurs est ensuite maintenue sur toute l'app, ce qui crée une cohérence visuelle immédiatement perceptible.
+
 **Fonctionnalités :**
 - 3 tuiles de rôle avec couleur et icône distinctives :
   - 🟡 **Entrepreneur** (amber) — "J'ai un projet, je cherche un mentor"
@@ -391,6 +409,8 @@ class AppColors {
 ---
 
 ### 2.5 Connexion — `page_connexion.dart`
+
+L'écran de connexion est conçu pour être rassurant et rapide. L'en-tête reprend le gradient navy avec la bande drapeau sénégalais pour ancrer visuellement l'app dans son identité. Les messages d'erreur Firebase sont traduits en français naturel — par exemple "Mot de passe incorrect" plutôt qu'un code d'erreur technique — pour ne pas décourager un utilisateur peu à l'aise avec la technologie.
 
 **Fonctionnalités :**
 - En-tête : gradient navy avec logo DIAPALER + bande drapeau sénégalais
@@ -408,6 +428,8 @@ class AppColors {
 ---
 
 ### 2.6 Inscription 4 étapes — `page_inscription.dart`
+
+L'inscription est découpée en quatre étapes pour ne jamais noyer l'utilisateur sous un long formulaire. Chaque étape est focalisée sur un thème précis (identité, localisation, profil pro, sécurité), et la progression est visible à tout moment grâce à la barre amber segmentée. Une attention particulière a été portée à l'internationalisation : le préfixe téléphonique s'adapte automatiquement au pays choisi, et la validation de longueur change en conséquence, ce qui évite les erreurs fréquentes lors de la saisie d'un numéro sénégalais, gambien ou malien.
 
 **Fonctionnalités :**
 - Barre de progression 4 segments animés (amber = complété, gris = à venir)
@@ -428,6 +450,8 @@ class AppColors {
 ---
 
 ### 2.7 Dashboard Entrepreneur — `page_accueil.dart`
+
+Le dashboard entrepreneur est l'écran central de l'utilisateur porteur de projet. Il a été pensé comme un tableau de bord opérationnel : d'un seul coup d'oeil, l'entrepreneur voit l'état de son projet, ses statistiques clés, et les actions qu'il peut faire tout de suite. Le skeleton loading de 900ms masque les temps de chargement Firebase et donne une impression de réactivité immédiate, même sur une connexion mobile moyenne.
 
 **Fonctionnalités :**
 - En-tête gradient navy (`_NavyHero`) : avatar amber + "Bonjour 🇸🇳 + Nom complet" + cloche notifications (badge rouge dynamique via `NotificationService.notifications`)
@@ -453,6 +477,8 @@ class AppColors {
 
 ### 2.8 Dashboard Mentor — `page_dashboard_mentor.dart`
 
+Le dashboard mentor met en avant ce qui compte pour un expert qui partage son temps : combien de personnes il accompagne, combien de sessions il a réalisées, et quels sont ses domaines d'intervention. La SliverAppBar permet à l'en-tête de disparaître progressivement au scroll, laissant plus de place au contenu sans alourdir l'interface.
+
 **Fonctionnalités :**
 - En-tête sticky (SliverAppBar) avec avatar vert + badge "Mentor"
 - 3 cartes stats : Mentorés / Sessions / Années d'expérience
@@ -467,6 +493,8 @@ class AppColors {
 
 ### 2.9 Dashboard Investisseur — `page_dashboard_investisseur.dart`
 
+L'investisseur a des besoins différents des deux autres rôles : il cherche des opportunités, pas un mentor. Son dashboard est donc centré sur le flux des pitchs reçus et les entrepreneurs avec qui il est en contact. Les données sont chargées via StreamBuilder directement depuis Firebase, ce qui garantit que la liste des pitchs est toujours à jour sans nécessiter de rafraîchissement manuel.
+
 **Fonctionnalités :**
 - En-tête sticky avec avatar bleu + badge "Investisseur"
 - 3 cartes stats : Opportunités / Entrepreneurs / Favoris
@@ -479,6 +507,8 @@ class AppColors {
 ---
 
 ### 2.10 Matching / Explorer — `page_matching.dart`
+
+La page Matching est le coeur de la mise en relation. Un utilisateur peut y trouver un mentor, un investisseur ou un entrepreneur en quelques secondes grâce aux filtres combinables : texte libre, rôle, secteur, ville, et tri par distance GPS. Nous avons affiché en priorité les membres réels de DIAPALER (inscrits via l'app) par rapport aux 112 profils statiques de démonstration, pour encourager les vraies connexions entre utilisateurs.
 
 **Fonctionnalités :**
 - Barre de recherche textuelle (filtre en temps réel : nom, secteur, ville, tags)
@@ -504,6 +534,8 @@ class AppColors {
 
 ### 2.11 Détail d'un profil — `page_detail_mentor.dart`
 
+Cet écran est celui où l'utilisateur décide s'il veut entrer en contact avec quelqu'un. Il doit donc contenir toutes les informations utiles : biographie, domaines, disponibilités, et les actions possibles selon le contexte. Une attention particulière a été portée à la cohérence : pour les profils de démonstration (sans UID Firebase), les disponibilités affichées sont explicitement marquées comme illustratives, afin de ne pas créer de confusion avec les vraies disponibilités des membres réels.
+
 **Fonctionnalités :**
 - Avatar grand format en en-tête
 - Nom, rôle, secteur, ville, distance GPS
@@ -527,6 +559,8 @@ class AppColors {
 ---
 
 ### 2.12 Messagerie — `page_messages.dart` + `page_chat.dart`
+
+La messagerie est organisée en deux onglets complémentaires : "Contacts" regroupe les personnes avec qui l'utilisateur a une relation acceptée, tandis que "Messages" liste toutes les conversations actives avec aperçu du dernier message. Ce choix évite de mélanger carnet d'adresses et historique de conversation. Le badge rouge de messages non lus est mis à jour en temps réel via un ValueNotifier global, visible sur l'icône de l'onglet depuis n'importe quel écran de l'app.
 
 **Fonctionnalités `page_messages.dart` :**
 
@@ -559,6 +593,8 @@ La page Messages est organisée en **2 onglets** :
 
 ### 2.13 Notifications — `page_notifications.dart`
 
+Le centre de notifications regroupe tous les événements importants : demandes de mentorat reçues, sessions réservées, offres d'investissement, nouveaux messages. Chaque type de notification est reconnaissable visuellement (icône et couleur distinctes) et cliquable pour naviguer directement vers l'écran concerné. Les types critiques comme les offres d'investissement disposent même de boutons "Accepter / Refuser" directement dans la tuile, évitant à l'utilisateur de chercher où aller pour agir.
+
 **Fonctionnalités :**
 - Liste toutes les notifications triées par date décroissante (Firebase temps réel)
 - Icône et couleur distinctes selon le type (string) : `mentor_request`, `session_booked`, `session_cancelled`, `message`…
@@ -576,6 +612,8 @@ La page Messages est organisée en **2 onglets** :
 ---
 
 ### 2.14 Mon Profil — `page_profil.dart`
+
+La page profil est la vitrine de l'utilisateur au sein de DIAPALER. Elle est volontairement adaptative : un entrepreneur y voit ses projets en cours avec leurs barres de progression, un mentor y affiche ses années d'expérience et son planning, un investisseur ses contacts et ses rendez-vous. La jauge de complétion 0–100% motive l'utilisateur à renseigner toutes ses informations pour maximiser sa visibilité dans le Matching.
 
 **Structure de la page (allégée et rôle-adaptive) :**
 - Carte identité : photo/initiales, nom, rôle, ville, barre de complétion 0–100%
@@ -600,6 +638,8 @@ La page Messages est organisée en **2 onglets** :
 
 ### 2.15 Modifier le profil — `page_modification_profil.dart`
 
+L'écran de modification du profil pré-remplit automatiquement tous les champs avec les valeurs existantes, pour que l'utilisateur ne parte pas d'une page vide. Le bouton "SAUVEGARDER" reste grisé tant qu'aucune modification n'a été effectuée, ce qui évite les sauvegardes accidentelles. La sauvegarde est volontairement en deux temps — locale immédiate puis sync Firebase — pour que l'utilisateur voie le changement tout de suite même si la connexion est lente.
+
 **Fonctionnalités :**
 - Pré-remplissage de tous les champs avec les valeurs actuelles
 - Photo de profil : tap → galerie/caméra → redimensionnement 512×512 → base64
@@ -618,6 +658,8 @@ La page Messages est organisée en **2 onglets** :
 
 ### 2.16 Déposer un Pitch — `page_pitch.dart`
 
+Déposer un pitch est l'action centrale pour un entrepreneur : c'est ce qui le rend visible aux mentors et aux investisseurs. Nous avons structuré cet écran en trois étapes courtes pour ne pas intimider — présenter son idée en quelques lignes suffit pour commencer. Le pitch est enregistré à deux endroits simultanément : dans le profil de l'entrepreneur (vue personnelle) et dans la collection `pitches/` publique (vue mentors/investisseurs), garantissant que tout le monde a accès aux bonnes données.
+
 **Fonctionnalités :**
 - Stepper 3 étapes avec barre de progression amber
 - **Validation obligatoire par étape** — bouton CONTINUER désactivé si champs vides
@@ -634,6 +676,8 @@ La page Messages est organisée en **2 onglets** :
 ---
 
 ### 2.17 Pitchs Publiés — `page_pitches_publics.dart`
+
+Cette page est le fil d'actualité des opportunités pour les mentors et les investisseurs. Elle est conçue pour faciliter la découverte rapide : barre de recherche, pills de secteur générées dynamiquement depuis les vraies données Firebase, et un compteur de résultats qui se met à jour en temps réel. L'investisseur dispose en plus d'une icône bookmark pour sauvegarder les pitchs qui l'intéressent, et d'un bouton d'investissement direct sans quitter la page.
 
 **Fonctionnalités (accessible Mentors + Investisseurs) :**
 - StreamBuilder Firebase (données temps réel)
@@ -655,6 +699,8 @@ La page Messages est organisée en **2 onglets** :
 ---
 
 ### 2.18 Autres écrans complémentaires
+
+Au-delà des écrans principaux déjà présentés, l'application inclut un ensemble d'écrans secondaires qui complètent le parcours utilisateur et rendent l'expérience plus riche. Ces écrans couvrent des besoins spécifiques : gestion des disponibilités pour le mentor, chatbot IA, système d'avis, gestion des demandes, et agendas. Chacun est accessible depuis le bon endroit dans le flux principal.
 
 **Mentors recommandés — `page_mentors_recommandes.dart`**
 - Liste filtrée de mentors correspondant aux intérêts de l'entrepreneur
@@ -726,7 +772,11 @@ La page Messages est organisée en **2 onglets** :
 
 ## 3. Navigation entre les écrans
 
+La navigation est la colonne vertébrale de l'application. Bien penser la navigation, c'est s'assurer que l'utilisateur trouve toujours ce qu'il cherche sans se perdre, et que les transitions entre les pages sont fluides et naturelles. Cette section explique comment les 34 écrans de DIAPALER sont reliés entre eux, du flux d'authentification jusqu'aux sous-pages les plus profondes.
+
 ### 3.1 Architecture de navigation à deux niveaux
+
+Nous avons choisi une architecture à deux niveaux : une barre d'onglets fixe (`IndexedStack`, 5 onglets) pour les écrans principaux, et un `Navigator.push` pour les écrans de détail. Ce choix nous a permis de préserver l'état de chaque onglet lors des transitions — la position de scroll, les données chargées et les streams Firebase actifs restent intacts — ce qui améliore significativement la fluidité perçue par rapport à une approche `PageView`.
 
 **Niveau 1 — Navigation principale (barre d'onglets) :**
 
