@@ -12,7 +12,6 @@ import '../widgets/carte_mentor.dart';
 import '../widgets/feuille_profil.dart';
 import '../widgets/entete_section.dart';
 import '../widgets/squelette.dart';
-import 'page_nouveau_projet.dart';
 import 'page_notifications.dart';
 import 'page_pitch.dart';
 import 'page_mentors_recommandes.dart';
@@ -395,7 +394,7 @@ class _EmptyProjectHero extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             fullscreenDialog: true,
-            builder: (_) => const AddProjectPage(),
+            builder: (_) => const PitchPage(),
           ),
         ),
         child: Container(
@@ -424,8 +423,8 @@ class _EmptyProjectHero extends StatelessWidget {
                   color: AppColors.amber,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.add_rounded,
-                    color: Colors.white, size: 32),
+                child: const Icon(Icons.rocket_launch_rounded,
+                    color: Colors.white, size: 28),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -433,7 +432,7 @@ class _EmptyProjectHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Crée ton projet',
+                      'Lance ton projet',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -442,7 +441,7 @@ class _EmptyProjectHero extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Nom, secteur, description — ensuite dépose ton pitch pour les investisseurs.',
+                      'Crée ton projet et dépose ton pitch en une seule étape guidée.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 12.5,
@@ -569,6 +568,48 @@ void _showProjectSheet(BuildContext context, UserProfile p) {
                 label: const Text(
                   'Déposer un pitch',
                   style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final projectId = p.currentProject?.id;
+                  if (projectId == null) return;
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Supprimer ce projet ?'),
+                      content: Text(
+                          '« ${p.projectName} » sera supprimé définitivement.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Annuler'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: TextButton.styleFrom(
+                              foregroundColor: AppColors.red),
+                          child: const Text('Supprimer'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm != true || !context.mounted) return;
+                  UserProfileController.deleteProject(projectId);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.delete_outline_rounded,
+                    size: 18, color: AppColors.red),
+                label: const Text(
+                  'Supprimer ce projet',
+                  style: TextStyle(
+                      color: AppColors.red, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

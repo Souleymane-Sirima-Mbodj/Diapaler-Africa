@@ -12,16 +12,19 @@ import 'page_profil_public.dart';
 /// [canReview] = la relation est acceptée ET ce n'est pas son propre profil.
 /// [showLockedBanner] = affiche la bannière "demande requise" si canReview=false.
 ///   Mettre à false sur son propre profil (lecture seule silencieuse).
+/// [staticReviews] = avis fictifs pré-remplis pour les profils statiques (uid vide).
 class ReviewsPage extends StatefulWidget {
   final Mentor mentor;
   final bool canReview;
   final bool showLockedBanner;
+  final List<Review>? staticReviews;
 
   const ReviewsPage({
     super.key,
     required this.mentor,
     required this.canReview,
     this.showLockedBanner = true,
+    this.staticReviews,
   });
 
   @override
@@ -31,12 +34,14 @@ class ReviewsPage extends StatefulWidget {
 class _ReviewsPageState extends State<ReviewsPage> {
   final TextEditingController _ctrl = TextEditingController();
   bool _sending = false;
-  late final Stream<List<Review>> _stream;
+  late final Stream<List<Review>>? _stream;
 
   @override
   void initState() {
     super.initState();
-    _stream = InteractionsService.getReviews(widget.mentor.uid);
+    _stream = widget.staticReviews != null
+        ? null
+        : InteractionsService.getReviews(widget.mentor.uid);
   }
 
   @override
@@ -52,14 +57,27 @@ class _ReviewsPageState extends State<ReviewsPage> {
     final myUid = AuthService.currentUid ?? '';
     final myName = UserProfileController.profile.value.fullName;
     try {
-      await InteractionsService.addReview(
-        toUid: widget.mentor.uid,
-        fromUid: myUid,
-        fromName: myName.isNotEmpty ? myName : 'Utilisateur',
-        text: text,
-      );
+      // Mentor statique (uid vide) : pas d'écriture Firebase, succès local uniquement
+      if (widget.mentor.uid.isNotEmpty) {
+        await InteractionsService.addReview(
+          toUid: widget.mentor.uid,
+          fromUid: myUid,
+          fromName: myName.isNotEmpty ? myName : 'Utilisateur',
+          text: text,
+        );
+      }
       _ctrl.clear();
       if (mounted) FocusScope.of(context).unfocus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avis publié !'),
+            backgroundColor: AppColors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,6 +99,20 @@ class _ReviewsPageState extends State<ReviewsPage> {
       'juil', 'août', 'sep', 'oct', 'nov', 'déc',
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  Widget _buildList(List<Review> reviews, String firstName) {
+    if (reviews.isEmpty) return _EmptyState(firstName: firstName);
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      itemCount: reviews.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => _ReviewCard(
+        review: reviews[i],
+        formatDate: _fmt,
+        initials: _initials(reviews[i].fromName),
+      ),
+    );
   }
 
   /// Initiales à partir d'un nom complet.
@@ -132,28 +164,19 @@ class _ReviewsPageState extends State<ReviewsPage> {
         children: [
           // ── Liste des avis ──────────────────────────────────────
           Expanded(
-            child: StreamBuilder<List<Review>>(
-              stream: _stream,
-              builder: (ctx, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final reviews = snap.data ?? [];
-                if (reviews.isEmpty) {
-                  return _EmptyState(firstName: firstName);
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  itemCount: reviews.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) => _ReviewCard(
-                    review: reviews[i],
-                    formatDate: _fmt,
-                    initials: _initials(reviews[i].fromName),
+            child: widget.staticReviews != null
+                ? _buildList(widget.staticReviews!, firstName)
+                : StreamBuilder<List<Review>>(
+                    stream: _stream,
+                    builder: (ctx, snap) {
+                      if (snap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final reviews = snap.data ?? [];
+                      if (reviews.isEmpty) return _EmptyState(firstName: firstName);
+                      return _buildList(reviews, firstName);
+                    },
                   ),
-                );
-              },
-            ),
           ),
 
           // ── Zone basse : saisie, bannière verrouillée, ou rien ──

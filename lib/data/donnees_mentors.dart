@@ -19,6 +19,8 @@ class Mentor {
   final String uid;
   /// Photo base64 — vide pour les mentors statiques, rempli pour les membres Firebase.
   final String photoBase64;
+  /// Relation de mentorat pré-acceptée pour la démo (mentor statique uniquement).
+  final bool demoAccepted;
 
   const Mentor({
     required this.initials,
@@ -37,6 +39,7 @@ class Mentor {
     this.bio = '',
     this.uid = '',
     this.photoBase64 = '',
+    this.demoAccepted = false,
   });
 
   bool get isInvestor => role == 'Investisseur';
@@ -71,6 +74,7 @@ const mentors = <Mentor>[
     compatibility: 96,
     cis: true,
     gender: Gender.female,
+    demoAccepted: true,
   ),
   Mentor(
     initials: 'YS',
@@ -1576,6 +1580,7 @@ List<Mentor> recommendedMentorsFor({
 const allSectors = <String>[
   'Agro-industrie',
   'Agriculture',
+  'AgriTech',
   'Avicole',
   'Artisanat',
   'Automobile',
