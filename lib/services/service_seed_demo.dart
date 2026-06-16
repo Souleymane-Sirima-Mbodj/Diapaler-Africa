@@ -498,6 +498,79 @@ class SeedDemoService {
         fromUserId: _testInvestUid, fromName: 'Test',
         requestId: req6, daysAgo: 9);
 
+    // ── 9. Investisseur réel (Test) — demandes reçues + propositions envoyées ──
+
+    // Nettoyage : supprime les anciennes demandes d'investissement envoyées PAR l'investisseur
+    try {
+      final investSentSnap = await _db
+          .child('mentorRequests')
+          .orderByChild('fromUserId')
+          .equalTo(_testInvestUid)
+          .get();
+      if (investSentSnap.exists && investSentSnap.value != null) {
+        final data = Map<dynamic, dynamic>.from(investSentSnap.value as Map);
+        for (final key in data.keys) {
+          await _db.child('mentorRequests/$key').remove();
+        }
+      }
+    } catch (_) {}
+
+    // Reçues : entrepreneurs qui envoient des demandes d'investissement À l'investisseur
+    const reqInvIs = 'demo_inv_req_is_test';
+    await _db.child('mentorRequests/$reqInvIs').set({
+      'id': reqInvIs,
+      'fromUserId': _ibrahimaSarrUid, 'toUserId': _testInvestUid,
+      'fromName': 'Ibrahima Sarr', 'toName': 'Test',
+      'message': 'Bonjour, je suis fondateur de FarmLink, une plateforme AgriTech qui connecte les petits producteurs aux marchés locaux dans la région de Thiès. Je recherche un investissement de 8M FCFA pour financer notre phase de lancement commercial. Notre modèle est éprouvé avec 47 producteurs partenaires actifs.',
+      'type': 'investment', 'status': 'pending',
+      'createdAt': _daysAgo(2), 'respondedAt': null,
+    });
+
+    const reqInvFb = 'demo_inv_req_fb_test';
+    await _db.child('mentorRequests/$reqInvFb').set({
+      'id': reqInvFb,
+      'fromUserId': _fatouBaUid, 'toUserId': _testInvestUid,
+      'fromName': 'Fatou Ba', 'toName': 'Test',
+      'message': 'Bonjour, je co-fonde SantéDirect, une solution de téléconsultation pour les zones périurbaines. Nous cherchons 12M FCFA pour développer notre infrastructure et couvrir 5 nouvelles communes en 6 mois. 920 consultations réalisées depuis le lancement, taux de satisfaction 94 %.',
+      'type': 'investment', 'status': 'pending',
+      'createdAt': _daysAgo(5), 'respondedAt': null,
+    });
+
+    // Envoyées : l'investisseur propose son investissement à des entrepreneurs
+    const reqInvPropAbb = 'demo_inv_prop_test_abb';
+    await _db.child('mentorRequests/$reqInvPropAbb').set({
+      'id': reqInvPropAbb,
+      'fromUserId': _testInvestUid, 'toUserId': _alioubadBarryUid,
+      'fromName': 'Test', 'toName': 'Alioune Badara Barry',
+      'message': 'Bonjour Alioune Badara, j\'ai découvert le projet ShopAfrik et il correspond exactement à notre thèse d\'investissement sur le commerce de proximité digitalisé. Je souhaite vous proposer un accompagnement financier de 10M FCFA en échange d\'une prise de participation de 15 %. Seriez-vous disponible pour un échange ?',
+      'type': 'investment', 'status': 'accepted',
+      'createdAt': _daysAgo(6), 'respondedAt': _daysAgo(4),
+    });
+
+    const reqInvPropOk = 'demo_inv_prop_test_oumar';
+    await _db.child('mentorRequests/$reqInvPropOk').set({
+      'id': reqInvPropOk,
+      'fromUserId': _testInvestUid, 'toUserId': _oumarKaneUid,
+      'fromName': 'Test', 'toName': 'Oumar Kane',
+      'message': 'Bonjour Oumar, votre projet SolarKër répond à un besoin urgent en zones rurales non électrifiées. Je serais intéressé pour vous accompagner financièrement à hauteur de 6M FCFA pour accélérer vos déploiements dans la région de Thiès. Pouvons-nous en discuter ?',
+      'type': 'investment', 'status': 'pending',
+      'createdAt': _daysAgo(1), 'respondedAt': null,
+    });
+
+    // Notifications pour l'investisseur
+    await _notif(_testInvestUid, 'Nouvelle demande d\'investissement 💰',
+        'Fatou Ba cherche un investissement pour SantéDirect.',
+        'mentor_request', fromUserId: _fatouBaUid, fromName: 'Fatou Ba',
+        requestId: reqInvFb, daysAgo: 5);
+    await _notif(_testInvestUid, 'Nouvelle demande d\'investissement 💰',
+        'Ibrahima Sarr cherche un financement pour FarmLink.',
+        'mentor_request', fromUserId: _ibrahimaSarrUid, fromName: 'Ibrahima Sarr',
+        requestId: reqInvIs, daysAgo: 2);
+    await _notif(_testInvestUid, 'Proposition acceptée ✓',
+        'Alioune Badara Barry a accepté votre proposition d\'investissement.',
+        'mentor_request_accepted', fromUserId: _alioubadBarryUid,
+        fromName: 'Alioune Badara Barry', requestId: reqInvPropAbb, daysAgo: 4);
+
     // Mise à jour compteur mentorsActive
     await _db.child('users/$myUid').update({'mentorsActive': 6});
   }
@@ -530,6 +603,7 @@ class SeedDemoService {
       'yearsExperience': d['yearsExperience'] ?? 0,
       'investmentRange': d['investmentRange'] ?? '',
       'isPremium': false, 'premiumPlan': '',
+      'companies': d['companies'] ?? <String>[],
       'updatedAt': ServerValue.timestamp,
     });
   }

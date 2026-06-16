@@ -157,12 +157,19 @@ class _RequestsPageState extends State<RequestsPage>
           );
         }
 
-        // Un entrepreneur qui contacte un investisseur cherche du financement ;
-        // il ne "propose" pas d'investissement, donc on adapte le titre.
         final isEntrepreneur = role != 'Mentor' && role != 'Investisseur';
-        final investSectionTitle = (isSent && isEntrepreneur)
-            ? 'Demandes de financement'
-            : 'Propositions d\'investissement';
+        // Titres de section selon direction + rôle :
+        // Entrepreneur envoie → "Demandes de financement"
+        // Investisseur envoie → "Propositions d'investissement"
+        // Entrepreneur reçoit → "Propositions d'investissement"
+        // Investisseur reçoit → "Demandes d'investissement"
+        final investSectionTitle = isSent
+            ? (isEntrepreneur
+                ? 'Demandes de financement'
+                : 'Propositions d\'investissement')
+            : (isEntrepreneur
+                ? 'Propositions d\'investissement'
+                : 'Demandes d\'investissement');
         // Un mentor qui envoie des offres → "Offres de mentorat", pas "Demandes".
         final mentorSectionTitle = (isSent && role == 'Mentor')
             ? 'Offres de mentorat'
@@ -312,7 +319,10 @@ class _RequestCard extends StatelessWidget {
           : 'Demande de mentorat envoyée à ${request.toName}';
     }
     if (request.type == 'investment') {
-      return '${request.fromName} te propose un investissement';
+      // Investisseur reçoit une demande d'entrepreneur → il cherche, il ne propose pas.
+      return isEntrepreneur
+          ? '${request.fromName} te propose un investissement'
+          : '${request.fromName} cherche un investissement';
     }
     // Mentor qui offre son mentorat à un entrepreneur vs entrepreneur demandant.
     return isEntrepreneur

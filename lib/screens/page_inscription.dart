@@ -45,6 +45,10 @@ class _SignUpPageState extends State<SignUpPage> {
   Uint8List? _photoBytes;
   String _photoBase64 = '';
 
+  // Entreprises fondées/possédées (mentors/investisseurs)
+  final List<String> _companies = [];
+  final _companyCtrl = TextEditingController();
+
   // Sécurité
   final _phone = TextEditingController();
   final _password = TextEditingController();
@@ -80,6 +84,7 @@ class _SignUpPageState extends State<SignUpPage> {
     _confirm.dispose();
     _yearsExp.dispose();
     _investmentRange.dispose();
+    _companyCtrl.dispose();
     super.dispose();
   }
 
@@ -226,6 +231,9 @@ class _SignUpPageState extends State<SignUpPage> {
         photoBase64: photoData,
         interests: _interests.toList()..sort(),
         projects: const [],
+        companies: (_role == UserRole.mentor || _role == UserRole.investor)
+            ? List<String>.from(_companies)
+            : const [],
       );
       await DatabaseService.createUserProfile(uid, profile);
       UserProfileController.update(profile);
@@ -244,6 +252,15 @@ class _SignUpPageState extends State<SignUpPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _addCompany() {
+    final name = _companyCtrl.text.trim();
+    if (name.isEmpty || _companies.contains(name)) return;
+    setState(() {
+      _companies.add(name);
+      _companyCtrl.clear();
+    });
   }
 
   void _next() {
@@ -627,6 +644,87 @@ class _SignUpPageState extends State<SignUpPage> {
               hintText: 'Ex. 12',
             ),
           ),
+          const SizedBox(height: 12),
+        ],
+
+        // Entreprises fondées / possédées (Mentor + Investisseur)
+        if (_role == UserRole.mentor || _role == UserRole.investor) ...[
+          const _Label('Entreprises fondées / possédées'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _companyCtrl,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addCompany(),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.business_rounded,
+                        color: AppColors.subtle, size: 20),
+                    hintText: 'Nom de l\'entreprise…',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: _addCompany,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 44,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.navy,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: Colors.white, size: 22),
+                ),
+              ),
+            ],
+          ),
+          if (_companies.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _companies.map((c) {
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueTint,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                        color: AppColors.blue.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.business_rounded,
+                          size: 13, color: AppColors.blue),
+                      const SizedBox(width: 6),
+                      Text(
+                        c,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _companies.remove(c)),
+                        child: const Icon(Icons.close_rounded,
+                            size: 15, color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 4),
+          const _Hint(text: 'Optionnel — tu peux en ajouter plusieurs.'),
           const SizedBox(height: 12),
         ],
 

@@ -365,7 +365,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                               if (pending > 0)
                                 Positioned(
                                   top: -4,
-                                  right: -4,
+                                  right: 4,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 5, vertical: 2),

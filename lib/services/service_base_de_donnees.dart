@@ -165,6 +165,7 @@ class DatabaseService {
         'investmentRange': p.investmentRange,
         'isPremium': p.isPremium,
         'premiumPlan': p.premiumPlan,
+        'companies': p.companies,
         'updatedAt': ServerValue.timestamp,
       };
 
@@ -204,6 +205,14 @@ class DatabaseService {
       }
     }
 
+    final rawCompanies = m['companies'];
+    final companies = <String>[];
+    if (rawCompanies is List) {
+      for (final v in rawCompanies) {
+        companies.add(v.toString());
+      }
+    }
+
     DateTime? birth;
     final rawBirth = m['birthDate']?.toString();
     if (rawBirth != null && rawBirth.isNotEmpty) {
@@ -235,6 +244,7 @@ class DatabaseService {
       investmentRange: m['investmentRange']?.toString() ?? '',
       isPremium: (m['isPremium'] as bool?) ?? false,
       premiumPlan: m['premiumPlan']?.toString() ?? '',
+      companies: companies,
     );
   }
 }

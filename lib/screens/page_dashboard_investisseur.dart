@@ -346,7 +346,7 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                               if (pending > 0)
                                 Positioned(
                                   top: -4,
-                                  right: -4,
+                                  right: 4,
                                   child: Container(
                                     width: 18,
                                     height: 18,

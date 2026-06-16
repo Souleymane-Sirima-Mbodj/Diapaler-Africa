@@ -46,7 +46,7 @@ Mentor _mentorFromProfile(UserProfile p, String uid) {
     city: p.city,
     sectors:
         p.interests.isNotEmpty ? p.interests : (p.sector.isNotEmpty ? [p.sector] : ['—']),
-    companies: const [],
+    companies: p.companies,
     rating: p.score.toDouble(),
     reviews: 0,
     years: p.yearsExperience,

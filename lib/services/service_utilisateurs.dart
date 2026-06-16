@@ -42,6 +42,13 @@ class UsersService {
           sectors.add(s.toString());
         }
       }
+      final rawCompanies = m['companies'];
+      final companies = <String>[];
+      if (rawCompanies is List) {
+        for (final c in rawCompanies) {
+          companies.add(c.toString());
+        }
+      }
       result.add(Mentor(
         uid: uid,
         initials: _initials(m['firstName']?.toString() ?? '',
@@ -50,7 +57,7 @@ class UsersService {
         title: m['sector']?.toString() ?? '',
         city: m['city']?.toString() ?? 'Dakar',
         sectors: sectors,
-        companies: const [],
+        companies: companies,
         rating: (m['score'] as num?)?.toDouble() ?? 0.0,
         reviews: 0,
         years: (m['yearsExperience'] as num?)?.toInt() ?? 0,

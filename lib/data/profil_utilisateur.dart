@@ -121,6 +121,9 @@ class UserProfile {
   /// Plan Premium souscrit : 'entrepreneur' | 'mentor' | 'investisseur' | ''.
   final String premiumPlan;
 
+  /// Entreprises fondées / possédées (mentors et investisseurs principalement).
+  final List<String> companies;
+
   const UserProfile({
     required this.firstName,
     required this.lastName,
@@ -146,6 +149,7 @@ class UserProfile {
     this.investmentRange = '',
     this.isPremium = false,
     this.premiumPlan = '',
+    this.companies = const [],
   });
 
   String get fullName => '$firstName $lastName';
@@ -211,6 +215,7 @@ class UserProfile {
     String? investmentRange,
     bool? isPremium,
     String? premiumPlan,
+    List<String>? companies,
   }) {
     return UserProfile(
       firstName: firstName ?? this.firstName,
@@ -237,6 +242,7 @@ class UserProfile {
       investmentRange: investmentRange ?? this.investmentRange,
       isPremium: isPremium ?? this.isPremium,
       premiumPlan: premiumPlan ?? this.premiumPlan,
+      companies: companies ?? this.companies,
     );
   }
 }

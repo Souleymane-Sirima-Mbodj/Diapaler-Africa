@@ -45,7 +45,7 @@ class _ProfilPublicPageState extends State<ProfilPublicPage> {
       sectors: p.interests.isNotEmpty
           ? p.interests
           : (p.sector.isNotEmpty ? [p.sector] : []),
-      companies: const [],
+      companies: p.companies,
       rating: p.score,
       reviews: 0,
       years: p.yearsExperience,
