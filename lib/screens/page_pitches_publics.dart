@@ -578,12 +578,15 @@ class _PitchCard extends StatelessWidget {
                   const Icon(Icons.rocket_launch_rounded,
                       size: 14, color: AppColors.muted),
                   const SizedBox(width: 5),
-                  Text(
-                    isInvestor
-                        ? 'Pitch · Opportunité d\'investissement'
-                        : 'Pitch publié · En attente de mentor',
-                    style: const TextStyle(
-                        fontSize: 11.5, color: AppColors.muted),
+                  Flexible(
+                    child: Text(
+                      isInvestor
+                          ? 'Pitch · Opportunité d\'investissement'
+                          : 'Pitch publié · En attente de mentor',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AppColors.muted),
+                    ),
                   ),
                   const Spacer(),
                   // Partager
@@ -721,7 +724,7 @@ class PitchDetailSheet extends StatelessWidget {
     final sector = pitch['sector']?.toString() ?? '';
     final description = pitch['description']?.toString() ?? '';
     final amount = pitch['amount']?.toString() ?? '';
-    final pdfUrl = pitch['pdfUrl']?.toString() ?? '';
+    final pdfUrl = pitch['businessPlanUrl']?.toString() ?? '';
     final videoUrl = pitch['videoUrl']?.toString() ?? '';
     final isInvestor = UserProfileController.profile.value.role == 'Investisseur';
 

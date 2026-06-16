@@ -19,6 +19,8 @@ class RequestsPage extends StatefulWidget {
 class _RequestsPageState extends State<RequestsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late Stream<List<MentorRequest>> _receivedStream;
+  late Stream<List<MentorRequest>> _sentStream;
 
   @override
   void initState() {
@@ -28,6 +30,9 @@ class _RequestsPageState extends State<RequestsPage>
       vsync: this,
       initialIndex: widget.initialTab.clamp(0, 1),
     );
+    final uid = AuthService.currentUid ?? '';
+    _receivedStream = InteractionsService.getReceivedRequests(uid);
+    _sentStream = InteractionsService.getSentRequests(uid);
   }
 
   @override
@@ -93,7 +98,23 @@ class _RequestsPageState extends State<RequestsPage>
           );
         }
 
-        final requests = snapshot.data ?? [];
+        final role = UserProfileController.profile.value.role;
+        final all = snapshot.data ?? [];
+
+        // Filtrage par rôle : chaque rôle ne voit que les types qui le concernent.
+        final List<MentorRequest> requests;
+        if (role == 'Mentor') {
+          // Reçues : demandes de mentorat (entrepreneurs → mentor).
+          // Envoyées : offres de mentorat (mentor → entrepreneur).
+          requests = all.where((r) => r.type == 'mentor').toList();
+        } else if (role == 'Investisseur') {
+          // Reçues & envoyées : uniquement propositions d'investissement.
+          requests = all.where((r) => r.type == 'investment').toList();
+        } else {
+          // Entrepreneur : tout sauf les sessions (gérées par l'Agenda).
+          requests = all.where((r) => r.type != 'session').toList();
+        }
+
         final mentorRequests =
             requests.where((r) => r.type == 'mentor').toList();
         final investmentRequests =
@@ -167,8 +188,6 @@ class _RequestsPageState extends State<RequestsPage>
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = AuthService.currentUid ?? '';
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -204,14 +223,8 @@ class _RequestsPageState extends State<RequestsPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRequestList(
-            InteractionsService.getReceivedRequests(currentUid),
-            isSent: false,
-          ),
-          _buildRequestList(
-            InteractionsService.getSentRequests(currentUid),
-            isSent: true,
-          ),
+          _buildRequestList(_receivedStream, isSent: false),
+          _buildRequestList(_sentStream, isSent: true),
         ],
       ),
     );

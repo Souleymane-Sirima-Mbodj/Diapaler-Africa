@@ -548,15 +548,75 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   (notif.type == 'investment_offer' ||
                    notif.type == 'session_request' ||
                    notif.type == 'mentor_request');
-              return _NotificationTile(
-                notification: notif,
-                onTap: () {
-                  NotificationService.markAsRead(notif.id);
-                  _handleNotifTap(context, notif);
+              return Dismissible(
+                key: ValueKey(notif.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.red,
+                    size: 26,
+                  ),
+                ),
+                confirmDismiss: (_) async {
+                  // Les notifs avec actions inline demandent confirmation
+                  if (showInlineActions) {
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        title: const Text(
+                          'Supprimer cette notification ?',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.navyDeep,
+                          ),
+                        ),
+                        content: const Text(
+                          'Les boutons Accepter / Refuser ne seront plus accessibles depuis les notifications.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.muted,
+                              height: 1.4),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Annuler',
+                                style: TextStyle(color: AppColors.muted)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Supprimer',
+                                style: TextStyle(
+                                    color: AppColors.red,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                        ],
+                      ),
+                    ) ?? false;
+                  }
+                  return true;
                 },
-                inlineActions: showInlineActions
-                    ? _buildInlineActions(context, notif)
-                    : null,
+                onDismissed: (_) => NotificationService.deleteOne(notif.id),
+                child: _NotificationTile(
+                  notification: notif,
+                  onTap: () {
+                    NotificationService.markAsRead(notif.id);
+                    _handleNotifTap(context, notif);
+                  },
+                  inlineActions: showInlineActions
+                      ? _buildInlineActions(context, notif)
+                      : null,
+                ),
               );
             },
           );
