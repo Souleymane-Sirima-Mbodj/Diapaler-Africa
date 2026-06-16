@@ -303,7 +303,9 @@ class _RequestCard extends StatelessWidget {
             ? 'Demande de financement envoyée à ${request.toName}'
             : 'Investissement proposé à ${request.toName}';
       }
-      return 'Demande de mentorat envoyée à ${request.toName}';
+      return role == 'Mentor'
+          ? 'Offre de mentorat envoyée à ${request.toName}'
+          : 'Demande de mentorat envoyée à ${request.toName}';
     }
     if (request.type == 'investment') {
       return '${request.fromName} te propose un investissement';
