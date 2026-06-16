@@ -18,7 +18,7 @@ class SeedDemoService {
   static const _ibrahimaSarrUid = 'demo_entr_ibrahima_sarr';
   static const _fatouBaUid      = 'demo_entr_fatou_ba';
   // Entrepreneur qui reçoit une offre de Mohamed (pour son onglet Envoyées)
-  static const _mariameSyUid    = 'demo_entr_mariame_sy';
+  static const _alioubadBarryUid = 'demo_entr_alioune_badara_barry';
 
   // UIDs réels de vrais comptes Firebase
   static const _mohamedNiangUid = 'iBu5zkFzocPW8yuRGcXB9pCH3ss2'; // Mentor
@@ -61,14 +61,14 @@ class SeedDemoService {
       'investmentRange': '5M - 50M FCFA',
     });
 
-    await _tryPutProfile(_mariameSyUid, {
-      'firstName': 'Mariame', 'lastName': 'Sy',
-      'email': 'mariame.sy@demo.sn',
-      'role': 'Entrepreneur', 'gender': 'female',
-      'city': 'Saint-Louis', 'country': 'Sénégal', 'sector': 'EdTech',
-      'bio': 'Fondatrice de LearnWave, une plateforme d\'apprentissage en ligne pour les lycéens des zones rurales au Sénégal. Ancienne enseignante reconvertie en entrepreneuse.',
-      'interests': ['EdTech', 'Éducation rurale', 'E-learning'],
-      'score': 0.0, 'yearsExperience': 1,
+    await _tryPutProfile(_alioubadBarryUid, {
+      'firstName': 'Alioune Badara', 'lastName': 'Barry',
+      'email': 'alioune.barry@demo.sn',
+      'role': 'Entrepreneur', 'gender': 'male',
+      'city': 'Dakar', 'country': 'Sénégal', 'sector': 'E-commerce',
+      'bio': 'Fondateur de ShopAfrik, une marketplace locale qui connecte artisans et boutiques de quartier aux consommateurs urbains. 2 ans d\'activité avec 150 marchands référencés à Dakar.',
+      'interests': ['E-commerce', 'Artisanat local', 'Commerce de proximité'],
+      'score': 0.0, 'yearsExperience': 2,
     });
 
     await _tryPutProfile(_ibrahimaSarrUid, {
@@ -397,12 +397,12 @@ class SeedDemoService {
     } catch (_) {}
 
     // Offre de mentorat envoyée PAR Mohamed à Mariame Sy (Envoyées de Mohamed)
-    const reqMmnOffer = 'demo_mr_mmn_offer_mariame';
+    const reqMmnOffer = 'demo_mr_mmn_offer_abb';
     await _db.child('mentorRequests/$reqMmnOffer').set({
       'id': reqMmnOffer,
-      'fromUserId': _mohamedNiangUid, 'toUserId': _mariameSyUid,
-      'fromName': 'Mohamed Moctar Niang', 'toName': 'Mariame Sy',
-      'message': 'Bonjour Mariame, j\'ai parcouru votre profil et votre projet LearnWave m\'a vraiment interpellé. Fort de mes 12 ans d\'expérience dans l\'accompagnement de startups africaines, je pense pouvoir apporter une valeur réelle à votre développement. Je vous propose mon mentorat — n\'hésitez pas si cela vous intéresse !',
+      'fromUserId': _mohamedNiangUid, 'toUserId': _alioubadBarryUid,
+      'fromName': 'Mohamed Moctar Niang', 'toName': 'Alioune Badara Barry',
+      'message': 'Bonjour Alioune Badara, j\'ai consulté votre profil et le projet ShopAfrik m\'a vraiment interpellé. Fort de mes 12 ans d\'expérience dans l\'accompagnement de startups africaines, je pense pouvoir vous apporter une vraie valeur ajoutée. Je vous propose mon mentorat — n\'hésitez pas si cela vous intéresse !',
       'type': 'mentor', 'status': 'pending',
       'createdAt': _daysAgo(2), 'respondedAt': null,
     });
