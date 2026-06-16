@@ -42,7 +42,11 @@ class _RequestsPageState extends State<RequestsPage>
   }
 
   /// Construit les widgets d'une section (pending en premier, puis traitées).
-  List<Widget> _buildSection(List<MentorRequest> items, {required bool isSent}) {
+  List<Widget> _buildSection(
+    List<MentorRequest> items, {
+    required bool isSent,
+    required String role,
+  }) {
     final pending = items.where((r) => r.status == RequestStatus.pending).toList();
     final processed = items.where((r) => r.status != RequestStatus.pending).toList();
     return [
@@ -58,7 +62,7 @@ class _RequestsPageState extends State<RequestsPage>
             ),
           ),
         ),
-        ...pending.map((r) => _RequestCard(request: r, isSent: isSent)),
+        ...pending.map((r) => _RequestCard(request: r, isSent: isSent, role: role)),
       ],
       if (processed.isNotEmpty) ...[
         const SizedBox(height: 8),
@@ -73,7 +77,7 @@ class _RequestsPageState extends State<RequestsPage>
             ),
           ),
         ),
-        ...processed.map((r) => _RequestCard(request: r, isSent: isSent)),
+        ...processed.map((r) => _RequestCard(request: r, isSent: isSent, role: role)),
       ],
     ];
   }
@@ -99,20 +103,25 @@ class _RequestsPageState extends State<RequestsPage>
         }
 
         final role = UserProfileController.profile.value.role;
+        final currentUid = AuthService.currentUid ?? '';
         final all = snapshot.data ?? [];
+
+        // Garde de direction côté client : garantit que "Envoyées" ne contient
+        // que des demandes dont fromUserId == moi, et "Reçues" toUserId == moi.
+        // Filet de sécurité si le filtre Firebase côté serveur est imparfait.
+        final directionOk = isSent
+            ? all.where((r) => r.fromUserId == currentUid).toList()
+            : all.where((r) => r.toUserId == currentUid).toList();
 
         // Filtrage par rôle : chaque rôle ne voit que les types qui le concernent.
         final List<MentorRequest> requests;
         if (role == 'Mentor') {
-          // Reçues : demandes de mentorat (entrepreneurs → mentor).
-          // Envoyées : offres de mentorat (mentor → entrepreneur).
-          requests = all.where((r) => r.type == 'mentor').toList();
+          requests = directionOk.where((r) => r.type == 'mentor').toList();
         } else if (role == 'Investisseur') {
-          // Reçues & envoyées : uniquement propositions d'investissement.
-          requests = all.where((r) => r.type == 'investment').toList();
+          requests = directionOk.where((r) => r.type == 'investment').toList();
         } else {
           // Entrepreneur : tout sauf les sessions (gérées par l'Agenda).
-          requests = all.where((r) => r.type != 'session').toList();
+          requests = directionOk.where((r) => r.type != 'session').toList();
         }
 
         final mentorRequests =
@@ -148,6 +157,13 @@ class _RequestsPageState extends State<RequestsPage>
           );
         }
 
+        // Un entrepreneur qui contacte un investisseur cherche du financement ;
+        // il ne "propose" pas d'investissement, donc on adapte le titre.
+        final isEntrepreneur = role != 'Mentor' && role != 'Investisseur';
+        final investSectionTitle = (isSent && isEntrepreneur)
+            ? 'Demandes de financement'
+            : 'Propositions d\'investissement';
+
         return ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
@@ -163,22 +179,22 @@ class _RequestsPageState extends State<RequestsPage>
                   ),
                 ),
               ),
-              ..._buildSection(mentorRequests, isSent: isSent),
+              ..._buildSection(mentorRequests, isSent: isSent, role: role),
             ],
             if (investmentRequests.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                 child: Text(
-                  'Propositions d\'investissement',
-                  style: TextStyle(
+                  investSectionTitle,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     color: AppColors.navyDeep,
                   ),
                 ),
               ),
-              ..._buildSection(investmentRequests, isSent: isSent),
+              ..._buildSection(investmentRequests, isSent: isSent, role: role),
             ],
           ],
         );
@@ -239,8 +255,10 @@ class _RequestCard extends StatelessWidget {
   final MentorRequest request;
   /// true si c'est une demande envoyée par l'utilisateur courant
   final bool isSent;
+  /// rôle de l'utilisateur courant ('Mentor', 'Investisseur', ou autre)
+  final String role;
 
-  const _RequestCard({required this.request, this.isSent = false});
+  const _RequestCard({required this.request, this.isSent = false, this.role = ''});
 
   Color _getStatusColor() {
     switch (request.status) {
@@ -277,13 +295,22 @@ class _RequestCard extends StatelessWidget {
       : AppColors.amber;
 
   String get _typeSubtitle {
+    final isEntrepreneur = role != 'Mentor' && role != 'Investisseur';
     if (isSent) {
-      return request.type == 'investment'
-          ? 'Investissement proposé à ${request.toName}'
-          : 'Demande de mentorat envoyée à ${request.toName}';
+      if (request.type == 'investment') {
+        // Entrepreneur cherchant du financement vs investisseur proposant.
+        return isEntrepreneur
+            ? 'Demande de financement envoyée à ${request.toName}'
+            : 'Investissement proposé à ${request.toName}';
+      }
+      return 'Demande de mentorat envoyée à ${request.toName}';
     }
-    return request.type == 'investment'
-        ? '${request.fromName} te propose un investissement'
+    if (request.type == 'investment') {
+      return '${request.fromName} te propose un investissement';
+    }
+    // Mentor qui offre son mentorat à un entrepreneur vs entrepreneur demandant.
+    return isEntrepreneur
+        ? '${request.fromName} te propose du mentorat'
         : '${request.fromName} te demande du mentorat';
   }
 
