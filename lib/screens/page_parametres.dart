@@ -57,12 +57,12 @@ class ParametresPage extends StatelessWidget {
           const SizedBox(height: 4),
 
           // ── Aide ─────────────────────────────────────────────────
-          _SectionHeader('Aide & support'),
+          _SectionHeader('Support'),
           _SettingsTile(
             icon: Icons.help_outline_rounded,
             label: 'Aide & support',
             subtitle: 'FAQ, contact, guide d\'utilisation',
-            onTap: () => Navigator.of(context).push(
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => const AidePage()),
             ),
           ),
