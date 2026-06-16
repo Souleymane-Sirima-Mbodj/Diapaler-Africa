@@ -9,6 +9,34 @@ import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_detail_mentor.dart';
 
+/// Crée un [Mentor] minimal depuis les données du mentorRequest quand le profil est introuvable.
+Mentor _mentorFromRequest(Map<String, dynamic> req, String uid, String type) {
+  final name = type == 'mentor'
+      ? req['toName']?.toString() ?? uid
+      : req['fromName']?.toString() ?? uid;
+  final parts = name.trim().split(RegExp(r'\s+'));
+  final initials = parts.length >= 2
+      ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+      : name.isNotEmpty ? name[0].toUpperCase() : '?';
+  return Mentor(
+    initials: initials,
+    name: name,
+    title: type == 'mentor' ? 'Mentor' : 'Investisseur',
+    city: '',
+    sectors: const [],
+    companies: const [],
+    rating: 0,
+    reviews: 0,
+    years: 0,
+    compatibility: 0,
+    cis: false,
+    role: type == 'mentor' ? 'Mentor' : 'Investisseur',
+    bio: '',
+    uid: uid,
+    photoBase64: '',
+  );
+}
+
 /// Convertit un [UserProfile] Firebase en objet [Mentor].
 Mentor _mentorFromProfile(UserProfile p, String uid) {
   return Mentor(
@@ -117,18 +145,18 @@ class _MesMentorsPageState extends State<MesMentorsPage>
 
           try {
             final profile = await DatabaseService.readUserProfile(profileUid);
-            if (profile != null) {
-              final contactEntry = _ContactEntry(
-                requestId: entry.key,
-                mentor: _mentorFromProfile(profile, profileUid),
-                fromUserId: fromUid,
-                toUserId: toUid,
-              );
-              if (type == 'mentor') {
-                mentors.add(contactEntry);
-              } else {
-                investors.add(contactEntry);
-              }
+            final contactEntry = _ContactEntry(
+              requestId: entry.key,
+              mentor: profile != null
+                  ? _mentorFromProfile(profile, profileUid)
+                  : _mentorFromRequest(m, profileUid, type),
+              fromUserId: fromUid,
+              toUserId: toUid,
+            );
+            if (type == 'mentor') {
+              mentors.add(contactEntry);
+            } else {
+              investors.add(contactEntry);
             }
           } catch (_) {}
         }
@@ -181,10 +209,11 @@ class _MesMentorsPageState extends State<MesMentorsPage>
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await InteractionsService.cancelRequest(
-        requestId: entry.requestId,
-        fromUserId: entry.fromUserId,
-        toUserId: entry.toUserId,
+      final myUid = AuthService.currentUid ?? '';
+      final otherUid = entry.fromUserId == myUid ? entry.toUserId : entry.fromUserId;
+      await InteractionsService.cancelAllRequestsWith(
+        myUid: myUid,
+        otherUid: otherUid,
       );
       // Met à jour le compteur local immédiatement
       final p = UserProfileController.profile.value;

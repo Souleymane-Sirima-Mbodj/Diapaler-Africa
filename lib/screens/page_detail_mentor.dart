@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import '../data/avis_statiques.dart';
 import '../data/donnees_mentors.dart';
 import '../data/interactions.dart';
 import '../data/profil_utilisateur.dart';
@@ -13,6 +14,7 @@ import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_avis.dart';
 import 'page_chat.dart';
+import 'page_pitches_publics.dart';
 import 'page_send_request.dart';
 
 /// Construit la bio à afficher dans le détail d'un mentor.
@@ -148,8 +150,13 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
   Future<void> _checkRequestStatus() async {
     final mentor = widget.mentor;
 
+    // Mentor demo : relation pré-acceptée sans Firebase
+    if (mentor.demoAccepted) {
+      setState(() => _requestAccepted = true);
+      return;
+    }
+
     // Profils statiques (uid vide) : pas de vérification Firebase
-    // Le bloc boutons est masqué directement dans le Builder pour ces profils.
     if (mentor.uid.isEmpty) {
       setState(() => _requestAccepted = false);
       return;
@@ -174,10 +181,11 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         setState(() => _requestAccepted = false);
         return;
       }
-      // Vérification bidirectionnelle : une demande acceptée dans n'importe quel sens
+      // Vérifie uniquement les relations de type 'mentor' acceptées
       final accepted = data.values.any((v) {
         if (v is! Map) return false;
         if (v['status'] != 'accepted') return false;
+        if (v['type']?.toString() != 'mentor') return false;
         final from = v['fromUserId']?.toString() ?? '';
         final to = v['toUserId']?.toString() ?? '';
         return (from == myUid && to == mentor.uid) ||
@@ -294,6 +302,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                               size: 70,
                               background: AppColors.amber,
                               foreground: AppColors.navyDeep,
+                              photoBase64: mentor.photoBase64,
+                              tappable: true,
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -429,8 +439,20 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                                   : _HeroStat(
                                       icon: Icons.reviews_rounded,
                                       color: AppColors.purple,
-                                      value: '${mentor.reviews}',
+                                      value: () {
+                                        final s = staticReviewsFor(mentor.name);
+                                        return s.isNotEmpty ? '${s.length}' : '${mentor.reviews}';
+                                      }(),
                                       label: 'Avis',
+                                      onTap: () => Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ReviewsPage(
+                                            mentor: mentor,
+                                            canReview: mentor.demoAccepted,
+                                            staticReviews: staticReviewsFor(mentor.name),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                             ),
                           ],
@@ -539,7 +561,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   final isViewingEntrepreneur = mentor.role == 'Entrepreneur' ||
                       mentor.role == 'Entrepreneure';
 
-                  // ─── Mentor → Entrepreneur : bouton Message ──────────
+                  // ─── Mentor → Entrepreneur ───────────────────────────
                   if (myRole == 'Mentor' &&
                       isViewingEntrepreneur &&
                       mentor.uid.isNotEmpty) {
@@ -550,34 +572,63 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    if (!_requestAccepted!) return const SizedBox.shrink();
+                    // Relation acceptée → bouton Message
+                    if (_requestAccepted!) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              final myUid = AuthService.currentUid ??
+                                  UserProfileController.profile.value.email;
+                              final convId =
+                                  InteractionsService.generateConversationId(
+                                      myUid, mentor.uid);
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ChatPage(
+                                    conversationId: convId,
+                                    otherUserName: mentor.name,
+                                    otherUserId: mentor.uid,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline_rounded,
+                                size: 18),
+                            label: const Text('Envoyer un message'),
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    // Pas encore de relation → le mentor peut proposer son mentorat
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            final myUid = AuthService.currentUid ??
-                                UserProfileController.profile.value.email;
-                            final convId =
-                                InteractionsService.generateConversationId(
-                                    myUid, mentor.uid);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ChatPage(
-                                  conversationId: convId,
-                                  otherUserName: mentor.name,
-                                  otherUserId: mentor.uid,
-                                ),
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SendRequestPage(
+                                mentor: mentor,
+                                fromMentor: true,
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.chat_bubble_outline_rounded,
-                              size: 18),
-                          label: const Text('Envoyer un message'),
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                          icon: const Icon(Icons.handshake_rounded, size: 18),
+                          label: const Text(
+                            'Proposer du mentorat',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.roleMentor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
@@ -594,8 +645,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   }
 
                   // Profil statique (démo) → montrer le bouton de demande
-                  // (uid vide = pas d'état d'acceptation à vérifier)
-                  if (mentor.uid.isEmpty) {
+                  // (sauf demoAccepted : on laisse passer au bloc "acceptée")
+                  if (mentor.uid.isEmpty && !mentor.demoAccepted) {
                     final isInvestorViewing = myRole == 'Investisseur';
                     final isInvestorProfile = mentor.isInvestor;
                     final IconData actionIcon =
@@ -1479,9 +1530,90 @@ class _PitchPreviewCard extends StatelessWidget {
         : _description;
   }
 
+  void _showDetail(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => PitchDetailSheet(
+        pitch: pitch,
+        onInvest: (budget, message) =>
+            _sendInvestmentRequest(context, budget: budget, message: message),
+      ),
+    );
+  }
+
+  Future<void> _sendInvestmentRequest(
+    BuildContext context, {
+    required String budget,
+    required String message,
+  }) async {
+    final currentUid = AuthService.currentUid;
+    final profile = UserProfileController.profile.value;
+    final toUserId = pitch['userId']?.toString() ?? '';
+    final toName = pitch['userName']?.toString() ?? 'Entrepreneur';
+
+    if (currentUid == null || toUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d\'envoyer la proposition.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final fullMessage = [
+      message.isNotEmpty
+          ? message
+          : 'Je souhaite investir dans votre projet "${pitch['title'] ?? ''}".',
+      if (budget.isNotEmpty) 'Budget proposé : $budget FCFA.',
+    ].join('\n');
+
+    try {
+      final reqId = await InteractionsService.sendMentorRequest(
+        fromUserId: currentUid,
+        toUserId: toUserId,
+        fromName: profile.fullName,
+        toName: toName,
+        message: fullMessage,
+        type: 'investment',
+      );
+      await NotificationService.notifyUser(
+        uid: toUserId,
+        title: 'Proposition d\'investissement 💰',
+        message:
+            '${profile.fullName} souhaite investir${budget.isNotEmpty ? " (budget : $budget FCFA)" : ""} dans votre projet "${pitch['title'] ?? ''}".',
+        type: 'investment_offer',
+        requestId: reqId,
+        fromUserId: currentUid,
+        fromName: profile.fullName,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Proposition d\'investissement envoyée à $toName.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.green,
+      ));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de l\'envoi de la proposition.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1559,6 +1691,7 @@ class _PitchPreviewCard extends StatelessWidget {
           ],
         ],
       ),
+    ),
     );
   }
 }

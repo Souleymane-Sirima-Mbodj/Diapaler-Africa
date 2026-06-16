@@ -75,9 +75,9 @@ class _MessagesPageState extends State<MessagesPage>
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
     _currentUid = AuthService.currentUid ?? '';
-    // Streams créés une seule fois — ne se réinitialisent pas lors des rebuilds.
-    _contactsStream =
-        FirebaseDatabase.instance.ref('mentorRequests').onValue;
+    // Streams partagés depuis InteractionsService (broadcast) — évite
+    // "already listened" quand TabBarView monte les deux onglets à la fois.
+    _contactsStream = InteractionsService.mentorRequestsEvents;
     _messagesStream = InteractionsService.getConversations(_currentUid);
   }
 

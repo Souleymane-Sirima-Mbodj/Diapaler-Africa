@@ -599,13 +599,6 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
         const SizedBox(height: 18),
-        // Secteur d'activité (tous les rôles)
-        _LabelRequired(_role == UserRole.mentor
-            ? 'Secteur principal'
-            : _role == UserRole.investor
-                ? "Secteur d'investissement"
-                : "Secteur d'activité"),
-        const SizedBox(height: 6),
         _InlineDropdown(
           label: _role == UserRole.mentor
               ? 'Secteur principal'
