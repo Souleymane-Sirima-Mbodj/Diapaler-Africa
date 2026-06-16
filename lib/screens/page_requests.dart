@@ -163,16 +163,20 @@ class _RequestsPageState extends State<RequestsPage>
         final investSectionTitle = (isSent && isEntrepreneur)
             ? 'Demandes de financement'
             : 'Propositions d\'investissement';
+        // Un mentor qui envoie des offres → "Offres de mentorat", pas "Demandes".
+        final mentorSectionTitle = (isSent && role == 'Mentor')
+            ? 'Offres de mentorat'
+            : 'Demandes de mentorat';
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
           children: [
             if (mentorRequests.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                 child: Text(
-                  'Demandes de mentorat',
-                  style: TextStyle(
+                  mentorSectionTitle,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     color: AppColors.navyDeep,
