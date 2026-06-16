@@ -134,22 +134,22 @@ class SeedDemoService {
     });
 
     // ── 2b. Demandes de mentorat EN ATTENTE reçues d'entrepreneurs ──
-    final reqIs = 'demo_mr_is_$short';
+    final reqIs = 'demo_mr_is_mmn';
     await _db.child('mentorRequests/$reqIs').set({
       'id': reqIs,
-      'fromUserId': _ibrahimaSarrUid, 'toUserId': myUid,
-      'fromName': 'Ibrahima Sarr', 'toName': 'Souleymane Sirima Mbodj',
-      'message': 'Bonjour Souleymane, j\'ai découvert votre parcours avec PayFlow et votre expérience sur le marché informel m\'inspire beaucoup. Je développe FarmLink en AgriTech et je cherche un mentor qui comprend les réalités du terrain en Afrique de l\'Ouest. Seriez-vous disponible pour m\'accompagner ?',
+      'fromUserId': _ibrahimaSarrUid, 'toUserId': _mohamedNiangUid,
+      'fromName': 'Ibrahima Sarr', 'toName': 'Mohamed Moctar Niang',
+      'message': 'Bonjour Mohamed, j\'ai découvert votre parcours en entrepreneuriat africain et votre expertise me semble idéale pour m\'accompagner. Je développe FarmLink, une plateforme AgriTech qui connecte les petits producteurs aux marchés locaux dans la région de Thiès. Seriez-vous disponible pour un mentorat ?',
       'type': 'mentor', 'status': 'pending',
       'createdAt': _daysAgo(1), 'respondedAt': null,
     });
 
-    final reqFb = 'demo_mr_fb_$short';
+    final reqFb = 'demo_mr_fb_mmn';
     await _db.child('mentorRequests/$reqFb').set({
       'id': reqFb,
-      'fromUserId': _fatouBaUid, 'toUserId': myUid,
-      'fromName': 'Fatou Ba', 'toName': 'Souleymane Sirima Mbodj',
-      'message': 'Bonjour Souleymane ! Je suis co-fondatrice de SantéDirect, une app de téléconsultation pour les zones périurbaines. Votre expérience en acquisition utilisateurs et en réglementation me serait très précieuse. J\'aimerais beaucoup bénéficier de votre mentorat pour passer à l\'étape de scale-up.',
+      'fromUserId': _fatouBaUid, 'toUserId': _mohamedNiangUid,
+      'fromName': 'Fatou Ba', 'toName': 'Mohamed Moctar Niang',
+      'message': 'Bonjour Mohamed ! Je suis co-fondatrice de SantéDirect, une solution de téléconsultation pour les zones périurbaines. Votre expérience en structuration de startup et en levée de fonds serait précieuse pour notre scale-up. J\'aimerais bénéficier de votre mentorat.',
       'type': 'mentor', 'status': 'pending',
       'createdAt': _daysAgo(3), 'respondedAt': null,
     });
@@ -233,10 +233,10 @@ class SeedDemoService {
     await _notif(myUid, 'Pitch consulté 👀',
         'Votre pitch PayFlow a été consulté par 12 investisseurs cette semaine.',
         'pitch_viewed', daysAgo: 3);
-    await _notif(myUid, 'Nouvelle demande de mentorat 🤝',
+    await _notif(_mohamedNiangUid, 'Nouvelle demande de mentorat 🤝',
         'Fatou Ba souhaite bénéficier de votre mentorat pour SantéDirect.',
         'mentor_request', fromUserId: _fatouBaUid, fromName: 'Fatou Ba', requestId: reqFb, daysAgo: 3);
-    await _notif(myUid, 'Nouvelle demande de mentorat 🤝',
+    await _notif(_mohamedNiangUid, 'Nouvelle demande de mentorat 🤝',
         'Ibrahima Sarr vous contacte pour un accompagnement sur FarmLink.',
         'mentor_request', fromUserId: _ibrahimaSarrUid, fromName: 'Ibrahima Sarr', requestId: reqIs, daysAgo: 1);
 
