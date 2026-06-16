@@ -9,10 +9,14 @@ class SeedDemoService {
   static final _db = FirebaseDatabase.instance.ref();
 
   // UIDs fictifs stables pour les contacts démo
-  static const _papeDioufUid   = 'demo_mentor_pape_diouf';
+  static const _papeDioufUid    = 'demo_mentor_pape_diouf';
   static const _aminataNianeUid = 'demo_mentor_aminata_niane';
   static const _yassineDialloUid = 'demo_investor_yassine_diallo';
-  static const _awaCisseUid    = 'demo_investor_awa_cisse';
+  static const _awaCisseUid     = 'demo_investor_awa_cisse';
+
+  // UIDs fictifs — entrepreneurs qui envoient des demandes de mentorat
+  static const _ibrahimaSarrUid = 'demo_entr_ibrahima_sarr';
+  static const _fatouBaUid      = 'demo_entr_fatou_ba';
 
   // UIDs réels de vrais comptes Firebase
   static const _mohamedNiangUid = 'iBu5zkFzocPW8yuRGcXB9pCH3ss2'; // Mentor
@@ -53,6 +57,26 @@ class SeedDemoService {
       'interests': ['AgriTech', 'HealthTech', 'FinTech'],
       'score': 4.5, 'yearsExperience': 12,
       'investmentRange': '5M - 50M FCFA',
+    });
+
+    await _tryPutProfile(_ibrahimaSarrUid, {
+      'firstName': 'Ibrahima', 'lastName': 'Sarr',
+      'email': 'ibrahima.sarr@demo.sn',
+      'role': 'Entrepreneur', 'gender': 'male',
+      'city': 'Thiès', 'country': 'Sénégal', 'sector': 'AgriTech',
+      'bio': 'Fondateur de FarmLink, une plateforme qui connecte les petits producteurs agricoles aux marchés locaux. 2 ans d\'expérience terrain dans la région de Thiès.',
+      'interests': ['AgriTech', 'Chaîne de valeur agricole', 'Impact rural'],
+      'score': 0.0, 'yearsExperience': 2,
+    });
+
+    await _tryPutProfile(_fatouBaUid, {
+      'firstName': 'Fatou', 'lastName': 'Ba',
+      'email': 'fatou.ba@demo.sn',
+      'role': 'Entrepreneur', 'gender': 'female',
+      'city': 'Dakar', 'country': 'Sénégal', 'sector': 'HealthTech',
+      'bio': 'Co-fondatrice de SantéDirect, une solution de téléconsultation médicale adaptée aux zones périurbaines. Infirmière de formation reconvertie en entrepreneuse tech.',
+      'interests': ['HealthTech', 'Télémédecine', 'Santé communautaire'],
+      'score': 0.0, 'yearsExperience': 3,
     });
 
     await _tryPutProfile(_awaCisseUid, {
@@ -107,6 +131,27 @@ class SeedDemoService {
       'message': 'Votre projet d\'inclusion financière correspond parfaitement à notre thèse d\'investissement impact.',
       'type': 'investment', 'status': 'accepted',
       'createdAt': _daysAgo(7), 'respondedAt': _daysAgo(6),
+    });
+
+    // ── 2b. Demandes de mentorat EN ATTENTE reçues d'entrepreneurs ──
+    final reqIs = 'demo_mr_is_$short';
+    await _db.child('mentorRequests/$reqIs').set({
+      'id': reqIs,
+      'fromUserId': _ibrahimaSarrUid, 'toUserId': myUid,
+      'fromName': 'Ibrahima Sarr', 'toName': 'Souleymane Sirima Mbodj',
+      'message': 'Bonjour Souleymane, j\'ai découvert votre parcours avec PayFlow et votre expérience sur le marché informel m\'inspire beaucoup. Je développe FarmLink en AgriTech et je cherche un mentor qui comprend les réalités du terrain en Afrique de l\'Ouest. Seriez-vous disponible pour m\'accompagner ?',
+      'type': 'mentor', 'status': 'pending',
+      'createdAt': _daysAgo(1), 'respondedAt': null,
+    });
+
+    final reqFb = 'demo_mr_fb_$short';
+    await _db.child('mentorRequests/$reqFb').set({
+      'id': reqFb,
+      'fromUserId': _fatouBaUid, 'toUserId': myUid,
+      'fromName': 'Fatou Ba', 'toName': 'Souleymane Sirima Mbodj',
+      'message': 'Bonjour Souleymane ! Je suis co-fondatrice de SantéDirect, une app de téléconsultation pour les zones périurbaines. Votre expérience en acquisition utilisateurs et en réglementation me serait très précieuse. J\'aimerais beaucoup bénéficier de votre mentorat pour passer à l\'étape de scale-up.',
+      'type': 'mentor', 'status': 'pending',
+      'createdAt': _daysAgo(3), 'respondedAt': null,
     });
 
     // ── 3. Conversations et messages temps réel ────────────────────
@@ -188,6 +233,12 @@ class SeedDemoService {
     await _notif(myUid, 'Pitch consulté 👀',
         'Votre pitch PayFlow a été consulté par 12 investisseurs cette semaine.',
         'pitch_viewed', daysAgo: 3);
+    await _notif(myUid, 'Nouvelle demande de mentorat 🤝',
+        'Fatou Ba souhaite bénéficier de votre mentorat pour SantéDirect.',
+        'mentor_request', fromUserId: _fatouBaUid, fromName: 'Fatou Ba', requestId: reqFb, daysAgo: 3);
+    await _notif(myUid, 'Nouvelle demande de mentorat 🤝',
+        'Ibrahima Sarr vous contacte pour un accompagnement sur FarmLink.',
+        'mentor_request', fromUserId: _ibrahimaSarrUid, fromName: 'Ibrahima Sarr', requestId: reqIs, daysAgo: 1);
 
     // ── 5. Pitchs complets ─────────────────────────────────────────
     final p1 = 'demo_pitch_${short}_payflow';
