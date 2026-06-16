@@ -17,8 +17,9 @@ class SeedDemoService {
   // UIDs fictifs — entrepreneurs qui envoient des demandes de mentorat
   static const _ibrahimaSarrUid = 'demo_entr_ibrahima_sarr';
   static const _fatouBaUid      = 'demo_entr_fatou_ba';
-  // Entrepreneur qui reçoit une offre de Mohamed (pour son onglet Envoyées)
+  // Entrepreneurs qui reçoivent des offres de Mohamed (pour son onglet Envoyées)
   static const _alioubadBarryUid = 'demo_entr_alioune_badara_barry';
+  static const _oumarKaneUid     = 'demo_entr_oumar_kane';
 
   // UIDs réels de vrais comptes Firebase
   static const _mohamedNiangUid = 'iBu5zkFzocPW8yuRGcXB9pCH3ss2'; // Mentor
@@ -59,6 +60,16 @@ class SeedDemoService {
       'interests': ['AgriTech', 'HealthTech', 'FinTech'],
       'score': 4.5, 'yearsExperience': 12,
       'investmentRange': '5M - 50M FCFA',
+    });
+
+    await _tryPutProfile(_oumarKaneUid, {
+      'firstName': 'Oumar', 'lastName': 'Kane',
+      'email': 'oumar.kane@demo.sn',
+      'role': 'Entrepreneur', 'gender': 'male',
+      'city': 'Thiès', 'country': 'Sénégal', 'sector': 'CleanTech',
+      'bio': 'Fondateur de SolarKër, une startup qui installe des kits solaires abordables dans les ménages ruraux non connectés au réseau électrique.',
+      'interests': ['Énergie solaire', 'CleanTech', 'Accès à l\'énergie'],
+      'score': 0.0, 'yearsExperience': 1,
     });
 
     await _tryPutProfile(_alioubadBarryUid, {
@@ -405,6 +416,17 @@ class SeedDemoService {
       'message': 'Bonjour Alioune Badara, j\'ai consulté votre profil et le projet ShopAfrik m\'a vraiment interpellé. Fort de mes 12 ans d\'expérience dans l\'accompagnement de startups africaines, je pense pouvoir vous apporter une vraie valeur ajoutée. Je vous propose mon mentorat — n\'hésitez pas si cela vous intéresse !',
       'type': 'mentor', 'status': 'accepted',
       'createdAt': _daysAgo(5), 'respondedAt': _daysAgo(3),
+    });
+
+    // Offre EN ATTENTE de Mohamed vers Oumar Kane
+    const reqMmnPending = 'demo_mr_mmn_offer_oumar';
+    await _db.child('mentorRequests/$reqMmnPending').set({
+      'id': reqMmnPending,
+      'fromUserId': _mohamedNiangUid, 'toUserId': _oumarKaneUid,
+      'fromName': 'Mohamed Moctar Niang', 'toName': 'Oumar Kane',
+      'message': 'Bonjour Oumar, votre projet SolarKër répond à un besoin crucial en zones rurales. J\'ai accompagné plusieurs entrepreneurs dans le secteur de l\'énergie et je serais ravi de partager mon expérience avec vous. Je vous propose mon mentorat.',
+      'type': 'mentor', 'status': 'pending',
+      'createdAt': _daysAgo(1), 'respondedAt': null,
     });
 
     // Relation acceptée avec Mohamed Moctar Niang (Mentor réel)
