@@ -7,6 +7,7 @@ import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import '../widgets/feuille_profil.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_planning.dart';
@@ -111,10 +112,13 @@ class _MentorDashboardState extends State<MentorDashboard> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Avatar(
-                      initials: profile.initials,
-                      background: AppColors.roleMentor,
-                      photoBase64: profile.photoBase64,
+                    GestureDetector(
+                      onTap: () => showProfileSheet(context),
+                      child: Avatar(
+                        initials: profile.initials,
+                        background: AppColors.roleMentor,
+                        photoBase64: profile.photoBase64,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

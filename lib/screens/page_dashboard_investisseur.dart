@@ -8,10 +8,13 @@ import '../services/service_notifications.dart';
 import '../services/service_pitch_favoris.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import '../widgets/feuille_profil.dart';
+import '../services/service_navigation.dart';
 import 'page_mes_pitchs_favoris.dart';
 import 'page_notifications.dart';
 import 'page_pitches_publics.dart';
 import 'page_profil_public.dart';
+import 'page_requests.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -55,10 +58,13 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Avatar(
-                      initials: profile.initials,
-                      background: AppColors.blue,
-                      photoBase64: profile.photoBase64,
+                    GestureDetector(
+                      onTap: () => showProfileSheet(context),
+                      child: Avatar(
+                        initials: profile.initials,
+                        background: AppColors.blue,
+                        photoBase64: profile.photoBase64,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -313,22 +319,74 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                   const SizedBox(height: 20),
 
                   // Actions rapides
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const PublicPitchesPage()),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: pendingRequestsCount,
+                          builder: (context, pending, _) => Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const RequestsPage()),
+                                ),
+                                icon: const Icon(Icons.mail_rounded, size: 18),
+                                label: const Text(
+                                  'Demandes',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.green,
+                                  side: const BorderSide(color: AppColors.green),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                              if (pending > 0)
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '$pending',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                      icon: const Icon(Icons.rocket_launch_rounded),
-                      label: const Text('Explorer la communauté'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        minimumSize: const Size(double.infinity, 0),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const PublicPitchesPage()),
+                          ),
+                          icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                          label: const Text('Explorer'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
 
                 ]),
