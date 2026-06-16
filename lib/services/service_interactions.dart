@@ -63,11 +63,17 @@ class InteractionsService {
   }
 
   static Stream<List<MentorRequest>> getReceivedRequests(String userId) {
-    return _mentorRequestsEvents.map((event) {
+    // Filtrage serveur via l'index Firebase — ne télécharge que les demandes
+    // où toUserId == userId, beaucoup plus rapide que tout charger côté client.
+    return _db.child('mentorRequests')
+        .orderByChild('toUserId')
+        .equalTo(userId)
+        .onValue
+        .map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .where((v) => v is Map && v['toUserId'] == userId)
+          .where((v) => v is Map)
           .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -76,11 +82,17 @@ class InteractionsService {
 
   /// Retourne en temps réel les demandes envoyées par [userId].
   static Stream<List<MentorRequest>> getSentRequests(String userId) {
-    return _mentorRequestsEvents.map((event) {
+    // Filtrage serveur — stream indépendant de getReceivedRequests,
+    // donc pas de conflit "already listened" avec TabBarView.
+    return _db.child('mentorRequests')
+        .orderByChild('fromUserId')
+        .equalTo(userId)
+        .onValue
+        .map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .where((v) => v is Map && v['fromUserId'] == userId)
+          .where((v) => v is Map)
           .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
