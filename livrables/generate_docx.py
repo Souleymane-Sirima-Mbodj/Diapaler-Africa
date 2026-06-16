@@ -350,12 +350,12 @@ def add_screenshot_placeholder(doc, text):
     cell = tbl.cell(0, 0)
     set_cell_shading(cell, 'F9FAFB')
 
-    # Hauteur fixe : 7 cm = 3969 twips
+    # Hauteur minimale : 7 cm = 3969 twips — s'agrandit automatiquement si image insérée
     tr = tbl.rows[0]._tr
     trPr = tr.get_or_add_trPr()
     trHeight = OxmlElement('w:trHeight')
     trHeight.set(qn('w:val'), '3969')
-    trHeight.set(qn('w:hRule'), 'exact')
+    trHeight.set(qn('w:hRule'), 'atLeast')
     trPr.append(trHeight)
 
     # Texte centré dans la boîte

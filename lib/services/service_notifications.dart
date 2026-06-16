@@ -157,6 +157,15 @@ class NotificationService {
     }
   }
 
+  static Future<void> deleteOne(String id) async {
+    if (_userId != null) {
+      await _db.child('notifications/$_userId/$id').remove();
+    } else {
+      notifications.value =
+          notifications.value.where((n) => n.id != id).toList();
+    }
+  }
+
   static Future<void> clearAll() async {
     if (_userId != null) {
       await _db.child('notifications/$_userId').remove();

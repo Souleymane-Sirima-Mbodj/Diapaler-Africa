@@ -9,8 +9,10 @@ import '../widgets/avatar.dart';
 
 class SendRequestPage extends StatefulWidget {
   final Mentor mentor;
+  /// true quand c'est un mentor qui propose son mentorat à un entrepreneur.
+  final bool fromMentor;
 
-  const SendRequestPage({super.key, required this.mentor});
+  const SendRequestPage({super.key, required this.mentor, this.fromMentor = false});
 
   @override
   State<SendRequestPage> createState() => _SendRequestPageState();
@@ -93,20 +95,23 @@ class _SendRequestPageState extends State<SendRequestPage> {
         message: fullMessage,
         type: requestType,
       );
-      final notifLabel = widget.mentor.isInvestor
-          ? 'proposition d\'investissement'
-          : 'demande de mentorat';
+
+      final notifLabel = widget.fromMentor
+          ? 'offre de mentorat'
+          : widget.mentor.isInvestor
+              ? 'proposition d\'investissement'
+              : 'demande de mentorat';
       NotificationService.addNotification(
         title: 'Demande envoyée',
-        message: 'Ta $notifLabel à ${widget.mentor.name} a bien été transmise.',
+        message: 'Ton $notifLabel à ${widget.mentor.name} a bien été transmise.',
         type: 'mentor_request',
       );
-      // Notif côté destinataire (mentor ou investisseur).
-      // Type 'mentor_request' → redirige vers RequestsPage pour accepter/refuser.
       if (widget.mentor.uid.isNotEmpty) {
-        final notifTitle = widget.mentor.isInvestor
-            ? 'Nouvelle demande d\'investissement 💰'
-            : 'Nouvelle demande de mentorat 🤝';
+        final notifTitle = widget.fromMentor
+            ? 'Offre de mentorat reçue 🤝'
+            : widget.mentor.isInvestor
+                ? 'Nouvelle demande d\'investissement 💰'
+                : 'Nouvelle demande de mentorat 🤝';
         await NotificationService.notifyUser(
           uid: widget.mentor.uid,
           title: notifTitle,
@@ -140,9 +145,11 @@ class _SendRequestPageState extends State<SendRequestPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          widget.mentor.isInvestor
-              ? 'Proposer un investissement'
-              : 'Demander du mentorat',
+          widget.fromMentor
+              ? 'Proposer du mentorat'
+              : widget.mentor.isInvestor
+                  ? 'Proposer un investissement'
+                  : 'Demander du mentorat',
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
@@ -261,9 +268,11 @@ class _SendRequestPageState extends State<SendRequestPage> {
             maxLines: 5,
             maxLength: 500,
             decoration: InputDecoration(
-              hintText: widget.mentor.isInvestor
-                  ? 'Présente ton projet et pourquoi tu cherches cet investissement…'
-                  : 'Explique pourquoi tu cherches du mentorat, tes objectifs...',
+              hintText: widget.fromMentor
+                  ? 'Présente ton expertise et en quoi tu peux aider cet entrepreneur…'
+                  : widget.mentor.isInvestor
+                      ? 'Présente ton projet et pourquoi tu cherches cet investissement…'
+                      : 'Explique pourquoi tu cherches du mentorat, tes objectifs...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

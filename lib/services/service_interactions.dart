@@ -5,6 +5,18 @@ import 'service_notifications.dart';
 class InteractionsService {
   static final _db = FirebaseDatabase.instance.ref();
 
+  // Broadcast streams partagés pour éviter l'erreur "Bad state: Stream has
+  // already been listened to" quand TabBarView / IndexedStack monte plusieurs
+  // StreamBuilder qui écoutent le même nœud Firebase simultanément.
+  static final Stream<DatabaseEvent> _mentorRequestsEvents =
+      FirebaseDatabase.instance.ref('mentorRequests').onValue.asBroadcastStream();
+  static final Stream<DatabaseEvent> _conversationsEvents =
+      FirebaseDatabase.instance.ref('conversations').onValue.asBroadcastStream();
+
+  /// Expose le stream broadcast mentorRequests pour les pages qui le lisent
+  /// directement (ex. onglet Contacts de MessagesPage).
+  static Stream<DatabaseEvent> get mentorRequestsEvents => _mentorRequestsEvents;
+
   // ────── MENTOR REQUESTS ──────
 
   /// Retourne `true` si une demande en attente existe déjà entre ces deux utilisateurs.
@@ -51,7 +63,7 @@ class InteractionsService {
   }
 
   static Stream<List<MentorRequest>> getReceivedRequests(String userId) {
-    return _db.child('mentorRequests').onValue.map((event) {
+    return _mentorRequestsEvents.map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
@@ -64,7 +76,7 @@ class InteractionsService {
 
   /// Retourne en temps réel les demandes envoyées par [userId].
   static Stream<List<MentorRequest>> getSentRequests(String userId) {
-    return _db.child('mentorRequests').onValue.map((event) {
+    return _mentorRequestsEvents.map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
@@ -105,6 +117,36 @@ class InteractionsService {
       _decrementMentorsActive(fromUserId),
       _decrementMentorsActive(toUserId),
     ]);
+  }
+
+  /// Annule TOUTES les relations acceptées entre deux utilisateurs (mentor + investment).
+  static Future<void> cancelAllRequestsWith({
+    required String myUid,
+    required String otherUid,
+  }) async {
+    final snap = await _db.child('mentorRequests').get();
+    if (snap.value == null) return;
+    final data = Map<String, dynamic>.from(snap.value as Map);
+    final futures = <Future>[];
+    for (final entry in data.entries) {
+      final m = Map<String, dynamic>.from(entry.value as Map);
+      if (m['status'] != 'accepted') continue;
+      final from = m['fromUserId']?.toString() ?? '';
+      final to = m['toUserId']?.toString() ?? '';
+      if ((from == myUid && to == otherUid) || (from == otherUid && to == myUid)) {
+        futures.add(_db.child('mentorRequests/${entry.key}').update({
+          'status': 'cancelled',
+          'cancelledAt': DateTime.now().toIso8601String(),
+        }));
+      }
+    }
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+      await Future.wait([
+        _decrementMentorsActive(myUid),
+        _decrementMentorsActive(otherUid),
+      ]);
+    }
   }
 
   static Future<void> _decrementMentorsActive(String uid) async {
@@ -302,7 +344,7 @@ class InteractionsService {
   }
 
   static Stream<List<Conversation>> getConversations(String userId) {
-    return _db.child('conversations').onValue.map((event) {
+    return _conversationsEvents.map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
@@ -321,6 +363,14 @@ class InteractionsService {
     await _db
         .child('conversations/$conversationId')
         .update({'unreadCount': 0});
+  }
+
+  /// Supprime un message d'une conversation.
+  static Future<void> deleteMessage({
+    required String conversationId,
+    required String messageId,
+  }) async {
+    await _db.child('messages/$conversationId/$messageId').remove();
   }
 
   // ────── REVIEWS ──────
