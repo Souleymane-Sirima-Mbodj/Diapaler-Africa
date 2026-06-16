@@ -403,8 +403,8 @@ class SeedDemoService {
       'fromUserId': _mohamedNiangUid, 'toUserId': _alioubadBarryUid,
       'fromName': 'Mohamed Moctar Niang', 'toName': 'Alioune Badara Barry',
       'message': 'Bonjour Alioune Badara, j\'ai consulté votre profil et le projet ShopAfrik m\'a vraiment interpellé. Fort de mes 12 ans d\'expérience dans l\'accompagnement de startups africaines, je pense pouvoir vous apporter une vraie valeur ajoutée. Je vous propose mon mentorat — n\'hésitez pas si cela vous intéresse !',
-      'type': 'mentor', 'status': 'pending',
-      'createdAt': _daysAgo(2), 'respondedAt': null,
+      'type': 'mentor', 'status': 'accepted',
+      'createdAt': _daysAgo(5), 'respondedAt': _daysAgo(3),
     });
 
     // Relation acceptée avec Mohamed Moctar Niang (Mentor réel)
