@@ -148,7 +148,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
           widget.fromMentor
               ? 'Proposer du mentorat'
               : widget.mentor.isInvestor
-                  ? 'Proposer un investissement'
+                  ? 'Rechercher un investissement'
                   : 'Demander du mentorat',
           style: const TextStyle(
             fontSize: 17,
