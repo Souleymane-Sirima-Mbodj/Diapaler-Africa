@@ -17,6 +17,8 @@ class SeedDemoService {
   // UIDs fictifs — entrepreneurs qui envoient des demandes de mentorat
   static const _ibrahimaSarrUid = 'demo_entr_ibrahima_sarr';
   static const _fatouBaUid      = 'demo_entr_fatou_ba';
+  // Entrepreneur qui reçoit une offre de Mohamed (pour son onglet Envoyées)
+  static const _mariameSyUid    = 'demo_entr_mariame_sy';
 
   // UIDs réels de vrais comptes Firebase
   static const _mohamedNiangUid = 'iBu5zkFzocPW8yuRGcXB9pCH3ss2'; // Mentor
@@ -57,6 +59,16 @@ class SeedDemoService {
       'interests': ['AgriTech', 'HealthTech', 'FinTech'],
       'score': 4.5, 'yearsExperience': 12,
       'investmentRange': '5M - 50M FCFA',
+    });
+
+    await _tryPutProfile(_mariameSyUid, {
+      'firstName': 'Mariame', 'lastName': 'Sy',
+      'email': 'mariame.sy@demo.sn',
+      'role': 'Entrepreneur', 'gender': 'female',
+      'city': 'Saint-Louis', 'country': 'Sénégal', 'sector': 'EdTech',
+      'bio': 'Fondatrice de LearnWave, une plateforme d\'apprentissage en ligne pour les lycéens des zones rurales au Sénégal. Ancienne enseignante reconvertie en entrepreneuse.',
+      'interests': ['EdTech', 'Éducation rurale', 'E-learning'],
+      'score': 0.0, 'yearsExperience': 1,
     });
 
     await _tryPutProfile(_ibrahimaSarrUid, {
@@ -134,7 +146,7 @@ class SeedDemoService {
     });
 
     // ── 2b. Demandes de mentorat EN ATTENTE reçues d'entrepreneurs ──
-    final reqIs = 'demo_mr_is_mmn';
+    const reqIs = 'demo_mr_is_mmn';
     await _db.child('mentorRequests/$reqIs').set({
       'id': reqIs,
       'fromUserId': _ibrahimaSarrUid, 'toUserId': _mohamedNiangUid,
@@ -144,7 +156,7 @@ class SeedDemoService {
       'createdAt': _daysAgo(1), 'respondedAt': null,
     });
 
-    final reqFb = 'demo_mr_fb_mmn';
+    const reqFb = 'demo_mr_fb_mmn';
     await _db.child('mentorRequests/$reqFb').set({
       'id': reqFb,
       'fromUserId': _fatouBaUid, 'toUserId': _mohamedNiangUid,
@@ -368,6 +380,32 @@ class SeedDemoService {
     });
 
     // ── 8. Utilisateurs réels — Mohamed Moctar Niang & Test ───────
+    // Nettoyage : supprime les anciennes demandes envoyées PAR Mohamed
+    // (données de test incohérentes créées manuellement).
+    try {
+      final mohamedSentSnap = await _db
+          .child('mentorRequests')
+          .orderByChild('fromUserId')
+          .equalTo(_mohamedNiangUid)
+          .get();
+      if (mohamedSentSnap.exists && mohamedSentSnap.value != null) {
+        final data = Map<dynamic, dynamic>.from(mohamedSentSnap.value as Map);
+        for (final key in data.keys) {
+          await _db.child('mentorRequests/$key').remove();
+        }
+      }
+    } catch (_) {}
+
+    // Offre de mentorat envoyée PAR Mohamed à Mariame Sy (Envoyées de Mohamed)
+    const reqMmnOffer = 'demo_mr_mmn_offer_mariame';
+    await _db.child('mentorRequests/$reqMmnOffer').set({
+      'id': reqMmnOffer,
+      'fromUserId': _mohamedNiangUid, 'toUserId': _mariameSyUid,
+      'fromName': 'Mohamed Moctar Niang', 'toName': 'Mariame Sy',
+      'message': 'Bonjour Mariame, j\'ai parcouru votre profil et votre projet LearnWave m\'a vraiment interpellé. Fort de mes 12 ans d\'expérience dans l\'accompagnement de startups africaines, je pense pouvoir apporter une valeur réelle à votre développement. Je vous propose mon mentorat — n\'hésitez pas si cela vous intéresse !',
+      'type': 'mentor', 'status': 'pending',
+      'createdAt': _daysAgo(2), 'respondedAt': null,
+    });
 
     // Relation acceptée avec Mohamed Moctar Niang (Mentor réel)
     final req5 = 'demo_mr_mmn_$short';
