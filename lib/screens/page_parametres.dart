@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/service_authentification.dart';
 import '../services/service_seed_demo.dart';
 import '../theme/theme_app.dart';
+import 'page_aide.dart';
 
 /// Page Paramètres — changer le mot de passe, infos app, support, suppression compte.
 class ParametresPage extends StatelessWidget {
@@ -58,19 +59,18 @@ class ParametresPage extends StatelessWidget {
           // ── Aide ─────────────────────────────────────────────────
           _SectionHeader('Aide & support'),
           _SettingsTile(
-            icon: Icons.mail_outline_rounded,
-            label: 'Contacter le support',
-            subtitle: 'support@diapaler.sn',
-            onTap: () async {
-              final uri = Uri(scheme: 'mailto', path: 'support@diapaler.sn');
-              if (await canLaunchUrl(uri)) await launchUrl(uri);
-            },
+            icon: Icons.help_outline_rounded,
+            label: 'Aide & support',
+            subtitle: 'FAQ, contact, guide d\'utilisation',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AidePage()),
+            ),
           ),
 
           // ── Démo ────────────────────────────────────────────────────
-          const SizedBox(height: 4),
-          _SectionHeader('Données de démo'),
-          const _SeedButton(),
+          // const SizedBox(height: 4),
+          // _SectionHeader('Données de démo'),
+          // const _SeedButton(),
 
           const SizedBox(height: 4),
 
