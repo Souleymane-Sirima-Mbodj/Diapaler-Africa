@@ -50,7 +50,7 @@ class ParametresPage extends StatelessWidget {
           _SettingsTile(
             icon: Icons.apartment_rounded,
             label: 'Développé par',
-            trailing: 'BNKMTN (Barry, Niang, Kama, Mbodj, Tine, Ndiaye) L3GLSIB',
+            subtitle: 'BNKMTN (Barry, Niang, Kama, Mbodj, Tine, Ndiaye) L3GLSIB',
           ),
 
           const SizedBox(height: 4),
