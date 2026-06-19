@@ -34,6 +34,11 @@ class AuthService {
     return _auth.sendPasswordResetEmail(email: email);
   }
 
+  static Future<bool> isEmailRegistered(String email) async {
+    final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
+    return methods.isNotEmpty;
+  }
+
   /// Traduit un FirebaseAuthException en message FR lisible.
   static String humanError(Object e) {
     if (e is FirebaseAuthException) {

@@ -1,13 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../data/pays.dart';
 import '../data/donnees_mentors.dart';
+import '../services/service_geolocalisation.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
+import 'page_crop_photo.dart';
+
+enum _PhotoSource { gallery, file }
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -34,6 +41,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   DateTime? _birthDate;
   late Set<String> _interests;
   late String _photoBase64;
+  bool _locating = false;
 
   bool get _isMentor => _initial.role == 'Mentor';
   bool get _isInvestor => _initial.role == 'Investisseur';
@@ -102,6 +110,45 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
+  Future<void> _autoDetectLocation() async {
+    setState(() => _locating = true);
+    try {
+      final result = await LocationService.detectCity();
+      if (!mounted) return;
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Permission GPS refusée ou position introuvable.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+        return;
+      }
+      setState(() {
+        _country = result.country;
+        _city = result.city;
+        if (result.locality.isNotEmpty) {
+          _address.text = result.locality;
+        }
+      });
+      final localityPart =
+          result.locality.isNotEmpty ? ' · ${result.locality}' : '';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Position détectée : ${result.country} · ${result.city}$localityPart'),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Erreur de géolocalisation. Réessaie.'),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -120,17 +167,87 @@ class _EditProfilePageState extends State<EditProfilePage> {
   /// L'image est redimensionnée (max 400 px) puis encodée en base64,
   /// ce qui la rend persistable dans Firebase et le cache local.
   Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<_PhotoSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded),
+            title: const Text('Galerie'),
+            onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.folder_open_rounded),
+            title: const Text('Fichier'),
+            onTap: () => Navigator.of(context).pop(_PhotoSource.file),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+    if (source == null) return;
+    if (source == _PhotoSource.gallery) {
+      await _pickPhotoFromGallery();
+    } else {
+      await _pickPhotoFromFile();
+    }
+  }
+
+  Future<void> _pickPhotoFromGallery() async {
     try {
       final picked = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 70,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
       );
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
-      setState(() => _photoBase64 = base64Encode(bytes));
+      // Ouvre la page de crop
+      final croppedBytes = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          builder: (_) => CropPhotoPage(imageBytes: bytes),
+        ),
+      );
+      if (croppedBytes != null && mounted) {
+        setState(() => _photoBase64 = base64Encode(croppedBytes));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de charger la photo.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickPhotoFromFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+      if (!mounted) return;
+      // Ouvre la page de crop
+      final croppedBytes = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          builder: (_) => CropPhotoPage(imageBytes: bytes),
+        ),
+      );
+      if (croppedBytes != null && mounted) {
+        setState(() => _photoBase64 = base64Encode(croppedBytes));
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -353,7 +470,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
             values: citiesOf(_country),
             onChanged: (v) => setState(() => _city = v),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _locating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : TextButton.icon(
+                    onPressed: _autoDetectLocation,
+                    icon: const Icon(Icons.my_location_rounded, size: 14),
+                    label: const Text('Détecter ma position',
+                        style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.blue,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 6),
           _Field(
             label: 'Adresse',
             icon: Icons.home_outlined,

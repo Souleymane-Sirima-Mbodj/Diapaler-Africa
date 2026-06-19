@@ -10,10 +10,13 @@ import '../services/service_cloudinary.dart';
 import '../services/service_navigation.dart';
 import '../theme/theme_app.dart';
 
-/// Stepper 5 étapes pour déposer un pitch.
-/// Étape 4 (Documents) est obligatoire : PDF + vidéo requis avant publication.
+/// Stepper 5 étapes : création, édition et publication d'un pitch.
+/// - Sans [existingProject] : nouveau projet, démarrage à l'étape 1.
+/// - Avec [existingProject] : reprend à l'étape sauvegardée, champs pré-remplis.
+/// La publication Firebase (pitches/) n'a lieu qu'à l'étape 5 (Récapitulatif).
 class PitchPage extends StatefulWidget {
-  const PitchPage({super.key});
+  final Project? existingProject;
+  const PitchPage({super.key, this.existingProject});
 
   @override
   State<PitchPage> createState() => _PitchPageState();
@@ -22,11 +25,10 @@ class PitchPage extends StatefulWidget {
 class _PitchPageState extends State<PitchPage> {
   int _step = 0;
   bool _loading = false;
+  bool _isNew = true;
   static const _total = 5;
 
-  /// ID stable généré au chargement de la page — utilisé pour Cloudinary
-  /// avant même la publication Firebase.
-  late final String _pitchId;
+  late String _pitchId;
 
   // ── Étapes 0-2 ──────────────────────────────────────────────────
   final _title = TextEditingController();
@@ -78,7 +80,25 @@ class _PitchPageState extends State<PitchPage> {
   @override
   void initState() {
     super.initState();
-    _pitchId = _generateId();
+    final p = widget.existingProject;
+    if (p != null) {
+      _pitchId = p.id;
+      _isNew = false;
+      _step = (p.step - 1).clamp(0, _total - 1);
+      _title.text = p.name;
+      _sector = p.sector.isNotEmpty ? p.sector : null;
+      // Description stockée comme "elevator\n\ndétaillée"
+      final parts = p.description.split('\n\n');
+      _description.text = parts.isNotEmpty ? parts[0] : p.description;
+      _detailDescription.text = parts.length > 1 ? parts.sublist(1).join('\n\n') : '';
+      _amount.text = p.amount ?? '';
+      _businessPlanUrl = p.businessPlanUrl;
+      _videoUrl = p.videoUrl;
+      _deckUrl = p.deckUrl;
+    } else {
+      _pitchId = _generateId();
+      _isNew = true;
+    }
     for (final c in [_title, _description, _detailDescription, _amount]) {
       c.addListener(() => setState(() {}));
     }
@@ -93,56 +113,82 @@ class _PitchPageState extends State<PitchPage> {
     super.dispose();
   }
 
+  // ── Construction du projet depuis l'état courant ─────────────────
+  Project _buildProject({bool published = false}) {
+    final description = [
+      _description.text.trim(),
+      _detailDescription.text.trim(),
+    ].where((s) => s.isNotEmpty).join('\n\n');
+    return Project(
+      id: _pitchId,
+      name: _title.text.trim(),
+      description: description,
+      sector: _sector ?? UserProfileController.profile.value.sector,
+      step: _step + 1,
+      totalSteps: _total,
+      amount: _amount.text.trim().isEmpty ? null : _amount.text.trim(),
+      businessPlanUrl: _businessPlanUrl,
+      videoUrl: _videoUrl,
+      deckUrl: _deckUrl,
+      published: published,
+    );
+  }
+
+  // ── Sauvegarde intermédiaire (sans publication Firebase pitches/) ─
+  void _saveProgress() {
+    final project = _buildProject();
+    if (_isNew) {
+      final added = UserProfileController.addProject(project);
+      if (added) _isNew = false;
+    } else {
+      UserProfileController.updateProject(project);
+    }
+  }
+
   // ── Navigation entre étapes ──────────────────────────────────────
   Future<void> _next() async {
     if (!_currentStepValid) return;
     if (_step < _total - 1) {
+      _saveProgress();
       setState(() => _step++);
       return;
     }
     _publish();
   }
 
-  // ── Publication ─────────────────────────────────────────────────
+  // ── Publication publique (Firebase pitches/) ────────────────────
   Future<void> _publish() async {
     setState(() => _loading = true);
     try {
       final profile = UserProfileController.profile.value;
       final uid = AuthService.currentUid ?? '';
-      final title = _title.text.trim();
-      final detail = _detailDescription.text.trim();
-      final summary = _description.text.trim();
-      final description =
-          [summary, detail].where((s) => s.isNotEmpty).join('\n\n');
-      final sector = _sector ?? profile.sector;
+      final project = _buildProject(published: true);
 
-      // 1. Ajoute le projet au profil de l'entrepreneur
-      final project = Project(
-        id: _pitchId,
-        name: title,
-        description: description,
-        sector: sector,
-        totalSteps: 5,
-      );
-      final updated =
-          profile.copyWith(projects: [...profile.projects, project]);
-      UserProfileController.update(updated);
+      // Mettre à jour le projet dans le profil (step 5, published)
+      final exists = profile.projects.any((p) => p.id == _pitchId);
+      if (exists) {
+        UserProfileController.updateProject(project);
+      } else {
+        UserProfileController.addProject(project);
+      }
       if (uid.isNotEmpty) {
-        await DatabaseService.updateUserProfile(uid, updated);
+        await DatabaseService.updateUserProfile(
+            uid, UserProfileController.profile.value);
       }
 
-      // 2. Publie dans le nœud global pitches/ avec les URLs documents
+      // Publier dans le nœud global pitches/
       await DatabaseService.publishPitch(
         pitchId: _pitchId,
         userId: uid,
         userName: profile.fullName,
-        title: title,
-        sector: sector,
-        description: description,
+        title: project.name,
+        sector: project.sector,
+        description: project.description,
         amount: _amount.text.trim(),
         businessPlanUrl: _businessPlanUrl,
         videoUrl: _videoUrl,
         deckUrl: _deckUrl,
+        isPremium: profile.isPremium,
       );
 
       if (!mounted) return;
@@ -150,8 +196,7 @@ class _PitchPageState extends State<PitchPage> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              '🎉 Pitch publié ! Retrouve-le dans ton profil → Mes projets.'),
+          content: Text('Pitch publié ! Retrouve-le dans ton profil → Mes projets.'),
           backgroundColor: AppColors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -320,36 +365,68 @@ class _PitchPageState extends State<PitchPage> {
                         ],
                       ),
                     ),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: (_loading || !_currentStepValid) ? null : _next,
-                      style: ElevatedButton.styleFrom(
-                        disabledBackgroundColor:
-                            AppColors.navy.withValues(alpha: 0.35),
-                        disabledForegroundColor: Colors.white,
-                      ),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _step == _total - 1
-                                  ? 'PUBLIER MON PITCH'
-                                  : 'CONTINUER',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.5,
-                                fontSize: 14,
-                              ),
+                  Row(
+                    children: [
+                      if (_step > 0) ...[
+                        SizedBox(
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: _loading
+                                ? null
+                                : () => setState(() => _step--),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.border),
+                              foregroundColor: AppColors.navyDeep,
+                              padding: const EdgeInsets.symmetric(horizontal: 18),
                             ),
-                    ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.arrow_back_rounded, size: 16),
+                                SizedBox(width: 4),
+                                Text('Précédent',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: (_loading || !_currentStepValid) ? null : _next,
+                            style: ElevatedButton.styleFrom(
+                              disabledBackgroundColor:
+                                  AppColors.navy.withValues(alpha: 0.35),
+                              disabledForegroundColor: Colors.white,
+                            ),
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    _step == _total - 1
+                                        ? 'PUBLIER MON PITCH'
+                                        : 'CONTINUER',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.5,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

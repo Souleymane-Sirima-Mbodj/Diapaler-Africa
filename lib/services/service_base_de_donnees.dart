@@ -30,6 +30,7 @@ class DatabaseService {
     String? businessPlanUrl,
     String? videoUrl,
     String? deckUrl,
+    bool isPremium = false,
   }) async {
     await _db.ref('pitches/$pitchId').set({
       'id': pitchId,
@@ -40,6 +41,7 @@ class DatabaseService {
       'description': description,
       'amount': amount,
       'createdAt': ServerValue.timestamp,
+      'isPremium': isPremium,
       if (businessPlanUrl != null) 'businessPlanUrl': businessPlanUrl,
       if (videoUrl != null)        'videoUrl':        videoUrl,
       if (deckUrl != null)         'deckUrl':         deckUrl,
@@ -55,6 +57,10 @@ class DatabaseService {
           .map((v) => Map<String, dynamic>.from(v as Map))
           .toList();
       list.sort((a, b) {
+        // Pitchs premium en premier
+        final aPremium = (a['isPremium'] as bool?) == true ? 1 : 0;
+        final bPremium = (b['isPremium'] as bool?) == true ? 1 : 0;
+        if (bPremium != aPremium) return bPremium.compareTo(aPremium);
         final aT = (a['createdAt'] as num?) ?? 0;
         final bT = (b['createdAt'] as num?) ?? 0;
         return bT.compareTo(aT);
@@ -122,13 +128,29 @@ class DatabaseService {
   /// Active le statut Premium de l'utilisateur dans Firebase.
   static Future<void> setPremium({
     required String uid,
-    required String plan, // 'entrepreneur' | 'mentor' | 'investisseur'
+    required String plan,
   }) async {
     await _userRef(uid).update({
       'isPremium': true,
       'premiumPlan': plan,
       'premiumSince': ServerValue.timestamp,
     });
+  }
+
+  /// Marque tous les pitchs d'un utilisateur comme premium (ou non).
+  static Future<void> markUserPitchesPremium(String uid,
+      {required bool isPremium}) async {
+    final snap = await _db.ref('pitches').get();
+    if (!snap.exists || snap.value == null) return;
+    final data = Map<String, dynamic>.from(snap.value as Map);
+    final updates = <String, dynamic>{};
+    for (final entry in data.entries) {
+      final pitch = Map<String, dynamic>.from(entry.value as Map);
+      if (pitch['userId'] == uid) {
+        updates['pitches/${entry.key}/isPremium'] = isPremium;
+      }
+    }
+    if (updates.isNotEmpty) await _db.ref().update(updates);
   }
 
   static Future<UserProfile?> readUserProfile(String uid) async {
@@ -176,6 +198,11 @@ class DatabaseService {
         'sector': p.sector,
         'step': p.step,
         'totalSteps': p.totalSteps,
+        if (p.amount != null)         'amount':         p.amount,
+        if (p.businessPlanUrl != null) 'businessPlanUrl': p.businessPlanUrl,
+        if (p.videoUrl != null)        'videoUrl':        p.videoUrl,
+        if (p.deckUrl != null)         'deckUrl':         p.deckUrl,
+        'published': p.published,
       };
 
   static UserProfile _fromMap(Map<String, dynamic> m) {
@@ -192,6 +219,11 @@ class DatabaseService {
             sector: pm['sector']?.toString() ?? '',
             step: (pm['step'] as num?)?.toInt() ?? 1,
             totalSteps: (pm['totalSteps'] as num?)?.toInt() ?? 5,
+            amount: pm['amount']?.toString(),
+            businessPlanUrl: pm['businessPlanUrl']?.toString(),
+            videoUrl: pm['videoUrl']?.toString(),
+            deckUrl: pm['deckUrl']?.toString(),
+            published: (pm['published'] as bool?) ?? false,
           ));
         }
       }

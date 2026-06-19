@@ -22,57 +22,24 @@ import '../data/profil_utilisateur.dart';
 
 const _waveBaseUrl = 'https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/';
 
-/// Plans d'abonnement DIAPALER PREMIUM.
+/// Plan d'abonnement DIAPALER PREMIUM — Entrepreneur uniquement.
 enum PremiumPlan {
-  entrepreneur,
-  mentor,
-  investisseur;
+  entrepreneur;
 
-  String get label => switch (this) {
-        PremiumPlan.entrepreneur => 'Entrepreneur Premium',
-        PremiumPlan.mentor       => 'Mentor Premium',
-        PremiumPlan.investisseur => 'Investisseur Premium',
-      };
+  String get label => 'Entrepreneur Premium';
 
   /// Montant mensuel en FCFA.
-  int get amountXof => switch (this) {
-        PremiumPlan.entrepreneur => 7500,
-        PremiumPlan.mentor       => 5000,
-        PremiumPlan.investisseur => 15000,
-      };
+  int get amountXof => 4900;
 
-  String get amountDisplay {
-    final s = amountXof.toString();
-    final buf = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
-      buf.write(s[i]);
-    }
-    return '$buf FCFA / mois';
-  }
+  String get amountDisplay => '4 900 FCFA / mois';
 
-  List<String> get benefits => switch (this) {
-        PremiumPlan.entrepreneur => [
-            'Pitch épinglé en tête du fil investisseurs',
-            'Badge ⭐ Premium visible dans le Matching',
-            'Demandes de mentorat illimitées',
-            'Statistiques de vues (profil + pitch)',
-            'Accès prioritaire aux mentors certifiés',
-          ],
-        PremiumPlan.mentor => [
-            'Accès aux pitchs complets (filtres avancés)',
-            'Badge ✅ Mentor Certifié sur le profil',
-            'Outils de suivi des mentorés',
-            'Planning prioritaire (créneaux réservés)',
-          ],
-        PremiumPlan.investisseur => [
-            'Pitchs complets + données financières',
-            'Filtres avancés (secteur, stade, montant)',
-            'Messagerie illimitée avec entrepreneurs',
-            'Alertes nouvelles opportunités par secteur',
-            'Badge 💎 Investisseur Vérifié',
-          ],
-      };
+  List<String> get benefits => [
+        'Pitch épinglé en tête du fil mentors & investisseurs',
+        'Badge ⭐ Premium visible sur ton profil et tes pitchs',
+        'Demandes de mentorat illimitées',
+        'Meilleure visibilité auprès des investisseurs',
+        'Accès prioritaire aux mentors certifiés',
+      ];
 
   /// URL Wave avec montant pré-rempli.
   String get waveUrl =>
@@ -95,9 +62,11 @@ class WaveService {
   static Future<void> activatePremium(PremiumPlan plan) async {
     final uid = AuthService.currentUid;
     if (uid == null) return;
-    // 1. Persistance Firebase
+    // 1. Persistance Firebase (profil)
     await DatabaseService.setPremium(uid: uid, plan: plan.name);
-    // 2. Mise à jour immédiate en mémoire → badge visible instantanément
+    // 2. Marquer tous les pitchs existants comme premium
+    await DatabaseService.markUserPitchesPremium(uid, isPremium: true);
+    // 3. Mise à jour immédiate en mémoire → badge visible instantanément
     final updated = UserProfileController.profile.value.copyWith(
       isPremium: true,
       premiumPlan: plan.name,

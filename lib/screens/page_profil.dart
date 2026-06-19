@@ -10,6 +10,7 @@ import '../services/service_navigation.dart';
 import '../services/service_interactions.dart';
 import '../services/service_notifications.dart';
 import '../services/service_partage.dart';
+import '../services/service_wave.dart';
 import '../theme/theme_app.dart';
 import '../widgets/avatar.dart';
 import 'page_avis.dart';
@@ -158,15 +159,29 @@ class _IdentityCard extends StatelessWidget {
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: AppColors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.navy, width: 2),
-                      ),
-                    ),
+                    child: profile.isPremium
+                        ? Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: AppColors.amber,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: AppColors.navy, width: 2),
+                            ),
+                            child: const Icon(Icons.star_rounded,
+                                color: Colors.white, size: 12),
+                          )
+                        : Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: AppColors.green,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: AppColors.navy, width: 2),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -192,6 +207,35 @@ class _IdentityCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (profile.isPremium) ...[
+                      const SizedBox(height: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color: AppColors.amber.withValues(alpha: 0.6)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star_rounded,
+                                color: AppColors.amber, size: 11),
+                            SizedBox(width: 4),
+                            Text(
+                              'Entrepreneur Premium',
+                              style: TextStyle(
+                                color: AppColors.amber,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -1109,6 +1153,7 @@ class _InteractionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final profile = UserProfileController.profile.value;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1134,7 +1179,105 @@ class _InteractionsSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        // Bouton Premium — visible uniquement si pas encore abonné
+        if (!profile.isPremium)
+          _PremiumBanner(context: context)
+        else
+          _PremiumActiveBadge(),
       ],
+    );
+  }
+}
+
+class _PremiumBanner extends StatelessWidget {
+  final BuildContext context;
+  const _PremiumBanner({required this.context});
+
+  @override
+  Widget build(BuildContext outerContext) {
+    return GestureDetector(
+      onTap: () => WavePremiumSheet.show(outerContext, PremiumPlan.entrepreneur),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFEF3C7), Color(0xFFFFF7ED)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.star_rounded,
+                  color: Color(0xFFF59E0B), size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Passer Entrepreneur Premium',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '4 900 FCFA / mois · Pitchs en tête de liste',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFFB45309),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFF59E0B), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumActiveBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.4)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+          SizedBox(width: 10),
+          Text(
+            'Compte Entrepreneur Premium actif',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF166534),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

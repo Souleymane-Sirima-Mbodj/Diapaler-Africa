@@ -166,11 +166,17 @@ diapaler-africa-default-rtdb/
 │       ├── investmentRange    → "500 000 – 5 000 000 FCFA"
 │       ├── projects/
 │       │   └── {id}/
-│       │       ├── name        → "Téranga Mode"
-│       │       ├── description → "Plateforme de mode africaine..."
-│       │       ├── sector      → "Mode & Textile"
-│       │       ├── step        → 2
-│       │       └── totalSteps  → 3 (pitch) ou 5 (projet manuel)
+│       │       ├── id             → "abc123xyz..."
+│       │       ├── name           → "Téranga Mode"
+│       │       ├── description    → "Plateforme de mode africaine..."
+│       │       ├── sector         → "Mode & Textile"
+│       │       ├── step           → 3
+│       │       ├── totalSteps     → 5
+│       │       ├── amount         → "5000000" (optionnel)
+│       │       ├── businessPlanUrl → "https://res.cloudinary.com/..." (optionnel)
+│       │       ├── videoUrl       → "https://res.cloudinary.com/..." (optionnel)
+│       │       ├── deckUrl        → "https://res.cloudinary.com/..." (optionnel)
+│       │       └── published      → false
 │       ├── mentorsActive      → 2
 │       ├── sessionsCount      → 8
 │       ├── favoritesCount     → 5
@@ -179,14 +185,17 @@ diapaler-africa-default-rtdb/
 │
 ├── pitches/
 │   └── {timestamp}/
-│       ├── id           → "1748123456789"
-│       ├── userId       → "uid_entrepreneur_abc123" (UID Firebase — pas l'email)
-│       ├── userName     → "Mariéme Tine"
-│       ├── title        → "Téranga Mode"
-│       ├── sector       → "Mode & Textile"
-│       ├── description  → "Plateforme de vente de mode africaine..."
-│       ├── amount       → "5000000"
-│       └── createdAt    → 1748123456789 (ServerTimestamp)
+│       ├── id              → "1748123456789"
+│       ├── userId          → "uid_entrepreneur_abc123" (UID Firebase — pas l'email)
+│       ├── userName        → "Mariéme Tine"
+│       ├── title           → "Téranga Mode"
+│       ├── sector          → "Mode & Textile"
+│       ├── description     → "Plateforme de vente de mode africaine..."
+│       ├── amount          → "5000000"
+│       ├── businessPlanUrl → "https://res.cloudinary.com/..." (optionnel)
+│       ├── videoUrl        → "https://res.cloudinary.com/..." (optionnel)
+│       ├── deckUrl         → "https://res.cloudinary.com/..." (optionnel)
+│       └── createdAt       → 1748123456789 (ServerTimestamp)
 │
 ├── messages/
 │   └── {conversationId}/
@@ -200,8 +209,8 @@ diapaler-africa-default-rtdb/
 │           └── isRead      → false
 │
 ├── conversations/
-│   └── {conversationId}/   (clé = sorted [uid1, uid2] joint par "-")
-│       ├── id              → "uid1-uid2"
+│   └── {conversationId}/   (clé = sorted [uid1, uid2] joint par "--")
+│       ├── id              → "uid1--uid2"
 │       ├── user1Id         → "uid1"
 │       ├── user2Id         → "uid2"
 │       ├── user1Name       → "Mariéme Tine"
@@ -219,7 +228,7 @@ diapaler-africa-default-rtdb/
 │       ├── fromName     → "Mariéme Tine"
 │       ├── toName       → "Ibrahima Sall"
 │       ├── message      → "Bonjour, je recherche un mentor..."
-│       ├── type              → "mentor" | "investment"   ← distingue demandes mentorat vs propositions investissement
+│       ├── type              → "mentor" | "investment" | "session"   ← distingue mentorat, investissement et réservation de session
 │       ├── status            → "pending" | "accepted" | "rejected" | "cancelled"
 │       ├── proposedDate      → "2025-06-15" (optionnel — date suggérée par l'expéditeur)
 │       ├── proposedTime      → "14:00" (optionnel — heure suggérée)
@@ -271,8 +280,11 @@ diapaler-africa-default-rtdb/
 │           ├── fromUid     → "uid_auteur"
 │           ├── fromName    → "Mariéme Tine"
 │           ├── text        → "Excellent mentor, très disponible"
-│           ├── rating      → 5   (entier 1–5)
-│           └── createdAt   → "2025-05-24T10:00:00.000"
+│           └── createdAt   → 1748123456789  (millisecondsSinceEpoch — entier, pas ISO string)
+│
+├── ratings/
+│   └── {toUid}/
+│       └── {fromUid}   → 5   (entier 1–5 — une note par évaluateur, écrasement si réévaluation)
 │
 └── pitchFavorites/
     └── {userId}/
@@ -331,13 +343,25 @@ Future<void> _submit() async {
     lastName: parts.length > 1 ? parts.sublist(1).join(' ') : '',
     email: _email.text.trim(),
     phone: '$dialCode ${_phone.text.trim()}',
-    role: _roleLabel(_role),       // "Entrepreneur" | "Mentor" | "Investisseur"
-    photoBase64: _photoBase64,
+    role: _roleLabel(_role),                                    // "Entrepreneur" | "Mentor" | "Investisseur"
+    gender: _gender,
+    birthDate: _birthDate,
+    address: _address.text.trim(),
+    city: _city,
+    country: _country,
+    sector: _sector,
+    yearsExperience: _role == UserRole.mentor
+                       ? (int.tryParse(_yearsExp.text.trim()) ?? 0) : 0,
+    investmentRange: _role == UserRole.investor
+                       ? _investmentRange.text.trim() : '',
+    bio: _bio.text.trim(),
+    linkedin: _linkedin.text.trim(),
+    photoBase64: photoData,                                     // URL Cloudinary ou base64 selon disponibilité
     interests: _interests.toList()..sort(),
     projects: const [],
-    city: _city,
-    sector: _sector,
-    bio: _bio.text.trim(),
+    companies: (_role == UserRole.mentor || _role == UserRole.investor)
+                 ? List<String>.from(_companies)
+                 : const [],
   );
 
   // 3. Écriture dans Firebase (CREATE) + cache local
@@ -402,8 +426,11 @@ static Stream<List<Map<String, dynamic>>> getPitches() {
         .map((v) => Map<String, dynamic>.from(v as Map))
         .toList();
 
-    // Tri par date décroissante (plus récent en premier)
     list.sort((a, b) {
+      // Pitchs premium en tête, puis tri par date décroissante
+      final aPremium = (a['isPremium'] as bool?) == true ? 1 : 0;
+      final bPremium = (b['isPremium'] as bool?) == true ? 1 : 0;
+      if (bPremium != aPremium) return bPremium.compareTo(aPremium);
       final aT = (a['createdAt'] as num?) ?? 0;
       final bT = (b['createdAt'] as num?) ?? 0;
       return bT.compareTo(aT);
@@ -454,28 +481,45 @@ static Future<void> updateUserProfile(String uid, UserProfile profile) {
 **Depuis `page_modification_profil.dart` :**
 ```dart
 Future<void> _save() async {
-  final updated = _initial.copyWith(
-    firstName:   _firstName.text.trim(),
-    lastName:    _lastName.text.trim(),
-    bio:         _bio.text.trim(),
+  final yearsParsed = int.tryParse(_yearsExperience.text.trim()) ?? 0;
+  final next = _initial.copyWith(
+    firstName: _firstName.text.trim(),
+    lastName: _lastName.text.trim(),
+    email: _email.text.trim(),
+    phone: _phone.text.trim(),
+    gender: _gender,
+    birthDate: _birthDate,
+    address: _address.text.trim(),
+    city: _city,
+    country: _country,
+    sector: _sector,
+    linkedin: _linkedin.text.trim(),
+    bio: _bio.text.trim(),
     photoBase64: _photoBase64,
-    interests:   _interests.toList()..sort(),
-    city:        _city,
-    country:     _country,
-    sector:      _sector,
-    birthDate:   _birthDate,
+    interests: _interests.toList()..sort(),
+    yearsExperience: _isMentor ? yearsParsed : _initial.yearsExperience,
+    investmentRange: _isInvestor ? _investmentRange.text.trim() : _initial.investmentRange,
   );
 
-  // Mise à jour locale immédiate (UX réactive) + cache + Firebase auto
-  UserProfileController.update(updated);
+  // Mise à jour locale immédiate (UX réactive) + cache
+  UserProfileController.update(next);
+
+  // Mise à jour serveur (non bloquante) — on tente d'écrire en Firebase si l'UID est disponible
+  final uid = AuthService.currentUid;
+  if (uid != null) {
+    try {
+      await DatabaseService.updateUserProfile(uid, next);
+    } catch (_) {/* non-bloquant */}
+  }
 
   // Retour avec confirmation
   if (!mounted) return;
   Navigator.of(context).pop();
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
-      content: Text('Profil mis à jour avec succès ✓'),
+      content: Text('✅ Profil mis à jour'),
       backgroundColor: AppColors.green,
+      behavior: SnackBarBehavior.floating,
     ),
   );
 }
@@ -495,45 +539,52 @@ Publier un pitch est une double opération : le projet est enregistré dans le p
 ```dart
 // service_base_de_donnees.dart
 static Future<void> publishPitch({
+  required String pitchId,       // ID pré-généré par PitchPage
   required String userId,
   required String userName,
   required String title,
   required String sector,
   required String description,
   required String amount,
+  String? businessPlanUrl,
+  String? videoUrl,
+  String? deckUrl,
+  bool isPremium = false,
 }) async {
-  final id = DateTime.now().millisecondsSinceEpoch.toString();
-  await _db.ref('pitches/$id').set({
-    'id': id,
+  await _db.ref('pitches/$pitchId').set({
+    'id': pitchId,
     'userId': userId,
     'userName': userName,
     'title': title,
     'sector': sector,
     'description': description,
     'amount': amount,
-    'createdAt': ServerValue.timestamp,  // Timestamp côté serveur Firebase
+    'createdAt': ServerValue.timestamp,
+    'isPremium': isPremium,
+    if (businessPlanUrl != null) 'businessPlanUrl': businessPlanUrl,
+    if (videoUrl != null)        'videoUrl':        videoUrl,
+    if (deckUrl != null)         'deckUrl':         deckUrl,
   });
 }
 ```
 
-**Double sauvegarde depuis `page_pitch.dart` :**
+**Publication depuis `page_pitch.dart` (étape 5 uniquement) :**
 ```dart
-// Double sauvegarde : profil entrepreneur (projects/) + nœud global pitches/
-final project = Project(
-  id: DateTime.now().millisecondsSinceEpoch.toString(),
-  name: title, description: description, sector: sector,
-);
-final updated = profile.copyWith(
-  projects: [...profile.projects, project],
-);
-UserProfileController.update(updated);          // Profil entrepreneur (via update())
-await DatabaseService.publishPitch(             // Nœud global visible par tous
-  userId: profile.email,
+// _publish() — appelée à l'étape 5 uniquement
+final project = _buildProject(published: true);  // published: true
+UserProfileController.updateProject(project);    // Profil entrepreneur
+await DatabaseService.publishPitch(
+  pitchId: _pitchId,                            // ID généré à l'initState
+  userId: uid,
   userName: profile.fullName,
-  title: title,
-  sector: sector,
-  description: description,
+  title: project.name,
+  sector: project.sector,
+  description: project.description,
   amount: _amount.text.trim(),
+  businessPlanUrl: _businessPlanUrl,
+  videoUrl: _videoUrl,
+  deckUrl: _deckUrl,
+  isPremium: profile.isPremium,  // Pitch marqué premium si entrepreneur abonné
 );
 ```
 
@@ -544,7 +595,7 @@ await DatabaseService.publishPitch(             // Nœud global visible par tous
 
 ### 1.8 UPDATE — Activer le statut Premium (Wave)
 
-Le système Premium de DIAPALER fonctionne avec Wave, le principal service de paiement mobile au Sénégal. Après que l'utilisateur a validé le paiement sur l'application Wave, notre service confirme l'activation en écrivant uniquement trois champs sur le profil Firebase (`isPremium`, `premiumPlan`, `premiumSince`) via `.update()`. Ce choix d'un update partiel est délibéré : on ne veut pas écraser d'autres données du profil. Le badge Premium étoile apparaît instantanément dans l'interface grâce à la mise à jour en mémoire du `UserProfileController`.
+Le système Premium de DIAPALER fonctionne avec Wave, le principal service de paiement mobile au Sénégal. Après que l'utilisateur a validé le paiement sur l'application Wave, notre service confirme l'activation en écrivant uniquement trois champs sur le profil Firebase (`isPremium`, `premiumPlan`, `premiumSince`) via `.update()`. Ce choix d'un update partiel est délibéré : on ne veut pas écraser d'autres données du profil. Le badge ⭐ Premium apparaît instantanément sur le profil, sur les cartes de pitch, et les pitchs de l'entrepreneur remontent en tête de liste — le tout grâce à la mise à jour en mémoire du `UserProfileController` et au batch Firebase sur les pitchs.
 
 Après confirmation du paiement Wave, un `update()` partiel marque l'utilisateur Premium :
 
@@ -552,7 +603,7 @@ Après confirmation du paiement Wave, un `update()` partiel marque l'utilisateur
 // service_base_de_donnees.dart
 static Future<void> setPremium({
   required String uid,
-  required String plan,   // 'entrepreneur' | 'mentor' | 'investisseur'
+  required String plan,   // 'entrepreneur'
 }) async {
   await _userRef(uid).update({
     'isPremium': true,
@@ -562,20 +613,42 @@ static Future<void> setPremium({
 }
 ```
 
+Lors de l'activation Premium, tous les pitchs existants de l'utilisateur sont marqués `isPremium: true` en une seule opération batch :
+
+```dart
+/// Marque tous les pitchs d'un utilisateur comme premium (ou non) en batch.
+static Future<void> markUserPitchesPremium(String uid,
+    {required bool isPremium}) async {
+  final snap = await _db.ref('pitches').get();
+  if (!snap.exists || snap.value == null) return;
+  final data = Map<String, dynamic>.from(snap.value as Map);
+  final updates = <String, dynamic>{};
+  for (final entry in data.entries) {
+    final pitch = Map<String, dynamic>.from(entry.value as Map);
+    if (pitch['userId'] == uid) {
+      updates['pitches/${entry.key}/isPremium'] = isPremium;
+    }
+  }
+  if (updates.isNotEmpty) await _db.ref().update(updates);
+}
+```
+
 **Depuis `service_wave.dart` :**
 ```dart
 // Après que l'utilisateur confirme son paiement Wave
 static Future<void> activatePremium(PremiumPlan plan) async {
   final uid = AuthService.currentUid;
   if (uid == null) return;
-  // 1. Écriture Firebase
+  // 1. Persistance Firebase (profil)
   await DatabaseService.setPremium(uid: uid, plan: plan.name);
-  // 2. Mise à jour en mémoire → badge ⭐ visible instantanément
+  // 2. Marquer tous les pitchs existants comme premium
+  await DatabaseService.markUserPitchesPremium(uid, isPremium: true);
+  // 3. Mise à jour en mémoire → badge ⭐ visible instantanément
   final updated = UserProfileController.profile.value.copyWith(
     isPremium: true,
     premiumPlan: plan.name,
   );
-  UserProfileController.update(updated); // → cache local + Firebase
+  UserProfileController.update(updated);
 }
 ```
 
@@ -606,10 +679,17 @@ static Future<void> cancel({
     await _db.child('bookedSessions/${session.otherUid}/${session.id}').remove();
   }
 
-  // Notifications croisées de l'annulation
+  // Notif côté annulant (récap de son action)
   await NotificationService.addNotification(
     title: 'Rendez-vous annulé',
     message: 'Session avec ${session.mentorName} annulée — motif : $reason',
+    type: 'session_cancelled',
+  );
+  // Notif croisée : avertit l'autre partie si elle a un compte Firebase
+  await NotificationService.notifyUser(
+    uid: session.otherUid,
+    title: 'Rendez-vous annulé',
+    message: '$userName a annulé votre session — motif : $reason',
     type: 'session_cancelled',
   );
 }
@@ -640,10 +720,13 @@ UserProfileController.reset();          // 4. Réinitialise le profil en mémoir
 appTabIndex.value = 0;                  // 5. Retour à l'onglet Accueil
 await AuthService.signOut();           // 6. Révoque la session Firebase Auth
 
-// Redirection vers la page de connexion (pile vidée)
-if (!mounted) return;
+// Redirection vers la page de connexion (pile vidée, fade transition)
+if (!context.mounted) return;
 Navigator.of(context).pushAndRemoveUntil(
-  MaterialPageRoute(builder: (_) => const LoginPage()),
+  PageRouteBuilder(
+    pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: const LoginPage()),
+    transitionDuration: const Duration(milliseconds: 350),
+  ),
   (_) => false,
 );
 ```
@@ -662,33 +745,123 @@ La sérialisation manuelle est nécessaire car Firebase Realtime Database retour
 ```dart
 // Dart → JSON (envoi à Firebase)
 static Map<String, dynamic> _toMap(UserProfile p) => {
-  'firstName':   p.firstName,
-  'lastName':    p.lastName,
-  'email':       p.email,
-  'role':        p.role,
-  'city':        p.city,
-  'sector':      p.sector,
-  'bio':         p.bio,
+  'firstName': p.firstName,
+  'lastName': p.lastName,
+  'email': p.email,
+  'phone': p.phone,
+  'gender': p.gender.serialized,
+  'birthDate': p.birthDate?.toIso8601String(),
+  'address': p.address,
+  'city': p.city,
+  'country': p.country,
+  'sector': p.sector,
+  'role': p.role,
+  'bio': p.bio,
+  'linkedin': p.linkedin,
   'photoBase64': p.photoBase64,
-  'interests':   p.interests,
-  'projects':    p.projects.map(_projectToMap).toList(),
-  'isPremium':   p.isPremium,
-  'updatedAt':   ServerValue.timestamp,
-  // ... autres champs (gender, phone, score, etc.)
+  'interests': p.interests,
+  'projects': p.projects.map(_projectToMap).toList(),
+  'mentorsActive': p.mentorsActive,
+  'sessionsCount': p.sessionsCount,
+  'favoritesCount': p.favoritesCount,
+  'score': p.score,
+  'yearsExperience': p.yearsExperience,
+  'investmentRange': p.investmentRange,
+  'isPremium': p.isPremium,
+  'premiumPlan': p.premiumPlan,
+  'companies': p.companies,
+  'updatedAt': ServerValue.timestamp,
 };
 
-// JSON → Dart (lecture depuis Firebase) — cast sécurisé obligatoire
-static UserProfile _fromMap(Map<String, dynamic> m) => UserProfile(
-  firstName: m['firstName']?.toString() ?? '',
-  lastName:  m['lastName']?.toString()  ?? '',
-  email:     m['email']?.toString()     ?? '',
-  role:      m['role']?.toString()      ?? 'Entrepreneur',
-  city:      m['city']?.toString()      ?? 'Dakar',
-  score:     (m['score'] as num?)?.toDouble() ?? 0.0,
-  interests: _parseList(m['interests']),   // Firebase peut retourner List ou Map
-  projects:  _parseProjects(m['projects']),
-  // ... autres champs
-);
+static Map<String, dynamic> _projectToMap(Project p) => {
+  'id': p.id,
+  'name': p.name,
+  'description': p.description,
+  'sector': p.sector,
+  'step': p.step,
+  'totalSteps': p.totalSteps,
+  if (p.amount != null)          'amount':          p.amount,
+  if (p.businessPlanUrl != null) 'businessPlanUrl': p.businessPlanUrl,
+  if (p.videoUrl != null)        'videoUrl':        p.videoUrl,
+  if (p.deckUrl != null)         'deckUrl':         p.deckUrl,
+  'published': p.published,
+};
+
+// JSON → Dart (lecture depuis Firebase) — cast sécurisé + parsing listes
+static UserProfile _fromMap(Map<String, dynamic> m) {
+  final rawProjects = m['projects'];
+  final projects = <Project>[];
+  if (rawProjects is List) {
+    for (final raw in rawProjects) {
+      if (raw is Map) {
+        final pm = Map<String, dynamic>.from(raw);
+        projects.add(Project(
+          id: pm['id']?.toString() ?? '',
+          name: pm['name']?.toString() ?? '',
+          description: pm['description']?.toString() ?? '',
+          sector: pm['sector']?.toString() ?? '',
+          step: (pm['step'] as num?)?.toInt() ?? 1,
+          totalSteps: (pm['totalSteps'] as num?)?.toInt() ?? 5,
+          amount: pm['amount']?.toString(),
+          businessPlanUrl: pm['businessPlanUrl']?.toString(),
+          videoUrl: pm['videoUrl']?.toString(),
+          deckUrl: pm['deckUrl']?.toString(),
+          published: (pm['published'] as bool?) ?? false,
+        ));
+      }
+    }
+  }
+
+  final rawInterests = m['interests'];
+  final interests = <String>[];
+  if (rawInterests is List) {
+    for (final v in rawInterests) {
+      interests.add(v.toString());
+    }
+  }
+
+  final rawCompanies = m['companies'];
+  final companies = <String>[];
+  if (rawCompanies is List) {
+    for (final v in rawCompanies) {
+      companies.add(v.toString());
+    }
+  }
+
+  DateTime? birth;
+  final rawBirth = m['birthDate']?.toString();
+  if (rawBirth != null && rawBirth.isNotEmpty) {
+    birth = DateTime.tryParse(rawBirth);
+  }
+
+  return UserProfile(
+    firstName: m['firstName']?.toString() ?? '',
+    lastName: m['lastName']?.toString() ?? '',
+    email: m['email']?.toString() ?? '',
+    phone: m['phone']?.toString() ?? '',
+    gender: Gender.fromString(m['gender']?.toString()),
+    birthDate: birth,
+    address: m['address']?.toString() ?? '',
+    city: m['city']?.toString() ?? 'Dakar',
+    country: m['country']?.toString() ?? 'Sénégal',
+    sector: m['sector']?.toString() ?? 'Autre',
+    role: m['role']?.toString() ?? 'Entrepreneur',
+    bio: m['bio']?.toString() ?? '',
+    linkedin: m['linkedin']?.toString() ?? '',
+    photoBase64: m['photoBase64']?.toString() ?? '',
+    interests: interests,
+    projects: projects,
+    mentorsActive: (m['mentorsActive'] as num?)?.toInt() ?? 0,
+    sessionsCount: (m['sessionsCount'] as num?)?.toInt() ?? 0,
+    favoritesCount: (m['favoritesCount'] as num?)?.toInt() ?? 0,
+    score: (m['score'] as num?)?.toDouble() ?? 0.0,
+    yearsExperience: (m['yearsExperience'] as num?)?.toInt() ?? 0,
+    investmentRange: m['investmentRange']?.toString() ?? '',
+    isPremium: (m['isPremium'] as bool?) ?? false,
+    premiumPlan: m['premiumPlan']?.toString() ?? '',
+    companies: companies,
+  );
+}
 ```
 
 ---
@@ -710,7 +883,7 @@ Le nœud `mentorRequests/` centralise deux types d'interactions entre membres : 
 | `toUserId` | String | UID du destinataire |
 | `fromName` / `toName` | String | Noms affichés |
 | `message` | String | Message personnalisé |
-| `type` | String | `'mentor'` ou `'investment'` |
+| `type` | String | `'mentor'` / `'investment'` / `'session'` |
 | `status` | String | `'pending'` / `'accepted'` / `'rejected'` / `'cancelled'` |
 | `createdAt` / `respondedAt` | String (ISO) | Dates |
 
@@ -722,8 +895,8 @@ import '../data/interactions.dart';
 class InteractionsService {
   static final _db = FirebaseDatabase.instance.ref();
 
-  // ── CREATE : Envoyer une demande de mentorat
-  static Future<void> sendMentorRequest({
+  // ── CREATE : Envoyer une demande de mentorat — retourne l'ID Firebase créé
+  static Future<String> sendMentorRequest({
     required String fromUserId,
     required String toUserId,
     required String fromName,
@@ -741,17 +914,24 @@ class InteractionsService {
       message: message,
       createdAt: DateTime.now(),
       status: RequestStatus.pending,
+      type: type,
     );
     await _db.child('mentorRequests/$id').set(request.toJson());
+    return id;  // ← ID renvoyé (utile pour référencer la demande après création)
   }
 
   // ── READ (stream) : Demandes reçues par un utilisateur
+  // Filtrage serveur via orderByChild + equalTo — plus rapide que tout charger côté client.
   static Stream<List<MentorRequest>> getReceivedRequests(String userId) {
-    return _db.child('mentorRequests').onValue.map((event) {
+    return _db.child('mentorRequests')
+        .orderByChild('toUserId')
+        .equalTo(userId)
+        .onValue
+        .map((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .where((v) => v is Map && v['toUserId'] == userId)
+          .where((v) => v is Map)
           .map<MentorRequest>((v) =>
               MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
@@ -909,6 +1089,12 @@ class UsersService {
       if (rawSectors is List) {
         for (final s in rawSectors) sectors.add(s.toString());
       }
+      // Lecture des entreprises fondées/possédées depuis Firebase
+      final rawCompanies = m['companies'];
+      final companies = <String>[];
+      if (rawCompanies is List) {
+        for (final c in rawCompanies) companies.add(c.toString());
+      }
       result.add(Mentor(
         uid: uid,
         initials: _initials(m['firstName']?.toString() ?? '',
@@ -917,7 +1103,7 @@ class UsersService {
         title: m['sector']?.toString() ?? '',
         city: m['city']?.toString() ?? 'Dakar',
         sectors: sectors,
-        companies: const [],
+        companies: companies,  // ← lues depuis Firebase (pas const [])
         rating: (m['score'] as num?)?.toDouble() ?? 0.0,
         reviews: 0,
         years: (m['yearsExperience'] as num?)?.toInt() ?? 0,
@@ -935,6 +1121,30 @@ class UsersService {
 
 > **📸 CAPTURE D'ÉCRAN — Matching : membres DIAPALER réels en tête de liste**
 > *(Insérer ici la capture d'écran)*
+
+---
+
+### Stockage de fichiers — Cloudinary
+
+Les fichiers volumineux (photos de profil haute résolution, PDFs de pitchs, vidéos) sont uploadés vers Cloudinary via le service `service_cloudinary.dart`. Cela évite de surcharger Firebase Realtime Database avec du contenu binaire. Le flux est :
+
+1. Utilisateur sélectionne fichier depuis la galerie (ImagePicker). L'application n'utilise pas de sélecteur caméra intégré pour ces flows.
+2. `CloudinaryService.uploadBytes()` effectue POST HTTPS vers `upload.cloudinary.com`
+3. Cloudinary retourne URL publique HTTPS
+4. URL stockée dans Firebase (références, pas le fichier lui-même)
+5. Affichage rapide de l'image via URL CDN global
+
+**Configuration Cloudinary :**
+- Cloud Name: ddpgzzwxb
+- Upload Preset: diapaler_unsigned (non-signé pour faciliter uploads client-side)
+- Dossier de destination: `pitches/` (organisé par type de contenu)
+- Transformations: redimensionnement automatique côté client à 512×512 lors de l'inscription (Cloudinary), et 400×400 dans la page de modification du profil (client-side). Cloudinary peut aussi appliquer ses propres transformations côté serveur.
+
+**Avantages :**
+- Pas de limite de taille Firebase (illimitée Cloudinary)
+- CDN global pour livraison rapide
+- Compression auto + cache HTTP
+- Gestion d'espace facilement séparable de la logique métier
 
 ---
 
@@ -1089,36 +1299,52 @@ class _ChatbotPageState extends State<ChatbotPage> {
   bool _loading = false;
 
   Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _loading) return;
+    final userText = _ctrl.text.trim();
+    if (userText.isEmpty || _loading) return;
 
     final profile = UserProfileController.profile.value;
     _ctrl.clear();
 
     setState(() {
-      _messages.add(ChatbotMessage(role: 'user', content: text));
+      _messages.add(ChatbotMessage(role: 'user', content: userText));
       _loading = true;
     });
     _scrollToBottom();
 
     try {
-      // Appel HTTP POST → proxy Cloudflare → Groq API
       final reply = await ChatbotService.sendMessage(
         messages: _messages,
-        userName: profile.firstName,       // Prénom pour personnalisation
-        userRole: profile.role,            // Entrepreneur / Mentor / Investisseur
-        userSector: profile.sector,        // Secteur d'activité
-        userCity: profile.city,            // Ville (Dakar, Saint-Louis…)
+        userName: profile.firstName,
+        userRole: profile.role,
+        userSector: profile.sector,
+        userCity: profile.city,
       );
+      if (!mounted) return;
       setState(() {
         _messages.add(ChatbotMessage(role: 'assistant', content: reply));
       });
+      _scrollToBottom();
     } on Exception catch (e) {
-      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (!mounted) return;
+      String raw = e.toString().replaceFirst('Exception: ', '');
+      final String msg;
+      if (raw.toLowerCase().contains('credit') || raw.toLowerCase().contains('balance')) {
+        msg = 'Service DIALI temporairement indisponible — crédits IA épuisés. Réessaie dans quelques instants.';
+      } else if (raw.toLowerCase().contains('timeout') || raw.toLowerCase().contains('network')) {
+        msg = 'Connexion internet instable. Vérifie ta connexion et réessaie.';
+      } else {
+        msg = 'DIALI rencontre une difficulté technique. Réessaie dans quelques instants.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppColors.red),
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
       );
-      setState(() => _messages.removeLast()); // Retire le msg utilisateur si échec
+      setState(() => _messages.removeLast());
+      _ctrl.text = userText;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1159,7 +1385,8 @@ Pour récapituler l'ensemble des interactions avec Firebase et l'API Groq, le ta
 | **UPDATE** statut demande | `InteractionsService` | `mentorRequests/{id}.update()` | Accepter/Refuser |
 | **UPDATE** disponibilités | `InteractionsService` | `availability/{uid}.set()` | Planning mentor |
 | **UPDATE** conversation (nb non lus) | `InteractionsService` | `conversations/{id}.update()` | Lecture message |
-| **CREATE** avis (review) | `InteractionsService` | `reviews/{toUid}/{id}.set()` | Laisser un avis étoilé |
+| **CREATE** avis (texte) | `InteractionsService` | `reviews/{toUid}/{id}.set()` — champs : id, fromUid, fromName, text, createdAt (ms) | Laisser un commentaire |
+| **CREATE/UPDATE** note (étoiles) | `InteractionsService` | `ratings/{toUid}/{fromUid}.set(value)` — entier 1–5, écrasement si réévaluation | Sélecteur étoiles 1–5 |
 | **CREATE** pitch favori | `PitchFavoriteService` | `pitchFavorites/{userId}/{pitchId}.set()` | Bookmark investisseur |
 | **READ** avis (stream) | `InteractionsService` | `reviews/{toUid}.onValue` | Page Avis / Profil |
 | **READ** pitchs favoris (stream) | `PitchFavoriteService` | `pitchFavorites/{userId}.onValue` | Mes Pitchs Sauvegardés |

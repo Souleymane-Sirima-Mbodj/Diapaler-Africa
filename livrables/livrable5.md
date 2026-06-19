@@ -84,7 +84,7 @@
   - [6.2 Planning (disponibilités mentor)](#62-planning-disponibilités-mentor)
   - [6.3 Demandes de mentorat](#63-demandes-de-mentorat)
 - [7. Système de Pitch Entrepreneurial](#7-système-de-pitch-entrepreneurial)
-  - [7.1 Dépôt de pitch — Formulaire 3 étapes](#71-dépôt-de-pitch--formulaire-3-étapes-page_pitchdart)
+  - [7.1 Dépôt de pitch — Formulaire 5 étapes](#71-dépôt-de-pitch--stepper-5-étapes-unifié-page_pitchdart)
   - [7.2 Fil des pitchs publics](#72-fil-des-pitchs-publics-page_pitches_publicsdart)
 - [8. Dashboards par rôle](#8-dashboards-par-rôle)
   - [8.1 Dashboard Mentor](#81-dashboard-mentor-page_dashboard_mentordart)
@@ -107,7 +107,7 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | Recherche | Barre textuelle en temps réel (nom, secteur, ville) dans Matching + Pitchs Publiés | ✅ |
 | Filtres | Matching : pills rôle + pills secteur (10) + dropdown ville + reset | ✅ |
 | Filtres pitchs | Pitchs : barre recherche + pills secteur dynamiques + compteur + reset | ✅ (bonus) |
-| Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km | ✅ |
+| Géolocalisation | GPS + bouton "Près de moi" + tri distance + puce km + `LocationService` auto-détection ville et localité/quartier (Nominatim OSM) dans la modification de profil | ✅ |
 | Chatbot IA | DIALI (Llama 3.1 8B via Groq) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge `unreadMessagesCount` global | ✅ (bonus) |
 | Système de Contacts | Onglet "Contacts" dans Messages — relations acceptées + searchable + badge rôle | ✅ (bonus) |
@@ -119,7 +119,7 @@ DIAPALER AFRICA implémente **toutes** les fonctionnalités avancées listées d
 | Compatibilité dynamique | Algorithme intérêts partagés — affiché ET trié de façon cohérente | ✅ (bonus) |
 | **Navigation notifications** | Tap → onglet Messages / Agenda / `RequestsPage` selon le type | ✅ (bonus) |
 | **Anti-doublon demandes** | `hasPendingRequest()` Firebase — bloque l'envoi si demande en attente | ✅ (bonus) |
-| **Pitch (stepper 3 étapes)** | `PitchPage` → double sauvegarde profil + `pitches/` global | ✅ (bonus) |
+| **Pitch (stepper 5 étapes)** | `PitchPage` — édition / création / publication unifiées, sauvegarde progressive par étape + publication directe sans stepper | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream Firebase temps réel | ✅ (bonus) |
 | **Dashboard Mentor** | `SliverAppBar` + stats + raccourcis | ✅ (bonus) |
 | **Dashboard Investisseur** | Header + accès Pitchs + Matching "Entrepreneurs à financer" | ✅ (bonus) |
@@ -235,17 +235,24 @@ class NotificationService {
     required String title,
     required String message,
     required String type,
+    String requestId = '',
+    String fromUserId = '',
+    String fromName = '',
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final item = NotificationItem(
       id: id, title: title, message: message,
       timestamp: DateTime.now(), type: type,
+      requestId: requestId,
+      fromUserId: fromUserId,
+      fromName: fromName,
     );
     if (_userId != null) {
       await _db.child('notifications/$_userId/$id').set(item.toJson());
       // Le ValueNotifier est mis à jour par le listener Firebase en temps réel.
     } else {
-      notifications.value = [item, ...notifications.value]; // fallback mémoire
+      // Fallback mémoire si pas encore connecté.
+      notifications.value = [item, ...notifications.value];
     }
   }
 
@@ -256,16 +263,24 @@ class NotificationService {
     required String title,
     required String message,
     required String type,
+    String requestId = '',
+    String fromUserId = '',
+    String fromName = '',
   }) async {
     if (uid.isEmpty) return;
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final item = NotificationItem(
       id: id, title: title, message: message,
       timestamp: DateTime.now(), type: type,
+      requestId: requestId,
+      fromUserId: fromUserId,
+      fromName: fromName,
     );
     try {
       await _db.child('notifications/$uid/$id').set(item.toJson());
-    } catch (_) {} // Échec silencieux
+    } catch (_) {
+      // Échec silencieux : la notif côté annulant a déjà été créée.
+    }
   }
 
   /// Marque une notification comme lue (mise à jour Firebase).
@@ -410,7 +425,7 @@ class _NotificationTile extends StatelessWidget {
 
 ### 2.1 Matching — Filtres multicritères
 
-La page Matching intègre un système de filtres multicritères : **barre de recherche textuelle** (temps réel sur nom/secteur/ville), **pills de rôle** (Tous / Mentor / Investisseur), **pills de secteur** (10 secteurs sénégalais), **dropdown de ville**, et bouton **"Réinitialiser"** visible dès qu'un filtre est actif.
+La page Matching intègre un système de filtres multicritères : **barre de recherche textuelle** (temps réel sur nom/secteur/ville), **pills de rôle** (adaptées au rôle : Entrepreneur → `['Tous', 'Mentor', 'Investisseur']` ; Mentor et Investisseur → `['Entrepreneur']` uniquement), **pills de secteur** (10 secteurs sénégalais), **dropdown de ville**, et bouton **"Réinitialiser"** visible dès qu'un filtre est actif.
 
 Tous les filtres convergent dans le getter `_filtered` qui combine les membres Firebase réels (priorité) et les 112 profils statiques :
 
@@ -539,6 +554,13 @@ class GeolocationService {
     ) / 1000;  // Conversion mètres → km
   }
 
+  /// Formate une distance km de façon lisible
+  static String formatDistance(double km) {
+    if (km < 1)  return '< 1 km';
+    if (km < 10) return '${km.toStringAsFixed(1)} km';
+    return '${km.round()} km';
+  }
+
   /// Demande la permission puis retourne la position GPS actuelle
   static Future<Position?> getCurrentLocation() async {
     try {
@@ -563,13 +585,6 @@ class GeolocationService {
     } catch (e) {
       return null;  // GPS non disponible (web, simulateur...)
     }
-  }
-
-  /// Formate une distance km de façon lisible
-  static String formatDistance(double km) {
-    if (km < 1)  return '< 1 km';
-    if (km < 10) return '${km.toStringAsFixed(1)} km';
-    return '${km.round()} km';
   }
 }
 ```
@@ -691,6 +706,123 @@ if (distanceKm != null)
 
 ---
 
+### 3.4 Auto-détection ville dans la modification de profil (`LocationService`)
+
+Au-delà du tri par proximité dans le Matching, la géolocalisation est également utilisée pour **pré-remplir automatiquement les champs localisation** lors de la modification du profil. L'utilisateur appuie sur un seul bouton et l'application détecte sa ville, son pays, et son quartier via le reverse geocoding Nominatim.
+
+**Fichier :** `lib/services/service_geolocalisation.dart`
+
+```dart
+class LocationResult {
+  final String city;
+  final String country;
+  final String locality; // quartier/suburb — vide si non détecté
+  const LocationResult({
+    required this.city,
+    required this.country,
+    this.locality = '',
+  });
+}
+
+class LocationService {
+  LocationService._();
+
+  /// Détecte la ville de l'utilisateur via GPS + Nominatim reverse geocoding.
+  static Future<LocationResult?> detectCity() async {
+    // 1. Permission GPS
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return null;
+    }
+    if (permission == LocationPermission.deniedForever) return null;
+
+    // 2. Position GPS (précision moyenne, timeout 12s)
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.medium,
+      timeLimit: const Duration(seconds: 12),
+    );
+
+    // 3. Reverse geocoding Nominatim (OSM) — gratuit, sans clé API
+    final uri = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse'
+      '?format=json&lat=${pos.latitude}&lon=${pos.longitude}&accept-language=fr',
+    );
+    final resp = await http
+        .get(uri, headers: {'User-Agent': 'DiapalaAfrica/1.0 (sirimambodj@gmail.com)'})
+        .timeout(const Duration(seconds: 8));
+
+    if (resp.statusCode != 200) return null;
+
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    final address = (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    // Extraire la ville depuis les champs possibles
+    final rawCity = _firstNonEmpty([
+      address['city'], address['town'], address['village'],
+      address['municipality'], address['county'],
+    ]);
+    final rawCountry = address['country']?.toString() ?? '';
+    // Extraire la localité fine (quartier, suburb, city_district…)
+    final rawLocality = _firstNonEmpty([
+      address['neighbourhood'], address['suburb'],
+      address['quarter'], address['city_district'], address['residential'],
+    ]);
+
+    // Correspondance pays et ville supportés (pays.dart)
+    final matchedCountry = _matchCountry(rawCountry);
+    final matchedCity = _matchCity(rawCity, citiesOf(matchedCountry));
+
+    return LocationResult(
+      city: matchedCity,
+      country: matchedCountry,
+      locality: rawLocality,
+    );
+  }
+}
+```
+
+**Intégration dans `page_modification_profil.dart` :**
+
+```dart
+Future<void> _autoDetectLocation() async {
+  setState(() => _detectingLocation = true);
+  try {
+    final result = await LocationService.detectCity();
+    if (!mounted || result == null) return;
+    setState(() {
+      _country = result.country;
+      _city = result.city;
+      // Pré-remplit le champ Adresse avec le quartier/suburb détecté
+      if (result.locality.isNotEmpty) {
+        _address.text = result.locality;
+      }
+    });
+    // Snackbar 3 niveaux : "Sénégal · Dakar · Liberté 6"
+    final localityPart =
+        result.locality.isNotEmpty ? ' · ${result.locality}' : '';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          'Position détectée : ${result.country} · ${result.city}$localityPart'),
+      backgroundColor: AppColors.green,
+      behavior: SnackBarBehavior.floating,
+    ));
+  } finally {
+    if (mounted) setState(() => _detectingLocation = false);
+  }
+}
+```
+
+**Résultat :** Si l'utilisateur est à Liberté 6 (Dakar), le snackbar affiche "Position détectée : **Sénégal · Dakar · Liberté 6**" et le champ Adresse est pré-rempli avec "Liberté 6". Les dropdowns Pays et Ville sont automatiquement sélectionnés.
+
+> **📸 CAPTURE D'ÉCRAN — Bouton "Détecter ma position" dans Modifier le profil**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Snackbar "Sénégal · Dakar · Liberté 6" après détection**
+> *(Insérer ici la capture d'écran)*
+
+---
+
 ## 4. Chatbot IA — DIALI
 
 DIALI est l'assistant intelligent intégré à DIAPALER AFRICA. Il est alimenté par le modèle Llama 3.1-8b-instant de Groq, accessible via un proxy Cloudflare Worker qui protège la clé API côté serveur. DIALI peut répondre aux questions des entrepreneurs sur le financement, la création d'entreprise au Sénégal, et orienter vers les bonnes ressources comme la DER, le FJ ou la BNDE. Son nom vient du wolof "aller de l'avant", ce qui reflète bien son rôle d'encouragement et d'orientation dans l'application.
@@ -781,8 +913,7 @@ class _PulseFabState extends State<_PulseFab>
 ```dart
 // Scaffold principal — FAB visible sur tous les onglets
 floatingActionButton: _PulseFab(
-  onPressed: () => Navigator.push(
-    context,
+  onPressed: () => Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => const ChatbotPage()),
   ),
 ),
@@ -834,45 +965,61 @@ class _ChatbotPageState extends State<ChatbotPage>
   }
 
   Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _loading) return;
+    final userText = _ctrl.text.trim();
+    if (userText.isEmpty || _loading) return;
     final profile = UserProfileController.profile.value;
     _ctrl.clear();
 
     setState(() {
-      _messages.add(ChatbotMessage(role: 'user', content: text));
+      _messages.add(ChatbotMessage(role: 'user', content: userText));
       _loading = true;
     });
     _scrollToBottom();
 
     try {
-      // sendMessage attend des ChatbotMessage typés + infos profil pour le prompt système
       final reply = await ChatbotService.sendMessage(
-        messages:   _messages,
-        userName:   profile.firstName,
-        userRole:   profile.role,
+        messages: _messages,
+        userName: profile.firstName,
+        userRole: profile.role,
         userSector: profile.sector,
-        userCity:   profile.city,
+        userCity: profile.city,
       );
-      setState(() => _messages.add(ChatbotMessage(role: 'assistant', content: reply)));
-    } catch (e) {
-      setState(() => _messages.add(ChatbotMessage(
-        role: 'assistant',
-        content: 'Désolé, je rencontre une difficulté technique. Réessaie.',
-      )));
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-        _scrollToBottom();
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatbotMessage(role: 'assistant', content: reply));
+      });
+      _scrollToBottom();
+    } on Exception catch (e) {
+      if (!mounted) return;
+      String raw = e.toString().replaceFirst('Exception: ', '');
+      final String msg;
+      if (raw.toLowerCase().contains('credit') || raw.toLowerCase().contains('balance')) {
+        msg = 'Service DIALI temporairement indisponible — crédits IA épuisés. Réessaie dans quelques instants.';
+      } else if (raw.toLowerCase().contains('timeout') || raw.toLowerCase().contains('network')) {
+        msg = 'Connexion internet instable. Vérifie ta connexion et réessaie.';
+      } else {
+        msg = 'DIALI rencontre une difficulté technique. Réessaie dans quelques instants.';
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      setState(() => _messages.removeLast());
+      _ctrl.text = userText;
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -883,21 +1030,49 @@ class _ChatbotPageState extends State<ChatbotPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
-        title: const Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppColors.amber, radius: 16,
-              child: Icon(Icons.psychology_rounded, size: 18, color: AppColors.navyDeep),
+        backgroundColor: AppColors.navyDeep,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        titleSpacing: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        ),
+        actions: [
+          // Bouton partage — visible si au moins un message IA dans l'historique
+          if (_messages.any((m) => m.role == 'assistant'))
+            IconButton(
+              onPressed: () {
+                final last = _messages.lastWhere((m) => m.role == 'assistant');
+                final name = UserProfileController.profile.value.firstName;
+                ShareService.shareDialiAdvice(advice: last.content, userName: name);
+              },
+              icon: const Icon(Icons.share_rounded, color: Colors.white),
+              tooltip: 'Partager ce conseil',
             ),
-            SizedBox(width: 10),
-            Column(
+        ],
+        title: Row(
+          children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.amber,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.psychology_rounded, color: AppColors.navyDeep, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('DIALI IA',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                Text('Assistant entrepreneurial',
-                    style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900,
+                        color: Colors.white, letterSpacing: 0.3)),
+                Text('Assistant entrepreneurial DIAPALER',
+                    style: TextStyle(fontSize: 10, color: Colors.white60,
+                        fontWeight: FontWeight.w500)),
               ],
             ),
           ],
@@ -905,53 +1080,38 @@ class _ChatbotPageState extends State<ChatbotPage>
       ),
       body: Column(
         children: [
-          // ── Liste des messages
+          // ── Liste des messages (ListView + spread, message de bienvenue en premier)
           Expanded(
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_loading ? 1 : 0),
-              itemBuilder: (_, i) {
-                if (_loading && i == _messages.length) {
-                  return const _TypingIndicator(); // Indicateur "..."
-                }
-                final msg    = _messages[i];
-                final isUser = msg.role == 'user';
-                return _ChatBubble(text: msg.content, isUser: isUser);
-              },
+            child: ListView(
+              controller: _scroll,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+              children: [
+                _AiMessage(
+                  text: _welcome,
+                  onShare: () => ShareService.shareDialiAdvice(
+                    advice: _welcome,
+                    userName: UserProfileController.profile.value.firstName,
+                  ),
+                ),
+                ..._messages.map((m) => m.role == 'user'
+                    ? _UserMessage(text: m.content)
+                    : _AiMessage(
+                        text: m.content,
+                        onShare: () => ShareService.shareDialiAdvice(
+                          advice: m.content,
+                          userName: UserProfileController.profile.value.firstName,
+                        ),
+                      )),
+                if (_loading) _TypingIndicator(controller: _dotCtrl),
+              ],
             ),
           ),
 
-          // ── Champ de saisie
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    maxLines: 4, minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    decoration: const InputDecoration(
-                      hintText: 'Pose ta question à DIALI…',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton.small(
-                  onPressed: _loading ? null : _send,
-                  backgroundColor: AppColors.amber,
-                  child: _loading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2)
-                      : const Icon(Icons.send_rounded, color: AppColors.navyDeep),
-                ),
-              ],
-            ),
+          // ── Barre de saisie (widget dédié _InputBar)
+          _InputBar(
+            controller: _ctrl,
+            loading: _loading,
+            onSend: _send,
           ),
         ],
       ),
@@ -1128,13 +1288,29 @@ class BookedSession {
   final String mentorName;
   final String mentorInitials;
   final DateTime scheduledAt;
-  final String otherUid; // UID de l'autre partie (notif croisée)
+  /// UID Firebase de l'autre partie (mentor/investisseur ou demandeur).
+  /// Reste vide pour les profils démo (liste statique).
+  final String otherUid;
 
-  String get weekday  => ['Lundi','Mardi','Mercredi','Jeudi','Vendredi',
-                          'Samedi','Dimanche'][scheduledAt.weekday - 1];
-  String get day      => scheduledAt.day.toString().padLeft(2, '0');
-  String get month    => ['JAN','FÉV','MAR','AVR','MAI','JUIN',
-                          'JUIL','AOÛT','SEP','OCT','NOV','DÉC'][scheduledAt.month - 1];
+  const BookedSession({
+    required this.id,
+    required this.mentorName,
+    required this.mentorInitials,
+    required this.scheduledAt,
+    this.otherUid = '',
+  });
+
+  static const _weekdays = [
+    'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche',
+  ];
+  static const _months = [
+    'JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUIN',
+    'JUIL', 'AOÛT', 'SEP', 'OCT', 'NOV', 'DÉC',
+  ];
+
+  String get weekday => _weekdays[scheduledAt.weekday - 1];
+  String get day     => scheduledAt.day.toString().padLeft(2, '0');
+  String get month   => _months[scheduledAt.month - 1];
   String get timeRange {
     final h = scheduledAt.hour.toString().padLeft(2, '0');
     final hEnd = (scheduledAt.hour + 1).toString().padLeft(2, '0');
@@ -1146,21 +1322,35 @@ class BookedSession {
 **Contrôleur `AgendaController` :**
 ```dart
 class AgendaController {
-  static final _db = FirebaseDatabase.instance.ref();
-  static final sessions = ValueNotifier<List<BookedSession>>([]);
+  AgendaController._();
 
-  /// Écoute Firebase en temps réel (WebSocket).
+  static final _db = FirebaseDatabase.instance.ref();
+  static final sessions        = ValueNotifier<List<BookedSession>>([]);
+  /// Demandes de session (pending/accepted/cancelled) pour l'utilisateur courant.
+  static final sessionRequests = ValueNotifier<List<MentorRequest>>([]);
+
+  static StreamSubscription? _subscription;
+  static StreamSubscription? _sessionSubscription;
+
+  /// Écoute Firebase en temps réel (WebSocket) + demandes de session.
   static Future<void> load(String userId) async {
-    _db.child('bookedSessions/$userId').onValue.listen((event) {
+    // Annule l'ancien listener avant d'en créer un nouveau (évite les doublons entre sessions).
+    await _subscription?.cancel();
+    _listenSessionRequests(userId);
+    _subscription = _db.child('bookedSessions/$userId').onValue.listen((event) {
       final data = event.snapshot.value as Map?;
       if (data == null) { sessions.value = []; return; }
-      final list = data.values
-          .map<BookedSession>((v) =>
-              BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
-          .toList()
-        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-      sessions.value = list;
-    });
+      try {
+        final list = data.values
+            .map<BookedSession>((v) =>
+                BookedSession.fromJson(Map<String, dynamic>.from(v as Map)))
+            .toList()
+          ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        sessions.value = list;
+      } catch (_) {
+        sessions.value = [];
+      }
+    }, onError: (_) => sessions.value = []);
   }
 
   /// Écriture bilatérale : agenda demandeur + agenda mentor/investisseur.
@@ -1187,32 +1377,43 @@ class AgendaController {
           mentorInitials: requesterInitials, scheduledAt: scheduledAt,
           otherUid: requesterUid).toJson(),
     );
-    // Notification push au mentor
+    // Notification au mentor/investisseur de la nouvelle réservation.
     await NotificationService.notifyUser(
       uid: otherUid,
       title: 'Nouveau rendez-vous',
-      message: '$requesterName a réservé une session avec toi.',
+      message:
+          '$requesterName a réservé une session avec toi le ${_formatDate(scheduledAt)}.',
       type: 'session_booked',
     );
   }
 
-  /// Annulation bilatérale + notification de l'autre partie.
+  /// Annulation bilatérale + notifications croisées (annulant + autre partie).
   static Future<void> cancel({
     required String userId,
     required String userName,
     required BookedSession session,
     required String reason,
   }) async {
+    // Suppression côté annulant.
     await _db.child('bookedSessions/$userId/${session.id}').remove();
+    // Suppression côté autre partie si elle a un compte.
     if (session.otherUid.isNotEmpty) {
       await _db.child('bookedSessions/${session.otherUid}/${session.id}').remove();
-      await NotificationService.notifyUser(
-        uid: session.otherUid,
-        title: 'Rendez-vous annulé',
-        message: '$userName a annulé votre session — motif : $reason',
-        type: 'session_cancelled',
-      );
     }
+    // Notif côté annulant : récap de son action.
+    await NotificationService.addNotification(
+      title: 'Rendez-vous annulé',
+      message: 'Session avec ${session.mentorName} annulée — motif : $reason',
+      type: 'session_cancelled',
+    );
+    // Notif croisée : avertit l'autre partie s'il a un compte (UID connu).
+    // notifyUser() est no-op silencieux si otherUid est vide.
+    await NotificationService.notifyUser(
+      uid: session.otherUid,
+      title: 'Rendez-vous annulé',
+      message: '$userName a annulé votre session — motif : $reason',
+      type: 'session_cancelled',
+    );
   }
 }
 ```
@@ -1220,19 +1421,36 @@ class AgendaController {
 **Page `page_agenda.dart` avec `ValueListenableBuilder` :**
 ```dart
 class AgendaPage extends StatelessWidget {
+  const AgendaPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final role = UserProfileController.profile.value.role;
-    // Titre adapté selon le rôle
-    final title = role == 'Mentor'
-        ? 'Mon agenda'
-        : role == 'Investisseur'
-            ? 'Mes rendez-vous'
-            : 'Mes sessions';
+
+    // Textes adaptés selon le rôle (switch, pas ternaire)
+    final String agendaTitle;
+    final String summarySubtitle;
+    final String emptyUpcoming;
+    switch (role) {
+      case 'Mentor':
+        agendaTitle    = 'Mon agenda';
+        summarySubtitle = 'Tes sessions de mentorat avec tes mentorés.';
+        emptyUpcoming  = 'Aucune session planifiée. Définis tes disponibilités dans "Mon planning".';
+        break;
+      case 'Investisseur':
+        agendaTitle    = 'Mes rendez-vous';
+        summarySubtitle = 'Tes rendez-vous avec les entrepreneurs.';
+        emptyUpcoming  = 'Aucun rendez-vous planifié. Explore les pitchs pour contacter des entrepreneurs.';
+        break;
+      default:
+        agendaTitle    = 'Mes sessions';
+        summarySubtitle = 'Tes sessions de mentorat planifiées.';
+        emptyUpcoming  = 'Aucune session planifiée. Réserve une session depuis le profil d\'un mentor.';
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(agendaTitle),
         actions: [
           // Bouton Planning uniquement pour les Mentors
           if (role == 'Mentor')
@@ -1246,26 +1464,60 @@ class AgendaPage extends StatelessWidget {
       ),
       body: ValueListenableBuilder<List<BookedSession>>(
         valueListenable: AgendaController.sessions,
-        builder: (context, bookedSessions, _) {
-          // Pas de section "Passées" : Firebase ne stocke pas de flag d'achèvement.
-          // Toutes les sessions affichées sont considérées "à venir".
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
-            children: [
-              _SummaryCard(upcomingCount: bookedSessions.length, subtitle: summarySubtitle),
-              const SizedBox(height: 20),
-              const _SectionLabel('À venir'),
-              const SizedBox(height: 10),
-              if (bookedSessions.isEmpty)
-                _EmptyHint(emptyUpcoming)
-              else
-                for (final s in bookedSessions) ...[
-                  _BookedSessionCard(session: s),
+        builder: (context, bookedSessions, _) =>
+            ValueListenableBuilder<List<MentorRequest>>(
+          valueListenable: AgendaController.sessionRequests,
+          builder: (context, sessionReqs, _) {
+            // Filtrage par statut — la date est stockée dans MentorRequest, pas BookedSession
+            final today = DateTime.now();
+            final todayStr =
+                '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+            final pending  = sessionReqs.where((r) => r.status == RequestStatus.pending).toList();
+            final accepted = sessionReqs.where((r) => r.status == RequestStatus.accepted).toList();
+            final upcoming = accepted
+                .where((r) => (r.proposedDate ?? '').compareTo(todayStr) >= 0)
+                .toList();
+            // upcomingCount = sessions bilatérales réservées + demandes acceptées à venir
+            final upcomingCount = bookedSessions.length + upcoming.length;
+
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 90),
+              children: [
+                _SummaryCard(
+                    upcomingCount: upcomingCount,
+                    pendingCount: pending.length,
+                    subtitle: summarySubtitle),
+                if (pending.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const _SectionLabel('En attente'),
                   const SizedBox(height: 10),
+                  for (final r in pending) ...[
+                    _PendingSessionCard(request: r),
+                    const SizedBox(height: 10),
+                  ],
                 ],
-            ],
-          );
-        },
+                const SizedBox(height: 20),
+                const _SectionLabel('À venir'),
+                const SizedBox(height: 10),
+                if (upcomingCount == 0)
+                  _EmptyHint(emptyUpcoming)
+                else ...[
+                  // Demandes acceptées → _AcceptedSessionCard
+                  for (final r in upcoming) ...[
+                    _AcceptedSessionCard(request: r),
+                    const SizedBox(height: 10),
+                  ],
+                  // Sessions bilatérales Firebase → _BookedSessionCard
+                  for (final s in bookedSessions) ...[
+                    _BookedSessionCard(session: s),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -1287,10 +1539,15 @@ StreamBuilder<Availability?>(
   stream: InteractionsService.getAvailability(currentUid),
   builder: (context, snapshot) {
     final availability = snapshot.data;
-    // Affichage + modification des créneaux
-    return _AvailabilityEditor(
-      availability: availability,
-      onSave: (updated) => InteractionsService.updateAvailability(updated),
+    // Affichage + modification des créneaux par jour via _DayScheduleCard
+    return ListView(
+      children: DayOfWeek.values.map((day) =>
+        _DayScheduleCard(
+          day: day,
+          slots: availability?.slots[day] ?? [],
+          onChanged: (updated) => _updateDay(day, updated),
+        ),
+      ).toList(),
     );
   },
 )
@@ -1368,42 +1625,64 @@ StreamBuilder<List<MentorRequest>>(
 
 Le système de pitch est la fonctionnalité centrale pour les entrepreneurs de DIAPALER AFRICA. Il leur permet de présenter leur projet de façon structurée, de le soumettre à l'attention des mentors et des investisseurs, et de le partager sur les réseaux sociaux. Nous avons conçu un parcours en deux temps : d'abord le dépôt du pitch via un formulaire guidé, puis la publication automatique dans un fil public visible par tous les membres de la plateforme.
 
-### 7.1 Dépôt de pitch — Formulaire 3 étapes (`page_pitch.dart`)
+### 7.1 Dépôt de pitch — Stepper 5 étapes unifié (`page_pitch.dart`)
 
-Les entrepreneurs déposent leur pitch via un **stepper 3 étapes** avec validation obligatoire par étape.
+`PitchPage` est la page unifiée de création, d'édition et de publication d'un pitch. Elle gère le **cycle de vie complet** du projet entrepreneur : démarrage depuis zéro, reprise à l'étape sauvegardée, complétion progressive, et publication publique.
+
+**5 étapes du stepper :**
+- **Étape 1 — Informations** : Titre (min 3 chars, obligatoire) + elevator pitch (optionnel)
+- **Étape 2 — Détails** : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
+- **Étape 3 — Financement** : Montant FCFA (optionnel) + carte explicative "Qui verra ton pitch ?"
+- **Étape 4 — Documents** : Business Plan PDF (obligatoire) + vidéo de présentation (obligatoire) + deck (optionnel) — upload Cloudinary
+- **Étape 5 — Récapitulatif** : Résumé complet + bouton **"PUBLIER MON PITCH"**
 
 **Fonctionnalités clés :**
-- Étape 1 : Titre (min 3 chars, obligatoire) + elevator pitch (optionnel)
-- Étape 2 : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
-- Étape 3 : Montant FCFA (optionnel) + carte explicative "Qui verra ton pitch ?"
 - **Validation par étape** : bouton CONTINUER désactivé + message d'aide si champ invalide
-- **Double sauvegarde** : profil entrepreneur (`projects/`, `totalSteps: 3`) + nœud global `pitches/`
-- **Après publication** : navigation vers l'onglet Profil + SnackBar "Retrouve-le dans ton profil → Mes projets"
+- **Navigation arrière** : bouton **"← Précédent"** affiché à partir de l'étape 2 (à gauche de CONTINUER) — permet de revenir à n'importe quelle étape précédente pour modifier des champs déjà remplis
+- **Sauvegarde progressive** : à chaque avancement d'étape, le projet est sauvegardé localement + Firebase avec le `step` mis à jour
+- **Reprise** : si `existingProject` est fourni, les champs sont pré-remplis et le stepper démarre à `existingProject.step - 1`
+- **Publication séparée** : la publication dans `pitches/` (nœud global) n'a lieu qu'à l'étape 5 — les étapes 1–4 ne font que sauvegarder le brouillon
+- **Publication directe sans stepper** : `_directPublish()` dans `page_accueil.dart` publie un projet existant sans repasser par le stepper
 
 ```dart
 // Validations par étape — CONTINUER désactivé si non valide
 bool get _step0Valid => _title.text.trim().length >= 3;
 bool get _step1Valid =>
     _sector != null && _detailDescription.text.trim().length >= 20;
-bool get _step2Valid => true; // Montant optionnel
+bool get _step2Valid => true;                          // montant optionnel
+bool get _step3Valid =>
+    _businessPlanUrl != null && _videoUrl != null;    // docs obligatoires
+bool get _step4Valid => true;                          // récap toujours valide
 
-// Projet créé avec totalSteps: 3 (Idée → En cours → Lancé)
-// step est omis car sa valeur par défaut est déjà 1
-final project = Project(
-  id: DateTime.now().millisecondsSinceEpoch.toString(),
-  name: title, description: description, sector: sector,
-  totalSteps: 3,
-);
+// Sauvegarde à chaque avancement (étapes 1–4)
+void _saveProgress() {
+  final project = _buildProject();
+  if (_isNew) {
+    final added = UserProfileController.addProject(project);
+    if (added) _isNew = false;
+  } else {
+    UserProfileController.updateProject(project);
+  }
+}
 
-// Après publication : navigation vers onglet Profil
-appTabIndex.value = 4;
-Navigator.of(context).pop();
+Future<void> _next() async {
+  if (!_currentStepValid) return;
+  if (_step < _total - 1) {
+    _saveProgress();          // sauvegarde locale + Firebase
+    setState(() => _step++);
+    return;
+  }
+  _publish();                 // étape 5 uniquement : publication Firebase pitches/
+}
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Étape 1 du formulaire Pitch (titre + bouton désactivé sans texte)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — Étape 3 (montant FCFA + carte "Qui verra ton pitch ?")**
+> **📸 CAPTURE D'ÉCRAN — Étape 4 (upload Business Plan PDF + vidéo obligatoires)**
+> *(Insérer ici la capture d'écran)*
+
+> **📸 CAPTURE D'ÉCRAN — Étape 5 (récapitulatif + bouton PUBLIER MON PITCH)**
 > *(Insérer ici la capture d'écran)*
 
 ---
@@ -1413,12 +1692,13 @@ Navigator.of(context).pop();
 Le fil des pitchs est la vitrine des projets entrepreneuriaux sur DIAPALER AFRICA. Les mentors et investisseurs y accèdent depuis leur dashboard et voient tous les pitchs en **temps réel** grâce à `DatabaseService.getPitches()` (stream Firebase WebSocket).
 
 **Fonctionnalités complètes de `page_pitches_publics.dart` :**
-- StreamBuilder Firebase — pitchs triés par date décroissante
+- StreamBuilder Firebase — tri **premium en tête** puis par date décroissante — les pitchs d'entrepreneurs Premium apparaissent en premier
+- Badge ⭐ **Premium** sur les cartes des entrepreneurs abonnés (chip amber doré à côté du nom)
 - Barre de recherche textuelle : filtre sur titre, entrepreneur, secteur, description (insensible à la casse)
 - Pills de secteur générées dynamiquement depuis les pitchs Firebase
 - Compteur "X pitch(s)" et bouton "Réinitialiser" si filtre actif
-- Chaque carte : avatar, nom entrepreneur, secteur (chip amber), titre, description (3 lignes max), montant FCFA
-- **Tap sur une carte → `_PitchDetailSheet`** : bottom sheet `DraggableScrollableSheet` avec tous les détails du pitch + bouton "Contacter" + bouton "💰 Proposer un investissement" (Investisseurs uniquement)
+- Chaque carte : avatar, nom entrepreneur, **badge ⭐ Premium si abonné**, secteur (chip amber), titre, description (3 lignes max), montant FCFA
+- **Tap sur une carte → `PitchDetailSheet`** (classe publique) : bottom sheet `DraggableScrollableSheet` avec tous les détails du pitch + bouton "Contacter" (non-Investisseurs) + bouton "💰 Proposer un investissement" (Investisseurs uniquement)
 - **Gating** : "Contacter" vérifie `_checkRequestStatus()` — chat autorisé seulement si une demande acceptée existe entre les deux utilisateurs
 - **Bouton "💰 Proposer un investissement"** : visible uniquement pour les Investisseurs → crée un `MentorRequest` de type `'investment'` dans Firebase + notification automatique à l'entrepreneur
 - Bouton "Partager" (icône) sur chaque carte → `ShareService.sharePitch(...)`
@@ -1446,7 +1726,7 @@ Chaque rôle dans DIAPALER AFRICA dispose d'un dashboard personnalisé qui s'aff
 
 ### 8.1 Dashboard Mentor (`page_dashboard_mentor.dart`)
 
-`CustomScrollView` + `SliverAppBar` épinglée. Contient : header avec avatar vert + badge notifications, grille de 3 statistiques, domaines d'expertise (chips), bio, et boutons d'accès rapide. Le tout est enveloppé dans un `ValueListenableBuilder<UserProfile>` pour rester synchronisé.
+`CustomScrollView` + `SliverAppBar` épinglée. Contient : header avec avatar vert + badge notifications, grille de **4 statistiques** (Mentorés, Sessions, Années expé., Note moy.), domaines d'expertise (chips), bio, et boutons d'accès rapide. Le tout est enveloppé dans un `ValueListenableBuilder<UserProfile>` pour rester synchronisé. Note : le badge notification affiche `'$unread'` sans cap (pas de `9+`).
 
 **Accès rapides (boutons OutlinedButton)** : Demandes, Mon Planning, Voir les pitchs publiés. Messages et Agenda sont accessibles via les onglets de la barre de navigation principale — les boutons doublons ont été supprimés.
 
@@ -1477,7 +1757,7 @@ CustomScrollView(slivers: [
 
 ### 8.2 Dashboard Investisseur (`page_dashboard_investisseur.dart`)
 
-Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets. Contient : header avec avatar bleu + badge notifications, 3 stats (Opportunités / Entrepreneurs / Favoris), ticket d'investissement (si renseigné), secteurs d'intérêt (chips), bio, et deux boutons d'action principaux. Messages et Agenda sont accessibles via les onglets de la barre de navigation principale — les boutons doublons ont été supprimés.
+Même architecture que le Dashboard Mentor (SliverAppBar + ValueListenableBuilder), mais orienté découverte de projets. Contient : header avec avatar bleu + badge notifications, 3 stats (**Entrepreneurs** / Pitchs vus / Favoris), ticket d'investissement (si renseigné), secteurs d'intérêt (chips), bio, et deux boutons d'action principaux. Messages et Agenda sont accessibles via les onglets de la barre de navigation principale — les boutons doublons ont été supprimés. Note : le badge notification affiche `'$unread'` sans cap.
 
 Dans l'onglet Matching, l'Investisseur voit les **Entrepreneurs à financer** (titre adapté) — le contenu du matching est filtré pour afficher les Entrepreneurs uniquement (pas les Mentors/Investisseurs).
 
@@ -1493,7 +1773,7 @@ CustomScrollView(slivers: [
     // Ticket d'investissement (visible si profile.investmentRange.isNotEmpty)
     // Secteurs d'intérêt (chips bleu clair)
     // Bio complète
-    ElevatedButton.icon(label: Text('Explorer la communauté'), onPressed: () => push(MatchingPage())),
+    ElevatedButton.icon(label: Text('Explorer'), onPressed: () => push(MatchingPage())),
     OutlinedButton.icon(label: Text('Pitchs reçus'),           onPressed: () => push(PublicPitchesPage())),
   ]))),
 ])
@@ -1521,16 +1801,13 @@ La page affiche le profil complet (bio, secteurs, distance GPS) et propose les a
 L'ID de conversation est généré avec `AuthService.currentUid` (UID Firebase) — jamais l'email — pour garantir la cohérence avec `page_notifications.dart` qui utilise également les UIDs.
 
 ```dart
-// Conversation ID avec UID Firebase (cohérence cross-écrans)
-final myUid = AuthService.currentUid ?? UserProfileController.profile.value.email;
+// Conversation ID avec UID Firebase (fallback email)
+final myUid = AuthService.currentUid ??
+    UserProfileController.profile.value.email;
 final convId = InteractionsService.generateConversationId(
   myUid,
   mentor.uid.isNotEmpty ? mentor.uid : mentor.name,
 );
-
-// Favori : incrémente/décrémente favoritesCount dans le profil
-void _toggleFavorite() => UserProfileController.update(
-  profile.copyWith(favoritesCount: profile.favoritesCount + (_isFavorite ? -1 : 1)));
 ```
 
 **Gating :** Le bouton "Message" n'est visible que si `_checkRequestStatus()` confirme une demande acceptée (vérification bidirectionnelle dans Firebase — `fromUserId == moi` OU `toUserId == moi` avec `status == 'accepted'`).
@@ -1657,6 +1934,8 @@ Le bouton de partage `IconButton(icon: Icon(Icons.share_rounded))` a été inté
 | `PagePitchsPublics` | Icône dans chaque carte pitch | `ShareService.sharePitch(...)` |
 | `PageProfil` | AppBar actions (avant le bouton modifier) | `ShareService.shareMyProfile(...)` |
 | `PageDetailMentor` | SliverAppBar actions (avant le favori) | `ShareService.shareMentorProfile(...)` |
+| `PageDetailPitch` | SliverAppBar actions | `ShareService.sharePitch(...)` |
+| `ChatbotPage` | AppBar actions (dernier conseil IA) + lien "Partager" sous chaque bulle DIALI | `ShareService.shareDialiAdvice(...)` |
 
 **Exemple — bouton partage dans la liste des pitchs :**
 
@@ -1729,7 +2008,7 @@ connecte entrepreneurs, mentors et investisseurs au Sénégal.
 
 ### Description
 
-L'onglet "Contacts" dans `page_messages.dart` centralise toutes les **relations acceptées** entre utilisateurs. Une relation est créée dès qu'une demande de mentorat **ou** une proposition d'investissement est acceptée.
+Les contacts acceptés sont accessibles depuis `MesMentorsPage` (`page_mes_mentors.dart`) — page dédiée "Mes Contacts" navigable depuis l'accueil, avec **2 onglets** (Mentors / Investisseurs). Une relation est créée dès qu'une demande de mentorat **ou** une proposition d'investissement est acceptée.
 
 **Fonctionnalités :**
 - Liste des contacts (relations acceptées : mentor/mentoré, investisseur/entrepreneur)
@@ -1779,8 +2058,8 @@ Le système d'avis permet aux membres ayant une **relation acceptée** de laisse
 
 **Fonctionnalités de `page_avis.dart` :**
 - StreamBuilder sur `reviews/{toUid}` — mises à jour en temps réel
-- Sélecteur d'étoiles interactif (1–5) avec animation
-- Calcul de la **moyenne live** — affichée avec icône ⭐ sur le profil et les dashboards
+- Saisie de commentaire texte libre ; la note (1–5 étoiles) est stockée séparément via `InteractionsService.setRating()` dans le nœud `ratings/{toUid}/{fromUid}` (entier 1–5), distinct du nœud `reviews/`
+- Calcul de la **moyenne live** depuis `getRatings()` — affichée avec icône ⭐ sur le profil et les dashboards
 - **Accès restreint par relation** :
   - Relation acceptée → peut laisser un avis
   - Propre profil → lecture seule
@@ -1790,25 +2069,36 @@ Le système d'avis permet aux membres ayant une **relation acceptée** de laisse
 
 ```dart
 // service_interactions.dart
+// Note : le modèle Review n'a PAS de champ rating — les notes sont stockées
+// séparément dans ratings/{toUid}/{fromUid} (entier 1–5) via setRating()/getRatings().
 static Future<void> addReview({
   required String toUid,
   required String fromUid,
   required String fromName,
   required String text,
-  required int rating,
 }) async {
   final id = DateTime.now().millisecondsSinceEpoch.toString();
   await _db.child('reviews/$toUid/$id').set({
-    'id': id, 'fromUid': fromUid, 'fromName': fromName,
-    'text': text, 'rating': rating,
-    'createdAt': DateTime.now().toIso8601String(),
+    'id': id,
+    'fromUid': fromUid,
+    'fromName': fromName,
+    'text': text,
+    'createdAt': DateTime.now().millisecondsSinceEpoch, // entier, PAS ISO string
   });
+  try {
+    await NotificationService.notifyUser(
+      uid: toUid,
+      title: 'Nouvel avis reçu 💬',
+      message: '$fromName a laissé un avis sur votre profil.',
+      type: 'new_review',
+    );
+  } catch (_) {}
 }
 
 static Stream<List<Review>> getReviews(String targetUid) =>
     _db.child('reviews/$targetUid').onValue.map((event) {
       final data = event.snapshot.value as Map?;
-      if (data == null) return [];
+      if (data == null) return <Review>[];
       return data.values
           .map<Review>((v) => Review.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
@@ -1844,31 +2134,66 @@ Les investisseurs peuvent **sauvegarder des pitchs** d'un simple tap sur l'icôn
 class PitchFavoriteService {
   static final _db = FirebaseDatabase.instance.ref();
   static final pitchFavorites = ValueNotifier<List<Map<String, dynamic>>>([]);
+  static StreamSubscription? _sub;
 
-  static Future<void> load(String userId) async {
-    _db.child('pitchFavorites/$userId').onValue.listen((event) {
-      final data = event.snapshot.value as Map?;
-      if (data == null) { pitchFavorites.value = []; return; }
-      final list = data.values
-          .map<Map<String, dynamic>>((v) => Map<String, dynamic>.from(v as Map))
-          .toList()
-        ..sort((a, b) {
-          final aT = (a['savedAt'] as num?) ?? 0;
-          final bT = (b['savedAt'] as num?) ?? 0;
-          return bT.compareTo(aT);
-        });
-      pitchFavorites.value = list;
-    });
+  // Clé Firebase unique par pitch — fallback sur titre normalisé
+  static String _keyOf(Map<String, dynamic> pitch) {
+    final id = pitch['id']?.toString() ?? '';
+    if (id.isNotEmpty) return id;
+    // Fallback : titre normalisé
+    return (pitch['title']?.toString() ?? 'pitch')
+        .replaceAll(RegExp(r'[^\w]'), '_')
+        .toLowerCase();
   }
 
-  static Future<void> toggleFavorite(String userId, Map<String, dynamic> pitch) async {
-    final pitchId = pitch['id']?.toString() ?? '';
-    final ref = _db.child('pitchFavorites/$userId/$pitchId');
-    final snap = await ref.get();
-    if (snap.exists) {
+  static Future<void> load(String userId) async {
+    await _sub?.cancel();
+    _sub = _db.child('pitchFavorites/$userId').onValue.listen((event) {
+      final data = event.snapshot.value as Map?;
+      if (data == null) {
+        pitchFavorites.value = [];
+        return;
+      }
+      try {
+        final list = data.values
+            .where((v) => v is Map)
+            .map<Map<String, dynamic>>((v) => Map<String, dynamic>.from(v as Map))
+            .toList()
+          ..sort((a, b) {
+            final at = (b['savedAt'] as int?) ?? 0;
+            final bt = (a['savedAt'] as int?) ?? 0;
+            return at.compareTo(bt);
+          });
+        pitchFavorites.value = list;
+      } catch (_) {
+        pitchFavorites.value = [];
+      }
+    }, onError: (_) => pitchFavorites.value = []);
+  }
+
+  static Future<void> reset() async {
+    await _sub?.cancel();
+    _sub = null;
+    pitchFavorites.value = [];
+  }
+
+  static bool isFavorite(Map<String, dynamic> pitch) {
+    final key = _keyOf(pitch);
+    return pitchFavorites.value.any((p) => _keyOf(p) == key);
+  }
+
+  static Future<void> toggle(String userId, Map<String, dynamic> pitch) async {
+    if (userId.isEmpty) return;
+    final key = _keyOf(pitch);
+    if (key.isEmpty) return;
+    final ref = _db.child('pitchFavorites/$userId/$key');
+    if (isFavorite(pitch)) {
       await ref.remove();
     } else {
-      await ref.set({...pitch, 'savedAt': ServerValue.timestamp});
+      await ref.set({
+        ...pitch,
+        'savedAt': DateTime.now().millisecondsSinceEpoch,
+      });
     }
   }
 }
@@ -1884,7 +2209,7 @@ class PitchFavoriteService {
 
 ## 11. Paiement Mobile — Wave Premium
 
-Pour monétiser l'application, nous avons intégré Wave, le portefeuille mobile le plus utilisé au Sénégal avec plusieurs millions d'utilisateurs actifs. L'approche choisie utilise les liens marchands Wave avec montant dynamique, ce qui évite de déployer un backend complexe pour la phase de démonstration. L'utilisateur est redirigé vers l'application Wave installée sur son téléphone, complète son paiement, puis revient dans DIAPALER AFRICA pour activer son abonnement Premium. Trois plans distincts ciblent chaque type d'utilisateur de la plateforme.
+Pour monétiser l'application, nous avons intégré Wave, le portefeuille mobile le plus utilisé au Sénégal avec plusieurs millions d'utilisateurs actifs. L'approche choisie utilise les liens marchands Wave avec montant dynamique, ce qui évite de déployer un backend complexe pour la phase de démonstration. L'utilisateur est redirigé vers l'application Wave installée sur son téléphone, complète son paiement, puis revient dans DIAPALER AFRICA pour activer son abonnement Premium. Un seul plan cible les entrepreneurs de la plateforme.
 
 ### 11.1 Architecture simplifiée (lien marchand)
 
@@ -1893,7 +2218,7 @@ DIAPALER AFRICA intègre le paiement via **Wave**, le portefeuille mobile le plu
 ```
 Utilisateur → appuie "Payer avec Wave"
     ↓
-url_launcher → ouvre https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/?amount=7500
+url_launcher → ouvre https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/?amount=4900
     ↓
 App Wave (ou navigateur) → utilisateur confirme le paiement
     ↓
@@ -1912,9 +2237,7 @@ Firebase → users/{uid}/isPremium = true
 
 | Plan | Tarif / mois | Avantages |
 |---|---|---|
-| **Entrepreneur Premium** | 7 500 FCFA | Pitch épinglé, badge ⭐, demandes illimitées, stats de vues |
-| **Mentor Certifié** | 5 000 FCFA | Filtres avancés pitchs, badge ✅, suivi mentorés |
-| **Investisseur Vérifié** | 15 000 FCFA | Pitchs complets, alertes secteur, badge 💎 |
+| **Entrepreneur Premium** | **4 900 FCFA** | Pitch épinglé en tête du fil mentors & investisseurs, badge ⭐ sur profil et pitchs, demandes de mentorat illimitées, meilleure visibilité investisseurs, accès prioritaire mentors certifiés |
 
 ### 11.3 Implémentation — `ServiceWave`
 
@@ -1924,15 +2247,20 @@ Firebase → users/{uid}/isPremium = true
 const _waveBaseUrl = 'https://pay.wave.com/m/M_sn_tH1ZQo00ZVko/c/sn/';
 
 enum PremiumPlan {
-  entrepreneur, mentor, investisseur;
+  entrepreneur;
 
-  int get amountXof => switch (this) {
-    PremiumPlan.entrepreneur => 7500,
-    PremiumPlan.mentor       => 5000,
-    PremiumPlan.investisseur => 15000,
-  };
+  String get label => 'Entrepreneur Premium';
+  int get amountXof => 4900;
+  String get amountDisplay => '4 900 FCFA / mois';
 
-  /// URL Wave avec montant pré-rempli
+  List<String> get benefits => [
+    'Pitch épinglé en tête du fil mentors & investisseurs',
+    'Badge ⭐ Premium visible sur ton profil et tes pitchs',
+    'Demandes de mentorat illimitées',
+    'Meilleure visibilité auprès des investisseurs',
+    'Accès prioritaire aux mentors certifiés',
+  ];
+
   String get waveUrl =>
       '$_waveBaseUrl?amount=$amountXof'
       '&label=Abonnement+Premium+DIAPALER+AFRICA';
@@ -1945,7 +2273,7 @@ class WaveService {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      throw Exception('Impossible d\'ouvrir Wave.');
+      throw Exception('Impossible d\'ouvrir Wave. Vérifie que l\'app Wave est installée.');
     }
   }
 
@@ -1954,14 +2282,16 @@ class WaveService {
   static Future<void> activatePremium(PremiumPlan plan) async {
     final uid = AuthService.currentUid;
     if (uid == null) return;
-    // 1. Persistance Firebase
+    // 1. Persistance Firebase (profil)
     await DatabaseService.setPremium(uid: uid, plan: plan.name);
-    // 2. Mise à jour immédiate en mémoire → badge visible instantanément
+    // 2. Marquer tous les pitchs existants comme premium
+    await DatabaseService.markUserPitchesPremium(uid, isPremium: true);
+    // 3. Mise à jour immédiate en mémoire → badge visible instantanément
     final updated = UserProfileController.profile.value.copyWith(
       isPremium: true,
       premiumPlan: plan.name,
     );
-    UserProfileController.update(updated); // → cache + Firebase
+    UserProfileController.update(updated);
   }
 }
 ```
@@ -1975,9 +2305,25 @@ static Future<void> setPremium({
 }) async {
   await _userRef(uid).update({
     'isPremium': true,
-    'premiumPlan': plan,            // 'entrepreneur' | 'mentor' | 'investisseur'
+    'premiumPlan': plan,            // 'entrepreneur'
     'premiumSince': ServerValue.timestamp,
   });
+}
+
+/// Marque tous les pitchs d'un utilisateur comme premium (ou non) en batch.
+static Future<void> markUserPitchesPremium(String uid,
+    {required bool isPremium}) async {
+  final snap = await _db.ref('pitches').get();
+  if (!snap.exists || snap.value == null) return;
+  final data = Map<String, dynamic>.from(snap.value as Map);
+  final updates = <String, dynamic>{};
+  for (final entry in data.entries) {
+    final pitch = Map<String, dynamic>.from(entry.value as Map);
+    if (pitch['userId'] == uid) {
+      updates['pitches/${entry.key}/isPremium'] = isPremium;
+    }
+  }
+  if (updates.isNotEmpty) await _db.ref().update(updates);
 }
 ```
 
@@ -1988,7 +2334,7 @@ static Future<void> setPremium({
 class UserProfile {
   // ... autres champs ...
   final bool isPremium;     // true après activation Wave
-  final String premiumPlan; // 'entrepreneur' | 'mentor' | 'investisseur' | ''
+  final String premiumPlan; // 'entrepreneur' | ''
 }
 ```
 
@@ -2002,19 +2348,15 @@ La bottom sheet s'affiche quand l'utilisateur souhaite passer en Premium. Elle a
 
 **État 2 — Après retour de Wave :** affiche un bandeau vert + bouton "Oui, j'ai payé — Activer Premium"
 
-**Badge ⭐ sur la page profil :** *(prévu en v2 — non affiché dans la version actuelle de `page_profil.dart`)* Le champ `isPremium` est bien sauvegardé dans Firebase et dans le modèle `UserProfile`, mais l'affichage visuel du badge n'est pas encore intégré dans la page profil. Il sera ajouté dans une prochaine version :
-```dart
-// lib/screens/page_profil.dart — À IMPLÉMENTER (v2)
-if (profile.isPremium) Container(
-  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-  decoration: BoxDecoration(
-    color: const Color(0xFFF59E0B),
-    borderRadius: BorderRadius.circular(20),
-  ),
-  child: const Text('⭐ Premium',
-      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
-),
-```
+**Badge ⭐ et bannière Premium sur `page_profil.dart` (Entrepreneur uniquement — implémenté) :**
+
+Trois éléments visuels s'affichent dès que `isPremium = true` :
+
+1. **Avatar** : le point vert de statut est remplacé par un cercle doré avec une icône étoile blanche
+2. **Carte identité** : badge "Entrepreneur Premium" (fond amber semi-transparent, bordure amber, icône ⭐) s'affiche sous le rôle
+3. **Section Interactions** :
+   - Si `!isPremium` → bannière cliquable "Passer Entrepreneur Premium / 4 900 FCFA/mois · Pitchs en tête de liste" → ouvre `WavePremiumSheet(PremiumPlan.entrepreneur)`
+   - Si `isPremium` → badge vert "Compte Entrepreneur Premium actif"
 
 ```dart
 // Ouverture de la bottom sheet depuis n'importe quel écran
@@ -2025,7 +2367,7 @@ await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
 
 **Flux utilisateur complet :**
 1. Clique "Passer Premium" → bottom sheet s'ouvre
-2. Voit les avantages + prix → clique "Payer avec Wave — 7 500 FCFA / mois"
+2. Voit les avantages + prix → clique "Payer avec Wave — 4 900 FCFA / mois"
 3. L'app Wave s'ouvre avec le montant pré-rempli
 4. Confirme le paiement dans Wave → revient dans DIAPALER AFRICA
 5. Clique "Oui, j'ai payé — Activer Premium" → Firebase mis à jour → SnackBar vert
@@ -2033,7 +2375,7 @@ await WavePremiumSheet.show(context, PremiumPlan.entrepreneur);
 > **📸 CAPTURE D'ÉCRAN — Bottom sheet Premium (avantages + bouton Wave bleu)**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — App Wave ouverte avec montant pré-rempli (7 500 FCFA)**
+> **📸 CAPTURE D'ÉCRAN — App Wave ouverte avec montant pré-rempli (4 900 FCFA)**
 > *(Insérer ici la capture d'écran)*
 
 > **📸 CAPTURE D'ÉCRAN — Confirmation "Compte Premium activé !" (SnackBar vert)**
@@ -2081,6 +2423,133 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 
 ---
 
+## SECTIONS BONUS — Écrans et Fonctionnalités Additionnels
+
+Les sections suivantes documentent les écrans et services additionnels non explicitement mentionnés dans les sections précédentes, mais présents dans le code et intégrés à l'application.
+
+### 2.6 Recommandations intelligentes — `page_mentors_recommandes.dart`
+
+Au-delà de la recherche manuelle, l'app propose des recommandations de mentors filtrées intelligemment selon le profil de l'utilisateur.
+
+**Algorithme de recommandation :**
+- Secteur principal de l'utilisateur (premier critère)
+- Secteurs des projets en cours (critères secondaires)
+- Centres d'intérêt partagés (tags)
+- Distance GPS optionnelle
+
+**Affichage :**
+- Liste complète des mentors recommandés
+- Cartes mentor standards (avatar, nom, secteur, distance, compatibilité %)
+- Tri : compatibilité décroissante
+- Tap → Détail profil + Réserver session
+
+> **📸 CAPTURE D'ÉCRAN — Mentors Recommandés**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 4.7 Formulaire d'envoi demande — `page_send_request.dart`
+
+Avant d'envoyer une demande de mentorat ou d'investissement, l'utilisateur peut personnaliser sa demande avec un message contextuel.
+
+**Affichage :**
+- Avatar + nom du mentor/investisseur en en-tête
+- Champ message personnalisé (placeholder: "Explique pourquoi tu souhaites travailler ensemble…")
+- **Pour demande d'investissement uniquement :** champ budget optionnel (en FCFA)
+- Validation : message min 10 caractères
+- Bouton "ENVOYER" → Création `MentorRequest` dans Firebase + notification destinataire
+- Retour automatique à Profil / Pitchs après envoi
+
+> **📸 CAPTURE D'ÉCRAN — Formulaire Envoi Demande**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 5.4 Mes Mentors — Relations acceptées (`page_mes_mentors.dart`)
+
+`MesMentorsPage` — page dédiée "Mes Contacts" avec 2 onglets (Mentors / Investisseurs), affichant les relations acceptées.
+
+**Affichage :**
+- Liste des contacts selon l'onglet actif (Mentors ou Investisseurs)
+- Avatar + nom + secteur + badge rôle coloré
+- Tap → Messagerie directe (`ChatPage`)
+
+Cette vue facilite la navigation rapide vers ses contacts sans chercher dans toute la messagerie.
+
+> **📸 CAPTURE D'ÉCRAN — Mes Mentors**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 7.1.1 Consultation d'un pitch — `page_detail_pitch.dart` (vue propriétaire)
+
+Le propriétaire d'un pitch peut consulter et modifier les détails de son pitch après publication, y compris uploader des fichiers d'accompagnement (PDF business plan, vidéo pitch, deck présentation).
+
+**Fonctionnalités :**
+- Bottom sheet `DraggableScrollableSheet` (hauteur min 0.5, max 1.0)
+- Affichage titre, description, secteur, montant
+- **Uploads facultatifs** (Cloudinary) :
+  - Business plan (PDF max 10MB)
+  - Vidéo pitch (MP4 max 50MB)
+  - Deck de présentation (PDF max 5MB)
+- Statut upload en temps réel (pourcentage)
+- Bouton "Supprimer le pitch" (après confirmation)
+- Retour à `PitchesPublics` après édition/suppression
+
+---
+
+### 7.3 Gestion mes pitchs — `page_mes_pitchs.dart`
+
+Après création d'un pitch, l'entrepreneur peut accéder à sa liste personnelle de pitchs pour en consulter l'historique, les éditer, ou les supprimer.
+
+**Fonctionnalités :**
+- Onglet "Mes pitchs" accessible depuis Mon Profil ou via navigation
+- Liste temps réel (`StreamBuilder`) de tous les pitchs créés par l'utilisateur
+- Statut visuel : "Publié" (badge vert) / "Brouillon" (badge gris, optionnel)
+- Tap sur un pitch → `PitchDetailPage` (vue propriétaire) pour éditer/voir uploads
+- Bouton "Ajouter un pitch" → `PitchPage` (nouvelle création)
+- Swipe ou bouton suppression → Dialog de confirmation → Suppression Firebase + `pitches/`
+- Tri : date descroissante (plus récent en premier)
+
+> **📸 CAPTURE D'ÉCRAN — Gestion Mes Pitchs**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 9. Système de Favoris — Mentors et Pitchs
+
+L'app dispose de **deux systèmes de favoris distincts** :
+
+#### 9.1 Favoris Mentors/Investisseurs — `page_mes_favoris.dart` + `service_favoris.dart`
+
+Permet à tout utilisateur de mettre en favori des profils (mentors ou investisseurs) pour y revenir facilement.
+
+**Fonctionnalités :**
+- Icône ♥ clic sur chaque profil (Matching, Détail) → sauvegarde Firebase sous `favorites/$userId/$mentorKey`
+- Liste réactive temps réel via `FavoriteService.favorites` (ValueNotifier)
+- Affichage: cartes mentor standards avec Cœur 💖 rempli
+- Tap → Détail profil + Réserver / Investir
+- Suppression favori: tap cœur à nouveau
+
+> **📸 CAPTURE D'ÉCRAN — Mes Favoris Mentors**
+> *(Insérer ici la capture d'écran)*
+
+#### 9.2 Favoris Pitchs — `page_mes_pitchs_favoris.dart` + `service_pitch_favoris.dart`
+
+Les investisseurs peuvent sauvegarder les pitchs qui les intéressent pour consultation ultérieure (bookmark).
+
+**Fonctionnalités :**
+- Icône 🔖 sur chaque carte pitch (Pitchs Publics) → sauvegarde Firebase sous `pitchFavorites/$userId/$pitchKey`
+- Liste réactive temps réel via `PitchFavoriteService.pitchFavorites` (ValueNotifier)
+- Affichage: cartes pitch standards avec Bookmark 🔖 rempli
+- Tap → Détail pitch détaillé
+- Suppression favori: tap bookmark à nouveau
+
+> **📸 CAPTURE D'ÉCRAN — Mes Pitchs Favoris**
+> *(Insérer ici la capture d'écran)*
+
+---
+
 ## Conclusion du Livrable 5
 
 ### Bilan des fonctionnalités implémentées
@@ -2091,7 +2560,7 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | Recherche | Filtre textuel temps réel (nom, secteur, ville) dans Matching + Pitchs Publiés | ✅ |
 | Filtres | Pills rôle + Pills secteur (10) + Dropdown ville + Reset (Matching) | ✅ |
 | Filtres pitchs | Recherche + pills secteur dynamiques + compteur + reset dans Pitchs Publiés | ✅ (bonus) |
-| Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km | ✅ |
+| Géolocalisation | `getCurrentLocation()` + tri proximité + puce distance km + `LocationService.detectCity()` + localité Nominatim (quartier/suburb) pré-rempli dans Modifier profil | ✅ |
 | Chatbot IA | DIALI (llama-3.1-8b-instant) + proxy Cloudflare + FAB pulsant | ✅ |
 | Messagerie temps réel | Firebase WebSocket + badge global `unreadMessagesCount` | ✅ (bonus) |
 | Badge messages non lus | `ValueNotifier<int>` global dans `service_navigation.dart` | ✅ (bonus) |
@@ -2105,14 +2574,14 @@ L'APK est distribué via Google Drive (gratuit, suffisant pour un projet académ
 | **Système de Contacts** | Onglet "Contacts" dans Messages — relations acceptées, searchable, badge rôle, tap → chat | ✅ (bonus) |
 | **Matching rôle-adaptatif** | Mentor → "Mes Entrepreneurs", Investisseur → "Entrepreneurs à financer" | ✅ (bonus) |
 | **Compatibilité dynamique** | Algorithme intérêts partagés — remplace valeurs hardcodées | ✅ (bonus) |
-| **Pitch (stepper 3 étapes)** | `PitchPage` → validation par étape + double sauvegarde (`totalSteps: 3`) + redirect Profil | ✅ (bonus) |
+| **Pitch (stepper 5 étapes)** | `PitchPage` → validation par étape + sauvegarde progressive + **bouton Précédent** (retour libre entre étapes) + publication directe | ✅ (bonus) |
 | **Fil de pitchs publics** | `PublicPitchesPage` → stream temps réel `DatabaseService.getPitches()` | ✅ (bonus) |
 | **Dashboard Mentor** | SliverAppBar + stats + raccourcis Pitchs/Planning/Demandes | ✅ (bonus) |
 | **Dashboard Investisseur** | SliverAppBar + ticket investissement + "Entrepreneurs à financer" | ✅ (bonus) |
 | **Agenda rôle-spécifique** | Titre/description adaptés : "Mes sessions" / "Mon agenda" / "Mes rendez-vous" | ✅ (bonus) |
 | **Détail mentor** | Bio Firebase réelle + pronom genre + bouton adapté rôle (mentorat/investissement) | ✅ (bonus) |
 | **Bouton CIS informatif** | Bottom sheet expliquant le Club des Investisseurs du Sénégal | ✅ (bonus) |
-| **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch, profil, conseil DIALI | ✅ (bonus) |
+| **Partage réseaux sociaux** | `ShareService` (share_plus) — pitch (`PagePitchsPublics` + `PageDetailPitch`), profil (perso + mentor), conseil DIALI (bouton AppBar + lien sous chaque bulle) | ✅ (bonus) |
 | **Paiement mobile Wave** | `WaveService` + lien marchand + `WavePremiumSheet` + badge ⭐ profil | ✅ (bonus) |
 | **Sauvegarde MDP** | `AutofillGroup` + `finishAutofillContext` → Google/Samsung/iCloud Password Manager | ✅ (bonus) |
 | **Déploiement APK signé** | `flutter build apk --release` — APK 58.2 MB disponible en téléchargement | ✅ (bonus) |

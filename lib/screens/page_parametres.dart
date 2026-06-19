@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_seed_demo.dart';
 import '../theme/theme_app.dart';
 import 'page_aide.dart';
@@ -9,7 +11,8 @@ import 'page_aide.dart';
 class ParametresPage extends StatelessWidget {
   const ParametresPage({super.key});
 
-  static const _demoEmail = 'sirimambodj@gmail.com';
+  static const _demoEmail  = 'sirimambodj@gmail.com';
+  static const _demoEmail2 = 'souleymanesirimambodj@esp.sn';
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +71,11 @@ class ParametresPage extends StatelessWidget {
           ),
 
           // ── Démo ────────────────────────────────────────────────────
-          // const SizedBox(height: 4),
-          // _SectionHeader('Données de démo'),
-          // const _SeedButton(),
+          if (email == _demoEmail || email == _demoEmail2) ...[
+            const SizedBox(height: 4),
+            const _SectionHeader('Données de démo'),
+            const _SeedButton(),
+          ],
 
           const SizedBox(height: 4),
 
@@ -245,6 +250,12 @@ class _SeedButtonState extends State<_SeedButton> {
     setState(() { _loading = true; _done = false; });
     try {
       await SeedDemoService.seed();
+      // Recharger le profil depuis Firebase pour que les projets apparaissent
+      final uid = AuthService.currentUid;
+      if (uid != null) {
+        final remote = await DatabaseService.readUserProfile(uid);
+        if (remote != null) UserProfileController.update(remote);
+      }
       if (mounted) setState(() { _loading = false; _done = true; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

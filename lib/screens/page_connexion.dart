@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
@@ -22,7 +23,45 @@ class _LoginPageState extends State<LoginPage> {
   final _password = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
+  bool _rememberMe = false;
   String? _error;
+
+  static const _kEmail    = 'saved_email';
+  static const _kPassword = 'saved_password';
+  static const _kRemember = 'remember_me';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remember = prefs.getBool(_kRemember) ?? false;
+    if (!remember) return;
+    final email    = prefs.getString(_kEmail)    ?? '';
+    final password = prefs.getString(_kPassword) ?? '';
+    if (!mounted) return;
+    setState(() {
+      _rememberMe = true;
+      _email.text    = email;
+      _password.text = password;
+    });
+  }
+
+  Future<void> _persistCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setBool  (_kRemember, true);
+      await prefs.setString(_kEmail,    _email.text.trim());
+      await prefs.setString(_kPassword, _password.text);
+    } else {
+      await prefs.remove(_kRemember);
+      await prefs.remove(_kEmail);
+      await prefs.remove(_kPassword);
+    }
+  }
 
   @override
   void dispose() {
@@ -58,6 +97,7 @@ class _LoginPageState extends State<LoginPage> {
       }
       // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
       // les identifiants (Google Password Manager, Samsung Pass, iCloud Keychain…)
+      await _persistCredentials();
       TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -211,30 +251,58 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordPage(),
+                  // ── Se souvenir de moi ──
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          activeColor: AppColors.blue,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4)),
+                          onChanged: (v) =>
+                              setState(() => _rememberMe = v ?? false),
                         ),
                       ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Mot de passe oublié ?',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.blue,
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _rememberMe = !_rememberMe),
+                        child: const Text(
+                          'Se souvenir de moi',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.navyDeep,
+                              fontWeight: FontWeight.w600),
                         ),
                       ),
-                    ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordPage(),
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Mot de passe oublié ?',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  // ── Erreur ──
                   if (_error != null) ...[
                     const SizedBox(height: 8),
                     Container(

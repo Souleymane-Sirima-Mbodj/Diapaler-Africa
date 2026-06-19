@@ -46,6 +46,11 @@ class Project {
   final String sector;
   final int step;
   final int totalSteps;
+  final String? amount;
+  final String? businessPlanUrl;
+  final String? videoUrl;
+  final String? deckUrl;
+  final bool published;
 
   const Project({
     required this.id,
@@ -54,6 +59,11 @@ class Project {
     required this.sector,
     this.step = 1,
     this.totalSteps = 5,
+    this.amount,
+    this.businessPlanUrl,
+    this.videoUrl,
+    this.deckUrl,
+    this.published = false,
   });
 
   bool get isCompleted => step >= totalSteps;
@@ -66,6 +76,11 @@ class Project {
     String? sector,
     int? step,
     int? totalSteps,
+    String? amount,
+    String? businessPlanUrl,
+    String? videoUrl,
+    String? deckUrl,
+    bool? published,
   }) {
     return Project(
       id: id ?? this.id,
@@ -74,6 +89,11 @@ class Project {
       sector: sector ?? this.sector,
       step: step ?? this.step,
       totalSteps: totalSteps ?? this.totalSteps,
+      amount: amount ?? this.amount,
+      businessPlanUrl: businessPlanUrl ?? this.businessPlanUrl,
+      videoUrl: videoUrl ?? this.videoUrl,
+      deckUrl: deckUrl ?? this.deckUrl,
+      published: published ?? this.published,
     );
   }
 }

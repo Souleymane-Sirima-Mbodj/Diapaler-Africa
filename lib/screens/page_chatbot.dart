@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_chatbot.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 
 class ChatbotPage extends StatefulWidget {
@@ -125,6 +126,18 @@ class _ChatbotPageState extends State<ChatbotPage>
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         ),
+        actions: [
+          if (_messages.any((m) => m.role == 'assistant'))
+            IconButton(
+              onPressed: () {
+                final last = _messages.lastWhere((m) => m.role == 'assistant');
+                final name = UserProfileController.profile.value.firstName;
+                ShareService.shareDialiAdvice(advice: last.content, userName: name);
+              },
+              icon: const Icon(Icons.share_rounded, color: Colors.white),
+              tooltip: 'Partager ce conseil',
+            ),
+        ],
         title: Row(
           children: [
             Container(
@@ -173,10 +186,22 @@ class _ChatbotPageState extends State<ChatbotPage>
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
                     children: [
-                      const _AiMessage(text: _welcome),
+                      _AiMessage(
+                        text: _welcome,
+                        onShare: () => ShareService.shareDialiAdvice(
+                          advice: _welcome,
+                          userName: UserProfileController.profile.value.firstName,
+                        ),
+                      ),
                       ..._messages.map((m) => m.role == 'user'
                           ? _UserMessage(text: m.content)
-                          : _AiMessage(text: m.content)),
+                          : _AiMessage(
+                              text: m.content,
+                              onShare: () => ShareService.shareDialiAdvice(
+                                advice: m.content,
+                                userName: UserProfileController.profile.value.firstName,
+                              ),
+                            )),
                       if (_loading) _TypingIndicator(controller: _dotCtrl),
                     ],
                   ),
@@ -233,7 +258,8 @@ class _UserMessage extends StatelessWidget {
 
 class _AiMessage extends StatelessWidget {
   final String text;
-  const _AiMessage({required this.text});
+  final VoidCallback? onShare;
+  const _AiMessage({required this.text, this.onShare});
 
   @override
   Widget build(BuildContext context) {
@@ -257,27 +283,54 @@ class _AiMessage extends StatelessWidget {
             ),
           ),
           Flexible(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12, right: 40),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(3),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border.all(color: AppColors.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 4, right: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(3),
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: _FormattedText(text: text),
+                  child: _FormattedText(text: text),
+                ),
+                if (onShare != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, bottom: 10),
+                    child: InkWell(
+                      onTap: onShare,
+                      borderRadius: BorderRadius.circular(6),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.share_rounded, size: 11, color: AppColors.muted),
+                            SizedBox(width: 4),
+                            Text('Partager',
+                                style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 12),
+              ],
             ),
           ),
         ],

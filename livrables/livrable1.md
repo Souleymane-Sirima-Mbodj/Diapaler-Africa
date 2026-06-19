@@ -84,6 +84,8 @@
   - [2.16 Déposer un Pitch](#216-déposer-un-pitch--page_pitchdart)
   - [2.17 Pitchs Publiés](#217-pitchs-publiés--page_pitches_publicsdart)
   - [2.18 Autres écrans complémentaires](#218-autres-écrans-complémentaires)
+  - [2.19 Aide & Support](#219-aide--support--page_aidedar)
+  - [2.20 Paramètres utilisateur](#220-paramètres-utilisateur--page_parametresdar)
 - [3. Navigation entre les écrans](#3-navigation-entre-les-écrans)
   - [3.1 Architecture de navigation](#31-architecture-de-navigation-à-deux-niveaux)
   - [3.2 Flux de navigation complet](#32-flux-de-navigation-complet)
@@ -116,7 +118,7 @@ Cette première section détaille la fondation technique du projet : comment il 
 
 ### 1.2 Dépendances installées (`pubspec.yaml`)
 
-Chaque package a été choisi pour une raison précise. Firebase assure le backend en temps réel sans serveur à maintenir. `google_fonts` permet d'appliquer une typographie soignée sans aucun asset local. `geolocator` alimente le tri "Près de moi" avec un calcul de distance Haversine. `shared_preferences` garantit une session persistante même hors-ligne, et `http` suffit pour l'intégration du chatbot IA via l'API Groq, sans dépendance lourde à un SDK tiers.
+Chaque package a été choisi pour une raison précise. Firebase assure le backend en temps réel sans serveur à maintenir. `google_fonts` permet d'appliquer une typographie soignée sans aucun asset local. `geolocator` alimente le tri "Près de moi" avec un calcul de distance Haversine. `shared_preferences` garantit une session persistante même hors-ligne, et `http` suffit pour l'intégration du chatbot IA via l'API Groq, sans dépendance lourde à un SDK tiers. `file_picker` et `crop_image` permettent respectivement la sélection de fichiers depuis le gestionnaire de fichiers et le recadrage de photo avant sauvegarde.
 
 ```yaml
 name: diapaler_africa
@@ -136,11 +138,13 @@ dependencies:
   firebase_auth: ^5.3.4         # Authentification Firebase (email/password)
   firebase_database: ^11.1.7    # Base de données temps réel WebSocket
   shared_preferences: ^2.3.0    # Cache local (session persistante, mode hors-ligne)
-  image_picker: ^1.1.0          # Photo de profil (galerie/caméra)
+  image_picker: ^1.1.0          # Photo de profil (galerie — ImagePicker)
   geolocator: ^11.0.0           # GPS et calcul de distances (Haversine)
   http: ^1.2.2                  # Requêtes HTTP vers l'API Groq (chatbot DIALI)
   share_plus: ^10.1.4           # Partage natif (WhatsApp, Facebook, Telegram, X, LinkedIn…)
   url_launcher: ^6.3.1          # Ouverture de liens externes (Wave, Play Store…)
+  file_picker: ^8.1.0           # Sélection de fichiers image depuis le gestionnaire de fichiers
+  crop_image: ^1.0.17           # Recadrage de photo (CropPhotoPage) avant sauvegarde
 
 dev_dependencies:
   flutter_test:
@@ -168,10 +172,11 @@ diapaler_africa/
 │   ├── data/                            # Modèles de données (UserProfile, ChatMessage…)
 │   │   ├── profil_utilisateur.dart
 │   │   ├── donnees_mentors.dart         # 112 profils sénégalais (statiques)
+│   │   ├── avis_statiques.dart          # Avis de démonstration (statiques)
 │   │   ├── pays.dart
 │   │   ├── citations.dart
 │   │   └── interactions.dart
-│   ├── screens/                         # 34 écrans (auth, dashboard, matching, chat…)
+│   ├── screens/                         # 35 écrans (auth, dashboard, matching, chat…)
 │   │   ├── page_demarrage.dart          # Splash + bootstrap Firebase
 │   │   ├── coquille_principale.dart     # RootShell : IndexedStack 5 onglets + FAB
 │   │   ├── page_accueil.dart            # Dashboard adaptatif (3 rôles)
@@ -187,7 +192,9 @@ diapaler_africa/
 │   │   ├── page_mes_favoris.dart        # Profils mis en favori
 │   │   ├── page_mes_mentors.dart        # Mes mentors actifs
 │   │   └── … (19 autres écrans)
-│   ├── services/                        # 14 services métier (auth, RTDB, GPS, cache…)
+│   ├── services/                        # 17 services métier (auth, RTDB, GPS, cache…)
+│   │   ├── service_geolocation.dart     # Distances GPS Haversine (tri "Près de moi" — Matching)
+│   │   ├── service_geolocalisation.dart # Auto-détection ville + localité (Nominatim)
 │   │   ├── service_pitch_favoris.dart   # Pitchs favoris (bookmark temps réel)
 │   ├── theme/theme_app.dart             # Palette couleurs + ThemeData
 │   └── widgets/                         # 13 composants réutilisables (avatar, nav, squelette…)
@@ -291,7 +298,7 @@ flutter build apk      # Build APK Android release
 
 ## 2. Intégration des interfaces
 
-Cette section présente les 34 écrans de l'application, du splash screen d'accueil jusqu'aux pages secondaires. Pour chaque écran, nous expliquons ce qu'il fait, ce que l'utilisateur y vit, et les décisions de design ou technique qui ont guidé son implémentation. L'ensemble est pensé pour être cohérent visuellement et adaptatif selon le rôle de l'utilisateur connecté.
+Cette section présente les 35 écrans de l'application, du splash screen d'accueil jusqu'aux pages secondaires. Pour chaque écran, nous expliquons ce qu'il fait, ce que l'utilisateur y vit, et les décisions de design ou technique qui ont guidé son implémentation. L'ensemble est pensé pour être cohérent visuellement et adaptatif selon le rôle de l'utilisateur connecté.
 
 ### 2.1 Design System unifié
 
@@ -300,8 +307,8 @@ Toutes les interfaces partagent une **palette de couleurs commune** définie dan
 ```dart
 class AppColors {
   // Couleurs primaires
-  static const navyDeep   = Color(0xFF0F1729); // Textes, titres principaux
   static const navy       = Color(0xFF0A234B); // Fonds navbars, boutons
+  static const navyDeep   = Color(0xFF0F1729); // Textes, titres principaux
   static const blue       = Color(0xFF1E50A0); // Investisseurs, liens actifs
   static const blueBright = Color(0xFF3B82F6); // Bleu vif (liens, accents)
   static const blueTint   = Color(0xFFDCE6F5); // Fond chips par défaut
@@ -382,7 +389,7 @@ L'onboarding n'apparaît qu'une seule fois, juste après la création d'un compt
 - Slide 2 : "Dépose ton pitch" — icône upload amber
 - Slide 3 : "DER/FJ à portée de main" — dispositifs de financement sénégalais
 - Indicateurs de pagination animés (dots)
-- Bouton "COMMENCER" sur la dernière slide → **RootShell** (app principale)
+- Bouton "JE COMMENCE 🚀" sur la dernière slide → **RootShell** (app principale)
 - Bouton "Passer" pour ignorer l'onboarding → **RootShell** (app principale)
 
 > **📸 CAPTURE D'ÉCRAN — Écran d'Onboarding (slide 1)**
@@ -435,7 +442,7 @@ L'inscription est découpée en quatre étapes pour ne jamais noyer l'utilisateu
 - Barre de progression 4 segments animés (amber = complété, gris = à venir)
 - Étape 1 — Identité : nom complet (prénom + nom obligatoires), email (regex), sexe (pills), date naissance (DatePicker)
 - Étape 2 — Localisation : pays (dropdown Afrique de l'Ouest), ville (filtrée par pays), adresse
-- Étape 3 — Profil pro : secteur d'activité (dropdown, **adapté selon le rôle**), photo (galerie, redim 512×512, base64), biographie, LinkedIn, intérêts/domaines (chips multi-sélection) + années d'expérience (Mentor) + ticket d'investissement (Investisseur)
+- Étape 3 — Profil pro : secteur d'activité (dropdown, **adapté selon le rôle** : "Secteur d'activité" / "Secteur principal" / "Secteur d'investissement"), photo (galerie, redimensionnée max 512×512 à l'inscription — upload Cloudinary avec fallback base64), biographie, LinkedIn, intérêts/domaines (chips multi-sélection, libellé adapté : "Centres d'intérêt" / "Domaines d'expertise" / "Secteurs d'intérêt") + années d'expérience (Mentor) + ticket d'investissement (Investisseur) + entreprises fondées/possédées — liste dynamique ajout/suppression (Mentor + Investisseur)
 - Étape 4 — Sécurité : téléphone avec **préfixe dynamique** selon le pays (🇸🇳 +221 Sénégal · 🇬🇲 +220 Gambie · 🇲🇱 +223 Mali), validation longueur adaptée (9/7/8 chiffres), mot de passe (jauge de force 5 niveaux), confirmation, CGU
 - Validation temps réel : icônes ✓/✗ colorées + messages d'aide sur chaque champ
 - Bouton CONTINUER désactivé si étape invalide
@@ -451,13 +458,13 @@ L'inscription est découpée en quatre étapes pour ne jamais noyer l'utilisateu
 
 ### 2.7 Dashboard Entrepreneur — `page_accueil.dart`
 
-Le dashboard entrepreneur est l'écran central de l'utilisateur porteur de projet. Il a été pensé comme un tableau de bord opérationnel : d'un seul coup d'oeil, l'entrepreneur voit l'état de son projet, ses statistiques clés, et les actions qu'il peut faire tout de suite. Le skeleton loading de 900ms masque les temps de chargement Firebase et donne une impression de réactivité immédiate, même sur une connexion mobile moyenne.
+Le dashboard entrepreneur est l'écran central de l'utilisateur porteur de projet. Il a été pensé comme un tableau de bord opérationnel : d'un seul coup d'oeil, l'entrepreneur voit l'état de son projet, ses statistiques clés, et les actions qu'il peut faire tout de suite. Un skeleton loading (`squelette.dart`) s'affiche pendant le rafraîchissement Firebase pour masquer les temps de chargement et donner une impression de réactivité immédiate.
 
 **Fonctionnalités :**
 - En-tête gradient navy (`_NavyHero`) : avatar amber + "Bonjour 🇸🇳 + Nom complet" + cloche notifications (badge rouge dynamique via `NotificationService.notifications`)
 - Barre de recherche dans l'en-tête → **auto-focus sur le champ de recherche de `MatchingPage`** via `matchingFocusSearch` ValueNotifier (pas de rechargement de page)
-- Skeleton loading (`squelette.dart`) pendant 900ms au démarrage
-- `_ProjectHero` : si aucun projet → carte "Aucun projet en cours" → `AddProjectPage` ; si projet existant → carte de progression avec barre animée (`TweenAnimationBuilder`)
+- Skeleton loading (`squelette.dart`) pendant le rafraîchissement Firebase (`_refresh()`)
+- `_ProjectHero` : si aucun projet → carte "Aucun projet en cours" → `PitchPage()` (nouveau projet) ; si projet existant → carte de progression avec barre animée (`TweenAnimationBuilder`) + bottom sheet 3 actions : "Modifier le projet" → `PitchPage(existingProject:)`, "Publier le pitch" → `_directPublish()`, "Supprimer"
 - Section "Actions rapides" — grille 2×2 (`_QuickActionsGrid`) — **visible pour tous les rôles** :
   - "Trouver un mentor" → onglet Matching (`appTabIndex.value = 1`) avec filtre Mentor pré-activé
   - "Déposer un pitch" → `PitchPage`
@@ -467,7 +474,7 @@ Le dashboard entrepreneur est l'écran central de l'utilisateur porteur de proje
   - **Sessions → cliquable** : navigue vers l'onglet Agenda (`appTabIndex.value = 3`)
   - Pills non encore navigables → badge `soon` + opacité 0.6 (indicateur visuel)
   - Mentors actifs / Sessions / Score / Pitchs / Favoris (`AnimatedCounter`)
-- Section "Mentors pour toi" → bandeau "Recommandations bientôt disponibles" (fonctionnalité prévue)
+- Section "Mentors pour toi" (`_RecommendedMentors`) → cartes mentors filtrées par `recommendedMentorsFor()` (secteur + intérêts partagés) ; si aucune correspondance → message "Choisis tes centres d'intérêt"
 - Pull-to-refresh (RefreshIndicator)
 
 > **📸 CAPTURE D'ÉCRAN — Dashboard Entrepreneur**
@@ -547,9 +554,9 @@ Cet écran est celui où l'utilisateur décide s'il veut entrer en contact avec 
   - Membres Firebase → vraies disponibilités lues en temps réel via `InteractionsService.getAvailability(mentor.uid)` (StreamBuilder)
   - Message "Disponibilités non encore configurées." si aucun créneau Firebase
 - **Bouton d'action adapté selon le rôle du profil consulté** :
-  - Si Mentor → "Réserver une session" → `_BookingSheet` (calendrier Firebase réel)
-  - Si Investisseur → "Proposer un investissement" (type `'investment'`)
-  - Visible pour tous les profils (pas seulement les membres Firebase)
+  - Membres Firebase réels → "Réserver une session" (Mentor) → `_BookingSheet` (calendrier Firebase réel) ; "Proposer un investissement" (Investisseur) → `_BookingSheet`
+  - Profils statiques de démo (uid vide) → `SendRequestPage` (formulaire de demande)
+  - Type `'investment'` pour les propositions d'investissement
 - **Bouton "Message"** — ID de conversation généré avec `AuthService.currentUid` (UID Firebase, jamais l'email) pour cohérence avec `page_notifications.dart`
 - Logique de communication stricte : chat disponible seulement après acceptation de la demande (`_checkRequestStatus()` bidirectionnel)
 
@@ -560,7 +567,7 @@ Cet écran est celui où l'utilisateur décide s'il veut entrer en contact avec 
 
 ### 2.12 Messagerie — `page_messages.dart` + `page_chat.dart`
 
-La messagerie est organisée en deux onglets complémentaires : "Contacts" regroupe les personnes avec qui l'utilisateur a une relation acceptée, tandis que "Messages" liste toutes les conversations actives avec aperçu du dernier message. Ce choix évite de mélanger carnet d'adresses et historique de conversation. Le badge rouge de messages non lus est mis à jour en temps réel via un ValueNotifier global, visible sur l'icône de l'onglet depuis n'importe quel écran de l'app.
+La messagerie est organisée en deux onglets complémentaires : "Contacts" regroupe les personnes avec qui l'utilisateur a une relation acceptée, tandis que "Messages" liste toutes les conversations actives avec aperçu du dernier message. Ce choix évite de mélanger carnet d'adresses et historique de conversation. Le compteur de messages non lus est calculé localement depuis le stream des conversations Firebase.
 
 **Fonctionnalités `page_messages.dart` :**
 
@@ -576,11 +583,11 @@ La page Messages est organisée en **2 onglets** :
 - Liste de toutes les conversations existantes (StreamBuilder Firebase temps réel)
 - Avatar, nom, dernier message, horodatage relatif
 - Badge rouge de messages non lus par conversation
-- Badge global sur l'onglet Messages (`unreadMessagesCount` ValueNotifier)
+- Badge de messages non lus calculé depuis le stream des conversations (comptage local dans `_buildMessagesTab()`)
 - Tap sur une conversation → `ChatPage` + marquage comme lu
 
 **Fonctionnalités `page_chat.dart` :**
-- Bulles de messages (envoyés : droite navy / reçus : gauche blanc)
+- Bulles de messages (envoyés : droite `AppColors.blue` / reçus : gauche gris clair)
 - Champ de saisie + bouton envoi
 - Horodatage sur chaque message
 - Synchronisation temps réel Firebase (StreamBuilder)
@@ -613,22 +620,19 @@ Le centre de notifications regroupe tous les événements importants : demandes 
 
 ### 2.14 Mon Profil — `page_profil.dart`
 
-La page profil est la vitrine de l'utilisateur au sein de DIAPALER. Elle est volontairement adaptative : un entrepreneur y voit ses projets en cours avec leurs barres de progression, un mentor y affiche ses années d'expérience et son planning, un investisseur ses contacts et ses rendez-vous. La jauge de complétion 0–100% motive l'utilisateur à renseigner toutes ses informations pour maximiser sa visibilité dans le Matching.
+La page profil est la vitrine de l'utilisateur au sein de DIAPALER. La jauge de complétion 0–100% motive l'utilisateur à renseigner toutes ses informations pour maximiser sa visibilité dans le Matching.
 
 **Structure de la page (allégée et rôle-adaptive) :**
-- Carte identité : photo/initiales, nom, rôle, ville, barre de complétion 0–100%
-- Bandeau stats **adapté selon le rôle** :
-  - Entrepreneur : Projets / Terminés / Mentors / Favoris
-  - Mentor : Mentorés / Sessions / Années d'expé. / Favoris
-  - Investisseur : Contacts / Pitchs vus / Favoris / Rendez-vous
+- Carte identité : photo/initiales, nom, rôle, ville, barre de complétion 0–100% ; badge "Entrepreneur Premium" (amber) sous le rôle si `isPremium = true`
+- Bandeau stats **adapté selon le rôle** (`_StatsStrip`) :
+  - Entrepreneur : carte "Projets / pitch decks publiés" (`_EntrepreneurStatCard`)
+  - Mentor : Note moy. (StreamBuilder Firebase) + Avis reçus + Années d'expérience
+  - Investisseur : Note moy. (StreamBuilder Firebase) + Avis reçus
 - Carte "À propos" : bio + **LinkedIn cliquable** (url_launcher) + chip "X ans d'expérience" (Mentor) + chip ticket d'investissement (Investisseur)
 - Coordonnées condensées (3 colonnes) : email · téléphone · ville
 - Centres d'intérêt (chips colorés)
-- Mes Projets avec barres de progression (**Entrepreneur uniquement**)
-- Boutons d'actions **rôle-spécifiques** :
-  - Entrepreneur → "Mes contacts" (relations acceptées — mentorat + investissement)
-  - Mentor → "Planning" + "Demandes reçues"
-  - Investisseur → "Pitchs publiés"
+- Bouton "Mes demandes" (**Entrepreneur uniquement**) → `RequestsPage` (demandes de mentorat et d'investissement envoyées/reçues)
+- Bannière **"Passer Entrepreneur Premium"** (Entrepreneur non-abonné uniquement) → `WavePremiumSheet` (4 900 FCFA/mois via Wave) ; si déjà abonné : badge vert "Compte Entrepreneur Premium actif"
 - AppBar : Partager · Modifier · Déconnexion (icône rouge)
 
 > **📸 CAPTURE D'ÉCRAN — Mon Profil**
@@ -642,11 +646,14 @@ L'écran de modification du profil pré-remplit automatiquement tous les champs 
 
 **Fonctionnalités :**
 - Pré-remplissage de tous les champs avec les valeurs actuelles
-- Photo de profil : tap → galerie/caméra → redimensionnement 512×512 → base64
+ - Photo de profil : tap → bottom sheet (Galerie / Fichier). Les deux sources utilisent max 512×512. La sélection ouvre `CropPhotoPage` pour recadrer avant sauvegarde. À l'inscription l'image est uploadée vers Cloudinary (URL) avec fallback base64; la modification de profil enregistre le blob encodé en base64 dans Firebase.
 - Modification : prénom, nom, téléphone, adresse, ville, pays, secteur, sexe, date naissance
-- Biographie (240 caractères max avec compteur)
+- Biographie (280 caractères max avec compteur)
 - LinkedIn
 - Centres d'intérêt (chips multi-sélection)
+- Années d'expérience (**Mentor uniquement**)
+- Ticket d'investissement (**Investisseur uniquement**)
+- **Bouton "Détecter ma position"** — appelle `LocationService.detectCity()` (GPS + Nominatim OSM) : pré-remplit automatiquement les dropdowns Pays + Ville **et** le champ Adresse avec la localité fine (quartier/suburb, ex : "Liberté 6"). Le SnackBar affiche le chemin complet à 3 niveaux : "Sénégal · Dakar · Liberté 6"
 - Détection des changements (bouton SAUVEGARDER désactivé si rien n'a changé)
 - Sauvegarde : mise à jour locale immédiate + cache local + sync Firebase
 - SnackBar vert de confirmation
@@ -658,17 +665,22 @@ L'écran de modification du profil pré-remplit automatiquement tous les champs 
 
 ### 2.16 Déposer un Pitch — `page_pitch.dart`
 
-Déposer un pitch est l'action centrale pour un entrepreneur : c'est ce qui le rend visible aux mentors et aux investisseurs. Nous avons structuré cet écran en trois étapes courtes pour ne pas intimider — présenter son idée en quelques lignes suffit pour commencer. Le pitch est enregistré à deux endroits simultanément : dans le profil de l'entrepreneur (vue personnelle) et dans la collection `pitches/` publique (vue mentors/investisseurs), garantissant que tout le monde a accès aux bonnes données.
+`PitchPage` est la page unifiée de **création, édition et publication** d'un pitch. Elle couvre le cycle de vie complet du projet entrepreneur : démarrage depuis zéro, reprise à l'étape sauvegardée (mode édition), complétion progressive, et publication publique uniquement à l'étape 5.
 
 **Fonctionnalités :**
-- Stepper 3 étapes avec barre de progression amber
-- **Validation obligatoire par étape** — bouton CONTINUER désactivé si champs vides
-- Étape 1 : Titre du projet (min 3 chars, obligatoire) + elevator pitch
-- Étape 2 : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
-- Étape 3 : Montant financement FCFA (optionnel) + carte explicative "Qui verra ton pitch ?"
-- Double sauvegarde : dans le profil (`projects/` — Étape **1/3**) ET dans `pitches/` Firebase (visible mentors/investisseurs)
-- Après publication : navigation automatique vers l'**onglet Profil** → Mes projets
-- SnackBar "Retrouve-le dans ton profil → Mes projets"
+- **Stepper 5 étapes** avec barre de progression amber
+- **Validation obligatoire par étape** — bouton CONTINUER désactivé si champs invalides + message d'aide
+- **Bouton "← Précédent"** visible à partir de l'étape 2 — retour libre vers toute étape précédente
+- Étape 1 — Informations : Titre (min 3 chars, obligatoire) + elevator pitch
+- Étape 2 — Détails : Secteur dropdown (obligatoire) + description détaillée (min 20 chars, obligatoire)
+- Étape 3 — Financement : Montant FCFA (optionnel) + carte "Qui verra ton pitch ?"
+- Étape 4 — Documents : Business Plan PDF (obligatoire) + Vidéo de présentation (obligatoire) + Deck (optionnel) — upload Cloudinary
+- Étape 5 — Récapitulatif : vue synthèse + bouton "PUBLIER MON PITCH"
+- **Sauvegarde progressive** : à chaque avancement (étapes 1–4), le projet est sauvegardé localement + Firebase avec `step` mis à jour
+- **Mode édition** : si `existingProject` fourni, champs pré-remplis et stepper démarre à l'étape sauvegardée
+- **Publication** : uniquement à l'étape 5 — écriture dans `pitches/` global (visible mentors/investisseurs) + `step = 5`, `published = true`
+- Après publication : retour automatique vers l'**onglet Profil** (onglet 4)
+- SnackBar "Pitch publié ! Retrouve-le dans ton profil → Mes projets"
 
 > **📸 CAPTURE D'ÉCRAN — Déposer un Pitch (Étape 1)**
 > *(Insérer ici la capture d'écran)*
@@ -681,12 +693,12 @@ Cette page est le fil d'actualité des opportunités pour les mentors et les inv
 
 **Fonctionnalités (accessible Mentors + Investisseurs) :**
 - StreamBuilder Firebase (données temps réel)
-- Tri par date décroissante (plus récent en premier)
+- Tri **premium d'abord** puis date décroissante — les pitchs d'entrepreneurs Premium apparaissent en tête de liste
 - **Barre de recherche** : filtre en temps réel (titre, entrepreneur, secteur, description)
 - **Pills de secteur** générées dynamiquement depuis les pitchs Firebase
 - **Compteur** "X pitch(s)" mis à jour selon les filtres actifs
 - **Bouton "Réinitialiser"** visible si un filtre est actif
-- Chaque carte : avatar entrepreneur, nom, secteur (chip amber), titre, description (3 lignes max), montant FCFA
+- Chaque carte : avatar entrepreneur, nom, **badge ⭐ Premium** si entrepreneur abonné, secteur (chip amber), titre, description (3 lignes max), montant FCFA
 - Bouton "Contacter →" → Messagerie
 - **Icône bookmark 🔖** : sauvegarde le pitch dans `pitchFavorites/` Firebase (Investisseur uniquement) — feedback visuel instantané
 - **Bouton "💰 Proposer un investissement"** visible uniquement pour les Investisseurs → crée un `MentorRequest` de type `'investment'` dans Firebase + notification automatique à l'entrepreneur
@@ -705,9 +717,8 @@ Au-delà des écrans principaux déjà présentés, l'application inclut un ense
 **Mentors recommandés — `page_mentors_recommandes.dart`**
 - Liste filtrée de mentors correspondant aux intérêts de l'entrepreneur
 
-**Nouveau projet — `page_nouveau_projet.dart`**
-- Formulaire de création d'un projet (nom, description, secteur)
-- Sauvegarde dans le profil entrepreneur + Firebase
+**Crop photo — `page_crop_photo.dart`**
+- Recadrage interactif d'une photo de profil avant upload Cloudinary
 
 **Agenda — `page_agenda.dart`**
 - Titre et messages **adaptés selon le rôle** : "Mes sessions" (Entrepreneur) / "Mon agenda" (Mentor) / "Mes rendez-vous" (Investisseur)
@@ -770,9 +781,63 @@ Au-delà des écrans principaux déjà présentés, l'application inclut un ense
 
 ---
 
+### 2.19 Aide & Support — `page_aide.dart`
+
+L'écran Aide & Support est le point d'entrée pour les utilisateurs qui recherchent de l'assistance ou des réponses aux questions fréquentes. Il est conçu pour être simple et intuitif, avec une bannière gradient et des accordéons FAQ expansibles.
+
+**Fonctionnalités :**
+- Bannière gradient (navy → blue) avec icône agent support et accroche "Comment pouvons-nous t'aider ?"
+- **Section "Questions fréquentes"** — 8 accordéons `_FaqTile` expansibles avec animation de rotation :
+  - "Comment envoyer une demande de mentorat ?" → Explication du flux depuis l'accueil
+  - "Comment trouver un investisseur ?" → Filtre par rôle dans la liste des membres
+  - "Comment publier un pitch ?" → Stepper 5 étapes depuis le dashboard
+  - "Comment accepter ou refuser une demande ?" → Onglet Demandes du dashboard
+  - "Comment fonctionne le système de notation ?" → Étoiles 1–5 après relation acceptée
+  - "Comment modifier mon profil ?" → Onglet Profil → bouton d'édition
+  - "Pourquoi ma demande n'apparaît-elle pas ?" → Connexion Firebase / relancer l'app
+  - "Comment supprimer mon compte ?" → Paramètres → Supprimer mon compte
+- **Section "Nous contacter"** :
+  - Email support : `support@diapaler.sn` → tap copie dans le presse-papier + SnackBar
+  - WhatsApp : `+221 77 000 00 00` → tap copie dans le presse-papier + SnackBar
+  - Horaires : Lun – Ven, 8h – 18h (GMT) (non-cliquable)
+- Footer : "Diapaler Africa · v1.0.0"
+
+> **📸 CAPTURE D'ÉCRAN — Écran Aide & Support (FAQ)**
+> *(Insérer ici la capture d'écran)*
+
+---
+
+### 2.20 Paramètres utilisateur — `page_parametres.dart`
+
+La page Paramètres centralise les actions de gestion de compte et les informations de l'application. Elle est structurée en sections logiques.
+
+**Fonctionnalités :**
+
+**Section Compte :**
+- "Changer le mot de passe" → dialog de confirmation → lien de réinitialisation envoyé à l'email connecté (SnackBar vert de confirmation)
+
+**Section Application :**
+- "Langue" (affichage fixe "Français")
+- "Version" (affichage fixe "1.0.0")
+- "Développé par" → sous-titre "BNKMTN (Barry, Niang, Kama, Mbodj, Tine, Ndiaye) L3GLSIB"
+
+**Section Support :**
+- "Aide & support" → `AidePage` (FAQ + contacts) — navigation via `rootNavigator`
+
+**Section Données de démo** *(visible uniquement pour les comptes de développement)* **:**
+- Bouton `_SeedButton` → réinitialise les données de démo Firebase
+
+**Section Zone de danger :**
+- "Supprimer mon compte" (rouge) → dialog d'avertissement → suppression Firebase complète + cache + déconnexion → retour `LoginPage`
+
+> **📸 CAPTURE D'ÉCRAN — Écran Paramètres Utilisateur**
+> *(Insérer ici la capture d'écran)*
+
+---
+
 ## 3. Navigation entre les écrans
 
-La navigation est la colonne vertébrale de l'application. Bien penser la navigation, c'est s'assurer que l'utilisateur trouve toujours ce qu'il cherche sans se perdre, et que les transitions entre les pages sont fluides et naturelles. Cette section explique comment les 34 écrans de DIAPALER sont reliés entre eux, du flux d'authentification jusqu'aux sous-pages les plus profondes.
+La navigation est la colonne vertébrale de l'application. Bien penser la navigation, c'est s'assurer que l'utilisateur trouve toujours ce qu'il cherche sans se perdre, et que les transitions entre les pages sont fluides et naturelles. Cette section explique comment les 35 écrans de DIAPALER sont reliés entre eux, du flux d'authentification jusqu'aux sous-pages les plus profondes.
 
 ### 3.1 Architecture de navigation à deux niveaux
 
@@ -917,14 +982,14 @@ class _FadeThroughBuilder extends PageTransitionsBuilder {
 | Écran d'accueil | Dashboard adaptatif selon le rôle (3 variantes) | ✅ |
 | Liste des éléments principaux | Matching (112 profils), Pitchs publiés, Messages | ✅ |
 | Détail d'un élément | `page_detail_mentor.dart` — profil complet + actions | ✅ |
-| Formulaire d'ajout/modification | Inscription (4 étapes), Pitch (3 étapes), Modifier profil | ✅ |
+| Formulaire d'ajout/modification | Inscription (4 étapes), Pitch (5 étapes + bouton Précédent + sauvegarde progressive), Modifier profil | ✅ |
 | Profil utilisateur | `page_profil.dart` avec jauge de complétion | ✅ |
 | Navigation entre pages | 5 onglets IndexedStack + push/pop + FAB | ✅ |
 | Boutons retour | Sur tous les écrans, multi-étapes pour les steppers | ✅ |
 | Accès aux détails | `page_detail_mentor.dart` depuis `MatchingPage` | ✅ |
 | Navigation fluide | IndexedStack, AnimatedSwitcher, `appTabIndex` global | ✅ |
-| Bonus — 34 écrans | Bien au-delà du minimum requis (vs 26 attendus) | ✅ |
-| Bonus — 14 services métier | Architecture professionnelle couche services | ✅ |
+| Bonus — 35 écrans | Bien au-delà du minimum requis (vs 26 attendus) | ✅ |
+| Bonus — 17 services métier | Architecture professionnelle couche services (incl. `LocationService` + `GeolocationService`) | ✅ |
 | Bonus — 13 widgets réutilisables | Composants partagés dans toute l'app | ✅ |
 | Bonus — Matching rôle-adaptatif | Titre et contenu selon le rôle connecté | ✅ |
 | Bonus — Système de Contacts | Onglet Contacts dans Messages (relations acceptées) | ✅ |

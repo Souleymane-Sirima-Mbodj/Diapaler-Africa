@@ -420,6 +420,7 @@ class _PitchCard extends StatelessWidget {
     final sector = pitch['sector']?.toString() ?? '';
     final description = pitch['description']?.toString() ?? '';
     final amount = pitch['amount']?.toString() ?? '';
+    final isPremium = (pitch['isPremium'] as bool?) == true;
     final isInvestor =
         UserProfileController.profile.value.role == 'Investisseur';
     final myUid = AuthService.currentUid ?? '';
@@ -429,7 +430,7 @@ class _PitchCard extends StatelessWidget {
       builder: (context, _, __) {
         final isBookmarked = PitchFavoriteService.isFavorite(pitch);
         return _buildCard(context, title, userName, sector, description,
-            amount, isInvestor, myUid, isBookmarked);
+            amount, isPremium, isInvestor, myUid, isBookmarked);
       },
     );
   }
@@ -441,6 +442,7 @@ class _PitchCard extends StatelessWidget {
     String sector,
     String description,
     String amount,
+    bool isPremium,
     bool isInvestor,
     String myUid,
     bool isBookmarked,
@@ -478,13 +480,49 @@ class _PitchCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navyDeep,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            userName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.navyDeep,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isPremium) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                  color: const Color(0xFFF59E0B), width: 1),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded,
+                                    color: Color(0xFFF59E0B), size: 10),
+                                SizedBox(width: 2),
+                                Text(
+                                  'Premium',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const Text(
                       'Entrepreneur',

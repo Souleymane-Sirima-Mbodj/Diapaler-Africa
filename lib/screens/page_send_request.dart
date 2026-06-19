@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../data/profil_utilisateur.dart';
 import '../data/donnees_mentors.dart';
@@ -148,7 +149,7 @@ class _SendRequestPageState extends State<SendRequestPage> {
           widget.fromMentor
               ? 'Proposer du mentorat'
               : widget.mentor.isInvestor
-                  ? 'Rechercher un investissement'
+                  ? 'Proposer un investissement'
                   : 'Demander du mentorat',
           style: const TextStyle(
             fontSize: 17,

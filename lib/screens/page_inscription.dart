@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/pays.dart';
@@ -13,6 +16,9 @@ import '../services/service_cloudinary.dart';
 import '../theme/theme_app.dart';
 import 'page_decouverte.dart';
 import 'page_choix_role.dart';
+import 'page_crop_photo.dart';
+
+enum _PhotoSource { gallery, file }
 
 class SignUpPage extends StatefulWidget {
   final UserRole initialRole;
@@ -142,27 +148,94 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _pickProfilePhoto() async {
+    final source = await showModalBottomSheet<_PhotoSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded),
+            title: const Text('Galerie'),
+            onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.folder_open_rounded),
+            title: const Text('Fichier'),
+            onTap: () => Navigator.of(context).pop(_PhotoSource.file),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+    if (source == null) return;
+    if (source == _PhotoSource.gallery) {
+      await _pickProfilePhotoFromGallery();
+    } else {
+      await _pickProfilePhotoFromFile();
+    }
+  }
+
+  Future<void> _pickProfilePhotoFromGallery() async {
     try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(
+      final picked = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
         maxWidth: 512,
         maxHeight: 512,
+        imageQuality: 80,
       );
-      if (image != null) {
-        final bytes = await image.readAsBytes();
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      final croppedBytes = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+      );
+      if (croppedBytes != null && mounted) {
         setState(() {
-          _photoBytes = bytes;
-          _photoBase64 = base64Encode(bytes); // temporaire, remplacé par URL au submit
+          _photoBytes = croppedBytes;
+          _photoBase64 = base64Encode(croppedBytes);
         });
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e')),
-        );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de charger la photo.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickProfilePhotoFromFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+      if (!mounted) return;
+      final croppedBytes = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+      );
+      if (croppedBytes != null && mounted) {
+        setState(() {
+          _photoBytes = croppedBytes;
+          _photoBase64 = base64Encode(croppedBytes);
+        });
       }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de charger la photo.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

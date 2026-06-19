@@ -116,3 +116,9 @@ coverage/
 docs/node_modules/
 docs/package-lock.json
 
+
+# Fichiers temporaires générés localement
+build_output.txt
+generated_content.txt
+user_content.txt
+~.docx

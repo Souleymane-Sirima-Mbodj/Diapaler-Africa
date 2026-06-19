@@ -35,17 +35,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _error = null;
       _success = null;
     });
+    final email = _email.text.trim();
     try {
-      await AuthService.sendPasswordResetEmail(_email.text.trim());
+      final exists = await AuthService.isEmailRegistered(email);
+      if (!exists) {
+        setState(() {
+          _error = 'Aucun compte n\'est lié à cette adresse e-mail.';
+          _loading = false;
+        });
+        return;
+      }
+      await AuthService.sendPasswordResetEmail(email);
       setState(() {
-        _success =
-            'Un lien de réinitialisation a été envoyé à ${_email.text.trim()}';
+        _success = 'Un lien de réinitialisation a été envoyé à $email';
         _email.clear();
       });
     } catch (e) {
       setState(() => _error = AuthService.humanError(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && _loading) setState(() => _loading = false);
     }
   }
 

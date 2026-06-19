@@ -571,8 +571,30 @@ class SeedDemoService {
         'mentor_request_accepted', fromUserId: _alioubadBarryUid,
         fromName: 'Alioune Badara Barry', requestId: reqInvPropAbb, daysAgo: 4);
 
-    // Mise à jour compteur mentorsActive
-    await _db.child('users/$myUid').update({'mentorsActive': 6});
+    // Mise à jour compteur mentorsActive + projets du profil
+    await _db.child('users/$myUid').update({
+      'mentorsActive': 6,
+      'projects': [
+        {
+          'id': 'payflow-demo',
+          'name': 'PayFlow',
+          'description':
+              'Solution de paiement mobile sans compte bancaire destinée aux commerçants du secteur informel en Afrique de l\'Ouest.',
+          'sector': 'FinTech',
+          'step': 5,
+          'totalSteps': 5,
+        },
+        {
+          'id': 'agriconnect-demo',
+          'name': 'AgriConnect',
+          'description':
+              'Marketplace B2B qui met en relation directe les producteurs agricoles locaux avec les restaurateurs, hôtels et supermarchés de Dakar.',
+          'sector': 'AgriTech',
+          'step': 2,
+          'totalSteps': 5,
+        },
+      ],
+    });
   }
 
   // ── Helpers ──────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/donnees_mentors.dart';
 import '../data/profil_utilisateur.dart';
+import '../services/service_authentification.dart';
+import '../services/service_base_de_donnees.dart';
 import '../services/service_favoris.dart';
 import '../services/service_navigation.dart';
 import '../services/service_notifications.dart';
@@ -441,7 +443,7 @@ class _EmptyProjectHero extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Crée ton projet et dépose ton pitch en une seule étape guidée.',
+                      'Crée ton projet — tu pourras publier ton pitch quand tu seras prêt.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 12.5,
@@ -560,14 +562,34 @@ void _showProjectSheet(BuildContext context, UserProfile p) {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       fullscreenDialog: true,
-                      builder: (_) => const PitchPage(),
+                      builder: (_) =>
+                          PitchPage(existingProject: p.currentProject),
                     ),
                   );
                 },
-                icon: const Icon(Icons.upload_file_rounded, size: 18),
+                icon: const Icon(Icons.edit_rounded, size: 18),
                 label: const Text(
-                  'Déposer un pitch',
+                  'MODIFIER LE PROJET',
                   style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: p.currentProject == null
+                    ? null
+                    : () {
+                        Navigator.of(context).pop();
+                        _directPublish(context, p.currentProject!);
+                      },
+                icon: const Icon(Icons.upload_rounded, size: 18),
+                label: Text(
+                  (p.currentProject?.published ?? false)
+                      ? 'REPUBLIER LE PITCH'
+                      : 'PUBLIER LE PITCH',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -613,6 +635,160 @@ void _showProjectSheet(BuildContext context, UserProfile p) {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _directPublish(BuildContext context, Project project) async {
+  if (project.name.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Remplis le nom du projet avant de publier.'),
+      backgroundColor: AppColors.red,
+      behavior: SnackBarBehavior.floating,
+    ));
+    return;
+  }
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Publier ce pitch ?'),
+      content: Text(
+        '« ${project.name} » sera visible par tous les mentors et investisseurs.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Publier'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+
+  try {
+    final uid = AuthService.currentUid ?? '';
+    final profile = UserProfileController.profile.value;
+
+    await DatabaseService.publishPitch(
+      pitchId: project.id,
+      userId: uid,
+      userName: profile.fullName,
+      title: project.name,
+      sector: project.sector,
+      description: project.description,
+      amount: project.amount ?? '',
+      businessPlanUrl: project.businessPlanUrl,
+      videoUrl: project.videoUrl,
+      deckUrl: project.deckUrl,
+    );
+
+    UserProfileController.updateProject(
+      project.copyWith(published: true, step: project.totalSteps),
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Pitch publié ! Retrouve-le dans ton profil.'),
+      backgroundColor: AppColors.green,
+      behavior: SnackBarBehavior.floating,
+    ));
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Erreur : $e'),
+      backgroundColor: AppColors.red,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+}
+
+void _showPitchListSheet(BuildContext context, List<Project> projects) {
+  if (projects.isEmpty) {
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => const PitchPage(),
+    ));
+    return;
+  }
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Choisir un projet à publier',
+              style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...projects.map((proj) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          proj.name,
+                          style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700,
+                            color: AppColors.navyDeep,
+                          ),
+                        ),
+                        Text(
+                          proj.published
+                              ? 'Déjà publié'
+                              : 'Étape ${proj.step} / ${proj.totalSteps}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: proj.published ? AppColors.green : AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _directPublish(context, proj);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                    ),
+                    child: Text(proj.published ? 'Republier' : 'Publier'),
+                  ),
+                ],
+              ),
+            )),
           ],
         ),
       ),
@@ -761,11 +937,9 @@ class _QuickActionsGrid extends StatelessWidget {
           color: AppColors.amber,
           title: 'Déposer',
           subtitle: 'un pitch',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              fullscreenDialog: true,
-              builder: (_) => const PitchPage(),
-            ),
+          onTap: () => _showPitchListSheet(
+            context,
+            UserProfileController.profile.value.projects,
           ),
         ),
         _QuickAction(

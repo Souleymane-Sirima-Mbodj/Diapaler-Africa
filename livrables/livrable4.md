@@ -76,8 +76,9 @@
   - [3.4 Détection des changements](#34-détection-des-changements)
   - [3.5 Sauvegarde avec synchronisation Firebase](#35-sauvegarde-avec-synchronisation-firebase)
 - [4. Gestion des projets (Entrepreneur)](#4-gestion-des-projets-entrepreneur)
-- [5. Propagation réactive des modifications](#5-propagation-réactive-des-modifications)
-- [6. Widget Avatar réutilisable](#6-widget-avatar-réutilisable-widgetsavatardart)
+- [5. Système d'Avis et Notation](#5-système-davis-et-notation-sur-les-profils)
+- [6. Propagation réactive des modifications](#6-propagation-réactive-des-modifications)
+- [7. Widget Avatar réutilisable](#7-widget-avatar-réutilisable-widgetsavatardart)
 - [Conclusion](#conclusion-du-livrable-4)
 
 ---
@@ -89,7 +90,7 @@ Ce livrable porte sur l'une des fonctionnalités les plus importantes de toute a
 DIAPALER AFRICA offre une gestion de profil **complète et réactive** permettant à chaque utilisateur de :
 - Consulter son profil avec une **jauge de complétion** animée
 - **Modifier** toutes ses informations personnelles et professionnelles
-- **Ajouter ou changer sa photo de profil** (galerie ou caméra)
+- **Ajouter ou changer sa photo de profil** (galerie — ImagePicker)
 - Voir ses **statistiques** (mentors actifs, sessions, favoris, score)
 - **Créer, modifier et supprimer** ses projets (Entrepreneur)
 - Voir les **membres DIAPALER réels** inscrits via Firebase
@@ -129,11 +130,16 @@ class UserProfile {
   // Premium (Wave)
   final bool isPremium;
   final String premiumPlan;
+  // Entreprises fondées / possédées (mentors et investisseurs)
+  final List<String> companies;
 
   // Getters calculés
-  String get fullName  => '$firstName $lastName'.trim();
-  String get initials  => (firstName.isNotEmpty ? firstName[0] : '')
-                        + (lastName.isNotEmpty  ? lastName[0]  : '');
+  String get fullName => '$firstName $lastName';
+  String get initials {
+    final f = firstName.isNotEmpty ? firstName[0] : '';
+    final l = lastName.isNotEmpty ? lastName[0] : '';
+    return (f + l).toUpperCase();
+  }
   bool   get canStartNewProject => projects.isEmpty || projects.every((p) => p.isCompleted);
 
   // copyWith : retourne une copie avec les champs modifiés
@@ -221,19 +227,41 @@ class UserProfileController {
 
   // Profil de démonstration visible au premier lancement
   static final UserProfile _seed = UserProfile(
-    firstName: 'Mariéme', lastName: 'Tine',
-    email: 'marieme.tine@esp.sn', phone: '+221 77 123 45 67',
-    gender: Gender.female, birthDate: DateTime(2001, 6, 14),
-    city: 'Dakar', country: 'Sénégal', sector: 'Mode & Textile',
-    role: 'Entrepreneure', bio: 'Diplômée ESP Dakar, je porte le projet '
-        'Téranga Mode — valoriser les tissus traditionnels sénégalais.',
-    interests: ['Mode & Textile', 'Artisanat', 'E-commerce', 'Made in Sénégal'],
-    projects: [Project(
-      id: 'teranga-mode', name: 'Téranga Mode',
-      description: 'Marque de prêt-à-porter valorisant les tissus sénégalais.',
-      sector: 'Mode & Textile', step: 3,
+    firstName: 'Mariéme',
+    lastName: 'Tine',
+    email: 'marieme.tine@esp.sn',
+    phone: '+221 77 123 45 67',
+    gender: Gender.female,
+    birthDate: DateTime(2001, 6, 14),
+    address: 'Sicap Liberté 6, Villa 1234',
+    city: 'Dakar',
+    sector: 'Mode & Textile',
+    role: 'Entrepreneure',
+    linkedin: 'linkedin.com/in/marieme-tine',
+    bio: "Diplômée de l'École Supérieure Polytechnique de Dakar, je porte le projet "
+        'Téranga Mode — une marque de prêt-à-porter qui valorise les tissus '
+        'traditionnels sénégalais (bogolan, wax, bazin) à travers des coupes '
+        'contemporaines. Je cherche un mentor pour structurer mon modèle '
+        'économique et accéder au financement DER/FJ.',
+    interests: const [
+      'Mode & Textile',
+      'Artisanat',
+      'Cosmétique',
+      'E-commerce',
+      'Made in Sénégal',
+    ],
+    projects: const [Project(
+      id: 'teranga-mode',
+      name: 'Téranga Mode',
+      description: 'Marque de prêt-à-porter qui valorise les tissus traditionnels '
+          'sénégalais à travers des coupes contemporaines.',
+      sector: 'Mode & Textile',
+      step: 3,
     )],
-    mentorsActive: 4, sessionsCount: 3, favoritesCount: 7, score: 4.8,
+    mentorsActive: 4,
+    sessionsCount: 3,
+    favoritesCount: 7,
+    score: 4.8,
   );
 }
 ```
@@ -251,29 +279,28 @@ La page de profil est la vitrine de l'utilisateur dans l'application. Nous avons
 | Élément | Description |
 |---|---|
 | Carte identité | Photo/initiales, nom, rôle · secteur, ville, barre de complétion 0–100% |
-| Bandeau stats (4 tuiles) | Labels **adaptés au rôle** — voir tableau ci-dessous |
+| Bandeau stats (`_StatsStrip`) | Adapté au rôle — voir tableau ci-dessous |
 | Carte "À propos" | Bio + **LinkedIn cliquable** (url_launcher) + chip "X ans d'expé." (Mentor) + chip ticket (Investisseur) |
 | Coordonnées condensées | 3 colonnes compactes : email · téléphone · ville |
 | Centres d'intérêt | Chips colorés |
-| Mes Projets | Liste avec barres de progression (**Entrepreneur uniquement**) |
-| Boutons d'actions | Rôle-spécifiques (voir tableau ci-dessous) |
+| Bouton "Mes demandes" | **Entrepreneur uniquement** → `RequestsPage` (demandes envoyées/reçues) |
 | AppBar | Partager · Modifier · Déconnexion (icône rouge discrète) |
 
-**Stats par rôle :**
+**Stats par rôle (`_StatsStrip`) :**
 
-| Rôle | Stat 1 | Stat 2 | Stat 3 | Stat 4 |
-|---|---|---|---|---|
-| Entrepreneur | Projets | Terminés | Mentors → RequestsPage | Favoris |
-| Mentor | Mentorés → RequestsPage | Sessions → AgendaPage | Années expé. | Favoris |
-| Investisseur | Contacts → RequestsPage | Pitchs vus | Favoris | Rendez-vous → AgendaPage |
-
-**Boutons d'actions par rôle :**
-
-| Rôle | Boutons |
+| Rôle | Contenu |
 |---|---|
-| Entrepreneur | "Mes contacts" (relations acceptées) → RequestsPage |
-| Mentor | "Planning" → SchedulePage + "Demandes reçues" → RequestsPage |
-| Investisseur | "Pitchs publiés" → PublicPitchesPage |
+| Entrepreneur | Carte `_EntrepreneurStatCard` : nombre de projets / pitch decks publiés |
+| Mentor | Note moy. (StreamBuilder Firebase) + Avis reçus + Années d'expérience |
+| Investisseur | Note moy. (StreamBuilder Firebase) + Avis reçus |
+
+**Bouton d'action :**
+
+| Rôle | Bouton |
+|---|---|
+| Entrepreneur | "Mes demandes" → `RequestsPage` (demandes mentorat + investissement) |
+| Mentor | — (pas de bouton dédié dans `page_profil.dart`) |
+| Investisseur | — (pas de bouton dédié dans `page_profil.dart`) |
 
 ---
 
@@ -378,12 +405,12 @@ La modification du profil est la fonctionnalité centrale pour tout utilisateur 
 
 | Section | Champs modifiables |
 |---|---|
-| Photo de profil | Galerie ou caméra → redimensionnée 512×512 → base64 |
+| Photo de profil | Bottom sheet (Galerie / Fichier) → `CropPhotoPage` → base64 (modification) ; inscription : 512×512 → upload Cloudinary |
 | Identité | **Prénom**, **Nom** |
 | Coordonnées | **Email**, **Téléphone**, Adresse |
-| Localisation | Pays (dropdown), Ville (dropdown filtrée) |
-| Profil pro | Secteur d'activité (dropdown), Biographie (240 chars), LinkedIn |
-| Données perso | Sexe (pills), Date de naissance (DatePicker) |
+| Localisation | Pays (dropdown), Ville (dropdown filtrée) + **bouton "Détecter ma position"** (GPS + Nominatim → pré-remplit Pays, Ville et Adresse avec le quartier/suburb) |
+| Profil pro | Secteur d'activité (dropdown), Biographie (**280 chars** en modification, 240 chars à l'inscription), LinkedIn |
+| Données perso | Sexe (pills : Femme / Homme — sans "Non précisé"), Date de naissance (DatePicker) |
 | Intérêts | Chips multi-sélection (au moins 1 requis) |
 
 ---
@@ -404,8 +431,14 @@ void initState() {
   _email     = TextEditingController(text: _initial.email);
   _phone     = TextEditingController(text: _initial.phone);
   _address   = TextEditingController(text: _initial.address);
-  _bio       = TextEditingController(text: _initial.bio);
   _linkedin  = TextEditingController(text: _initial.linkedin);
+  _bio       = TextEditingController(text: _initial.bio);
+  _yearsExperience = TextEditingController(
+    text: _initial.yearsExperience > 0
+        ? _initial.yearsExperience.toString()
+        : '',
+  );
+  _investmentRange = TextEditingController(text: _initial.investmentRange);
 
   // Vérification que les valeurs sont dans les listes supportées
   _country = supportedCountries.contains(_initial.country)
@@ -428,126 +461,130 @@ void initState() {
 
 ### 3.3 Modification et changement de la photo de profil
 
-La photo de profil joue un rôle important dans une application de mise en relation : elle humanise le contact entre les membres. Nous avons implémenté deux sources possibles — la galerie photo et l'appareil photo — accessibles depuis un bottom sheet qui s'affiche au tap sur l'avatar. La photo est automatiquement redimensionnée à 512×512 pixels et convertie en base64 pour être stockée dans Firebase, ce qui garantit une URL stable et un chargement rapide partout dans l'application. L'icône caméra superposée en bas à droite de l'avatar indique clairement à l'utilisateur que la photo est modifiable.
+La photo de profil joue un rôle important dans une application de mise en relation : elle humanise le contact entre les membres. Un tap sur la zone photo ouvre un **bottom sheet** proposant deux sources : **Galerie** (ImagePicker) ou **Fichier** (FilePicker, utile sur desktop/web). Ce comportement est identique à l'inscription et à la modification du profil. Dans les deux cas, l'image sélectionnée passe par la page `CropPhotoPage` pour recadrage carré (ratio 1:1) avant traitement. À l'inscription la photo est redimensionnée à max 512×512 et uploadée vers Cloudinary (URL) avec fallback base64 ; dans "Modifier le profil" elle est stockée directement en base64.
 
 ```dart
-// Sélection depuis la galerie
-Future<void> _pickFromGallery() async {
-  final picker = ImagePicker();
-  final image = await picker.pickImage(
-    source: ImageSource.gallery,
-    imageQuality: 80,   // Compression JPEG 80%
-    maxWidth: 512,      // Redimensionnement automatique à 512px max
-    maxHeight: 512,
-  );
-  if (image != null) {
-    final bytes = await image.readAsBytes();
-    setState(() {
-      _photoBytes  = bytes;
-      _photoBase64 = base64Encode(bytes);  // Prêt pour Firebase
-    });
-  }
-}
+// Inscription et modification : bottom sheet (Galerie / Fichier) → CropPhotoPage → base64
+enum _PhotoSource { gallery, file }
 
-// Sélection depuis la caméra
-Future<void> _pickFromCamera() async {
-  final picker = ImagePicker();
-  final image = await picker.pickImage(
-    source: ImageSource.camera,
-    imageQuality: 80,
-    maxWidth: 512, maxHeight: 512,
-  );
-  if (image != null) {
-    final bytes = await image.readAsBytes();
-    setState(() {
-      _photoBytes  = bytes;
-      _photoBase64 = base64Encode(bytes);
-    });
-  }
-}
-
-// Affichage du sélecteur de source (galerie ou caméra)
-void _showPhotoOptions() {
-  showModalBottomSheet(
+Future<void> _pickPhoto() async {
+  final source = await showModalBottomSheet<_PhotoSource>(
     context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+    ),
     builder: (_) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         ListTile(
-          leading: const Icon(Icons.photo_library_rounded, color: AppColors.blue),
-          title: const Text('Choisir depuis la galerie'),
-          onTap: () { Navigator.pop(context); _pickFromGallery(); },
+          leading: const Icon(Icons.photo_library_rounded),
+          title: const Text('Galerie'),
+          onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
         ),
         ListTile(
-          leading: const Icon(Icons.camera_alt_rounded, color: AppColors.purple),
-          title: const Text('Prendre une photo'),
-          onTap: () { Navigator.pop(context); _pickFromCamera(); },
+          leading: const Icon(Icons.folder_open_rounded),
+          title: const Text('Fichier'),
+          onTap: () => Navigator.of(context).pop(_PhotoSource.file),
         ),
+        const SizedBox(height: 12),
       ],
     ),
   );
+  if (source == null) return;
+  if (source == _PhotoSource.gallery) {
+    await _pickPhotoFromGallery();
+  } else {
+    await _pickPhotoFromFile();
+  }
 }
 
-// Widget d'affichage de la photo modifiable avec icône caméra superposée
-GestureDetector(
-  onTap: _showPhotoOptions,
-  child: Stack(
-    children: [
-      // Photo actuelle ou initiales
-      _photoBytes != null
-          ? ClipOval(child: Image.memory(_photoBytes!,
-              width: 90, height: 90, fit: BoxFit.cover))
-          : Avatar(
-              initials: _initial.initials,
-              photoBase64: _photoBase64,
-              size: 90,
-            ),
-      // Icône caméra superposée (coin bas-droite)
-      Positioned(
-        bottom: 0, right: 0,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: const BoxDecoration(
-            color: AppColors.blue, shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.camera_alt_rounded,
-              size: 16, color: Colors.white),
-        ),
+Future<void> _pickPhotoFromGallery() async {
+  try {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    // Recadrage avant sauvegarde
+    final croppedBytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+    );
+    if (croppedBytes != null && mounted) {
+      setState(() => _photoBase64 = base64Encode(croppedBytes));
+    }
+  } catch (_) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible de charger la photo.'),
+        behavior: SnackBarBehavior.floating,
       ),
-    ],
-  ),
-)
+    );
+  }
+}
+
+Future<void> _pickPhotoFromFile() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+    if (!mounted) return;
+    final croppedBytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+    );
+    if (croppedBytes != null && mounted) {
+      setState(() => _photoBase64 = base64Encode(croppedBytes));
+    }
+  } catch (_) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible de charger la photo.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Modifier le profil : zone de photo avec icône caméra**
 > *(Insérer ici la capture d'écran)*
 
-> **📸 CAPTURE D'ÉCRAN — BottomSheet choix galerie / caméra**
+> **📸 CAPTURE D'ÉCRAN — Sélecteur photo (galerie)**
 > *(Insérer ici la capture d'écran)*
 
 ---
 
 ### 3.4 Détection des changements
 
-Un détail d'expérience utilisateur qui nous tenait à coeur : le bouton "Enregistrer" reste désactivé tant qu'aucune modification réelle n'a été détectée. Cela évite les sauvegardes accidentelles ou inutiles — si l'utilisateur ouvre le formulaire et le ferme sans rien changer, aucun appel réseau n'est déclenché. La détection se fait en comparant chaque champ du formulaire avec la valeur initiale du profil, champ par champ.
+La détection des changements protège la navigation en arrière : si l'utilisateur tente de fermer le formulaire sans sauvegarder, un `PopScope` (avec `canPop: !_hasChanges`) affiche un `AlertDialog` de confirmation. Le bouton ENREGISTRER est toujours actif (pas de condition sur `_hasChanges`), mais la protection contre la fermeture accidentelle est bien implémentée. Le getter `_hasChanges` compare chaque champ avec la valeur initiale du profil.
 
 ```dart
 // Le bouton Enregistrer est actif uniquement si une modification a été faite
 bool get _hasChanges =>
-    _firstName.text.trim() != _initial.firstName      ||
-    _lastName.text.trim()  != _initial.lastName       ||
-    _phone.text.trim()     != _initial.phone          ||
-    _address.text.trim()   != _initial.address        ||
-    _bio.text.trim()       != _initial.bio            ||
-    _linkedin.text.trim()  != _initial.linkedin       ||
-    _city        != _initial.city                     ||
-    _country     != _initial.country                  ||
-    _sector      != _initial.sector                   ||
-    _gender      != _initial.gender                   ||
-    _birthDate   != _initial.birthDate                ||
-    _photoBase64 != _initial.photoBase64              ||
-    !_interests.containsAll(_initial.interests)       ||
-    _interests.length != _initial.interests.length;
+    _firstName.text.trim() != _initial.firstName ||
+    _lastName.text.trim() != _initial.lastName ||
+    _email.text.trim() != _initial.email ||
+    _phone.text.trim() != _initial.phone ||
+    _address.text.trim() != _initial.address ||
+    _linkedin.text.trim() != _initial.linkedin ||
+    _bio.text.trim() != _initial.bio ||
+    _city != _initial.city ||
+    _country != _initial.country ||
+    _sector != _initial.sector ||
+    _gender != _initial.gender ||
+    _birthDate != _initial.birthDate ||
+    _photoBase64 != _initial.photoBase64 ||
+    !_setEquals(_interests, _initial.interests.toSet());
 ```
 
 ---
@@ -558,56 +595,47 @@ La sauvegarde suit une logique en trois temps qui garantit à la fois la réacti
 
 ```dart
 Future<void> _save() async {
-  if (!_hasChanges) {
-    Navigator.pop(context);  // Pas de changements → retour simple
-    return;
+  final yearsParsed = int.tryParse(_yearsExperience.text.trim()) ?? 0;
+  final next = _initial.copyWith(
+    firstName: _firstName.text.trim(),
+    lastName: _lastName.text.trim(),
+    email: _email.text.trim(),
+    phone: _phone.text.trim(),
+    gender: _gender,
+    birthDate: _birthDate,
+    address: _address.text.trim(),
+    city: _city,
+    country: _country,
+    sector: _sector,
+    linkedin: _linkedin.text.trim(),
+    bio: _bio.text.trim(),
+    photoBase64: _photoBase64,
+    interests: _interests.toList()..sort(),
+    yearsExperience: _isMentor ? yearsParsed : _initial.yearsExperience,
+    investmentRange:
+        _isInvestor ? _investmentRange.text.trim() : _initial.investmentRange,
+  );
+  // Mise à jour locale immédiate (UX réactive) + cache
+  UserProfileController.update(next);
+
+  // Mise à jour serveur (non bloquante) — on tente d'écrire en Firebase si l'UID est disponible
+  final uid = AuthService.currentUid;
+  if (uid != null) {
+    try {
+      await DatabaseService.updateUserProfile(uid, next);
+    } catch (_) {/* non-bloquant */}
   }
-  setState(() => _loading = true);
 
-  try {
-    // ── 1. Construction du profil mis à jour
-    final updated = _initial.copyWith(
-      firstName:   _firstName.text.trim(),
-      lastName:    _lastName.text.trim(),
-      phone:       _phone.text.trim(),
-      address:     _address.text.trim(),
-      city:        _city,
-      country:     _country,
-      sector:      _sector,
-      gender:      _gender,
-      birthDate:   _birthDate,
-      bio:         _bio.text.trim(),
-      linkedin:    _linkedin.text.trim(),
-      interests:   _interests.toList()..sort(),
-      photoBase64: _photoBase64,
-    );
-
-    // ── 2. Mise à jour LOCALE immédiate + cache + Firebase (via Controller)
-    // UserProfileController.update() fait les 3 en une seule ligne
-    UserProfileController.update(updated);
-
-    // ── 3. Retour + confirmation SnackBar
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil mis à jour avec succès ✓'),
-        backgroundColor: AppColors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur lors de la sauvegarde : ${e.toString()}'),
-        backgroundColor: AppColors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  } finally {
-    if (mounted) setState(() => _loading = false);
-  }
+  // Retour avec confirmation
+  if (!mounted) return;
+  Navigator.of(context).pop();
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('✅ Profil mis à jour'),
+      backgroundColor: AppColors.green,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 ```
 
@@ -626,43 +654,158 @@ Future<void> _save() async {
 
 Dans DIAPALER AFRICA, les entrepreneurs ne sont pas de simples utilisateurs — ils portent des projets concrets qu'ils cherchent à faire connaître auprès de mentors et d'investisseurs. Nous avons donc intégré une gestion de projets directement liée au profil, avec des opérations complètes de création, modification, avancement et suppression. Chaque projet est visualisé dans le profil avec une barre de progression indiquant l'étape courante, ce qui donne une lecture rapide de la maturité du projet.
 
-Les projets sont créés depuis `page_pitch.dart` (dépôt de pitch). Le `UserProfileController` expose des méthodes dédiées pour les opérations CRUD sur les projets :
+La gestion de projet est entièrement pilotée par `page_pitch.dart`. Le modèle `Project` a été enrichi pour stocker non seulement la progression par étape, mais aussi toutes les données collectées au fil du stepper (montant, documents Cloudinary, statut de publication). Cela permet de reprendre un projet là où on s'était arrêté, avec tous les champs pré-remplis.
+
+**Modèle `Project` enrichi (`profil_utilisateur.dart`) :**
 
 ```dart
-// ── CREATE : Ajouter un projet (depuis page_pitch.dart)
-final project = Project(
-  id: DateTime.now().millisecondsSinceEpoch.toString(),
-  name: _title.text.trim(),
-  description: _description.text.trim(),
-  sector: _sector,
-  step: 1,
-  totalSteps: 3,
-);
-// addProject() vérifie canStartNewProject avant d'ajouter
-final added = UserProfileController.addProject(project);
-if (!added) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Terminez votre projet actuel avant d\'en créer un nouveau.')),
+@immutable
+class Project {
+  final String id;
+  final String name;
+  final String description;
+  final String sector;
+  final int step;          // étape actuelle (1–5)
+  final int totalSteps;    // toujours 5
+  final String? amount;          // montant financement FCFA (étape 3)
+  final String? businessPlanUrl; // URL Cloudinary PDF (étape 4)
+  final String? videoUrl;        // URL Cloudinary vidéo (étape 4)
+  final String? deckUrl;         // URL Cloudinary deck (étape 4, optionnel)
+  final bool published;          // true après publication Firebase pitches/
+
+  bool get isCompleted => step >= totalSteps;
+  double get progress  => step / totalSteps;
+}
+```
+
+**Sauvegarde progressive à chaque étape (`page_pitch.dart`) :**
+
+```dart
+// Construit le projet depuis l'état courant du stepper
+Project _buildProject({bool published = false}) {
+  return Project(
+    id: _pitchId,
+    name: _title.text.trim(),
+    description: [_description.text.trim(), _detailDescription.text.trim()]
+        .where((s) => s.isNotEmpty).join('\n\n'),
+    sector: _sector ?? UserProfileController.profile.value.sector,
+    step: _step + 1,
+    totalSteps: 5,
+    amount: _amount.text.trim().isEmpty ? null : _amount.text.trim(),
+    businessPlanUrl: _businessPlanUrl,
+    videoUrl: _videoUrl,
+    deckUrl: _deckUrl,
+    published: published,
   );
-  return;
 }
 
-// ── UPDATE : Avancement d'étape
-UserProfileController.updateProject(
-  project.copyWith(step: project.step + 1),
-);
+// Appelé à chaque avancement d'étape (sauf la dernière)
+void _saveProgress() {
+  final project = _buildProject();
+  if (_isNew) {
+    final added = UserProfileController.addProject(project);
+    if (added) _isNew = false;
+  } else {
+    UserProfileController.updateProject(project);
+  }
+}
 
-// ── UPDATE : Mode édition complet (depuis page_profil.dart → _ProjectTile)
-// Tap sur un projet → AddProjectPage(existingProject: project)
-// La page est réutilisée en mode édition — tous les champs pré-remplis.
-// À la sauvegarde : UserProfileController.updateProject(updatedProject)
-Navigator.push(context, MaterialPageRoute(
-  builder: (_) => AddProjectPage(existingProject: project),
-));
-
-// ── DELETE : Supprimer un projet
-UserProfileController.deleteProject(project.id);
+Future<void> _next() async {
+  if (!_currentStepValid) return;
+  if (_step < _total - 1) {
+    _saveProgress(); // sauvegarde locale + Firebase à chaque avancement
+    setState(() => _step++);
+    return;
+  }
+  _publish(); // uniquement à la dernière étape : publication Firebase pitches/
+}
 ```
+
+Remarques :
+- `UserProfileController.addProject/updateProject/deleteProject` encapsulent la logique et la vérification `canStartNewProject`.
+- La persistance se fait toujours via `UserProfileController.update()` → cache local (`CacheService`) + Firebase asynchrone (`DatabaseService`).
+
+### 4.1 Stepper unifié création / édition / publication (`page_pitch.dart`)
+
+`PitchPage` est la page unique qui gère l'ensemble du cycle de vie d'un projet : création, édition étape par étape, et publication publique. Elle accepte un paramètre `existingProject` optionnel :
+
+- **Sans `existingProject`** : nouveau projet, démarrage à l'étape 1
+- **Avec `existingProject`** : reprise à l'étape sauvegardée, tous les champs pré-remplis
+
+```dart
+class PitchPage extends StatefulWidget {
+  final Project? existingProject;
+  const PitchPage({super.key, this.existingProject});
+}
+```
+
+**Reprise d'un projet existant (`initState`) :**
+
+```dart
+@override
+void initState() {
+  super.initState();
+  final p = widget.existingProject;
+  if (p != null) {
+    _pitchId = p.id;
+    _isNew   = false;
+    _step    = (p.step - 1).clamp(0, _total - 1); // reprend à l'étape sauvegardée
+    _title.text            = p.name;
+    _sector                = p.sector.isNotEmpty ? p.sector : null;
+    final parts            = p.description.split('\n\n');
+    _description.text      = parts.isNotEmpty ? parts[0] : p.description;
+    _detailDescription.text = parts.length > 1 ? parts.sublist(1).join('\n\n') : '';
+    _amount.text           = p.amount ?? '';
+    _businessPlanUrl       = p.businessPlanUrl;
+    _videoUrl              = p.videoUrl;
+    _deckUrl               = p.deckUrl;
+  } else {
+    _pitchId = _generateId();
+    _isNew   = true;
+  }
+}
+```
+
+**Accès depuis le dashboard (`page_accueil.dart`) :**
+
+La bottom sheet du projet propose deux actions principales :
+- **"Modifier le projet"** → `PitchPage(existingProject: p.currentProject)` — reprend le stepper à l'étape sauvegardée
+- **"Publier le pitch"** → `_directPublish(context, p.currentProject!)` — publie directement sans repasser par le stepper
+
+**Publication directe sans stepper (`_directPublish`) :**
+
+```dart
+Future<void> _directPublish(BuildContext context, Project project) async {
+  // Confirmation utilisateur
+  final ok = await showDialog<bool>(...);
+  if (ok != true) return;
+
+  await DatabaseService.publishPitch(
+    pitchId: project.id,
+    userId: uid,
+    userName: profile.fullName,
+    title: project.name,
+    sector: project.sector,
+    description: project.description,
+    amount: project.amount ?? '',
+    businessPlanUrl: project.businessPlanUrl,
+    videoUrl: project.videoUrl,
+    deckUrl: project.deckUrl,
+  );
+
+  // Marquer le projet comme publié
+  UserProfileController.updateProject(
+    project.copyWith(published: true, step: project.totalSteps),
+  );
+}
+```
+
+**Sélection du projet à publier (`_showPitchListSheet`) :**
+
+Le quick action "Déposer un pitch" du dashboard ouvre une bottom sheet listant tous les projets de l'entrepreneur. Chaque ligne affiche le nom, l'étape courante (`"Étape 2/5"` ou `"Déjà publié"`) et un bouton **Publier** qui appelle `_directPublish` directement.
+
+- En **création** : `addProject()` vérifie `canStartNewProject` (un seul projet non terminé à la fois).
+- En **édition** : `updateProject()` retrouve le projet par son `id` et met à jour les champs sans toucher à l'`id`.
 
 **Affichage des projets avec barre de progression :**
 ```dart
@@ -733,18 +876,20 @@ Chaque profil DIAPALER affiche un compteur d'avis et la note moyenne. Un bouton 
 
 ```dart
 // page_profil.dart / page_detail_mentor.dart
-StreamBuilder<List<Review>>(
-  stream: InteractionsService.getReviews(mentor.uid),
+// Les avis (texte) et les notes (1–5) sont stockés séparément dans Firebase.
+// getReviews() lit reviews/{uid}, getRatings() lit ratings/{uid}/{fromUid}.
+StreamBuilder<Map<String, int>>(
+  stream: InteractionsService.getRatings(mentor.uid),
   builder: (context, snapshot) {
-    final reviews = snapshot.data ?? [];
-    final avg = reviews.isEmpty
+    final ratings = snapshot.data ?? {};
+    final avg = ratings.isEmpty
         ? 0.0
-        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+        : ratings.values.reduce((a, b) => a + b) / ratings.length;
     return Row(children: [
       const Icon(Icons.star_rounded, color: AppColors.amber, size: 16),
       Text(avg == 0 ? 'Aucun avis' : avg.toStringAsFixed(1),
           style: const TextStyle(fontWeight: FontWeight.w700)),
-      Text(' (${reviews.length} avis)', style: const TextStyle(color: AppColors.muted)),
+      Text(' (${ratings.length} avis)', style: const TextStyle(color: AppColors.muted)),
     ]);
   },
 )
@@ -766,13 +911,12 @@ Nous avons défini des règles d'accès claires pour éviter les abus. Le princi
 La page d'avis permet à un utilisateur de rédiger un commentaire et de noter son contact de 1 à 5 étoiles. L'avis est écrit dans Firebase sous le nœud `reviews/{uid_du_destinataire}`, ce qui permet un Stream en temps réel : dès qu'un nouvel avis est ajouté, la liste se met à jour automatiquement sur tous les appareils sans rechargement manuel. La moyenne est recalculée côté client à partir du Stream, ce qui évite de stocker une valeur agrégée qui pourrait être désynchronisée.
 
 ```dart
-// InteractionsService.addReview
+// InteractionsService.addReview — nœud reviews/ : texte uniquement, PAS de rating
 static Future<void> addReview({
   required String toUid,
   required String fromUid,
   required String fromName,
   required String text,
-  required int rating,       // 1 à 5
 }) async {
   final id = DateTime.now().millisecondsSinceEpoch.toString();
   await _db.child('reviews/$toUid/$id').set({
@@ -780,22 +924,33 @@ static Future<void> addReview({
     'fromUid': fromUid,
     'fromName': fromName,
     'text': text,
-    'rating': rating,
-    'createdAt': DateTime.now().toIso8601String(),
+    'createdAt': DateTime.now().millisecondsSinceEpoch, // entier, pas ISO string
   });
+  // Notification non critique : ne pas bloquer si elle échoue
+  try {
+    await NotificationService.notifyUser(
+      uid: toUid,
+      title: 'Nouvel avis reçu 💬',
+      message: '$fromName a laissé un avis sur votre profil.',
+      type: 'new_review',
+    );
+  } catch (_) {}
 }
 
-// Stream des avis (temps réel)
+// Stream des avis texte (temps réel) — trié du plus récent au plus ancien
 static Stream<List<Review>> getReviews(String targetUid) {
   return _db.child('reviews/$targetUid').onValue.map((event) {
     final data = event.snapshot.value as Map?;
-    if (data == null) return [];
+    if (data == null) return <Review>[];
     return data.values
         .map<Review>((v) => Review.fromJson(Map<String, dynamic>.from(v as Map)))
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
 }
+
+// Les notes 1–5 sont séparées : nœud ratings/{toUid}/{fromUid} → entier
+// Géré par setRating() / getRatings() — voir service_interactions.dart
 ```
 
 > **📸 CAPTURE D'ÉCRAN — Page Avis : liste des avis + sélecteur étoiles 1–5**
@@ -848,7 +1003,9 @@ if (_isUrl)
   ClipOval(child: Image.network(photoBase64, fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _initialsCircle()))
 else if (bytes != null)
-  ClipOval(child: Image.memory(bytes, fit: BoxFit.cover))
+  ClipOval(child: Image.memory(bytes, fit: BoxFit.cover,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => _initialsCircle()))
 else
   _initialsCircle()
 ```
@@ -880,13 +1037,13 @@ else
 | Modifier son nom | Champs prénom + nom pré-remplis | ✅ |
 | Modifier son téléphone | Champ téléphone +221 modifiable | ✅ |
 | Modifier son email | Champ email modifiable, mis à jour dans Firebase et cache | ✅ |
-| Ajouter une photo de profil | Galerie + caméra → redim 512×512 → upload Cloudinary (URL) | ✅ |
-| Changer sa photo de profil | Même flux, remplace la photo existante | ✅ |
+| Ajouter une photo de profil | Bottom sheet (Galerie / Fichier) → CropPhotoPage → base64 (inscription et modification) ; inscription : upload Cloudinary avec fallback base64 | ✅ |
+| Changer sa photo de profil | Même flux (bottom sheet → crop → base64), remplace la photo existante | ✅ |
 | Persistance Firebase | `UserProfileController.update()` → Firebase + cache | ✅ |
 | Cache offline-first | `CacheService.saveProfile()` dans `update()` | ✅ |
 | Réactivité UI | `ValueNotifier` → rebuild instantané sur tous les écrans | ✅ |
 | Photo dans toute l'app | Widget `Avatar` réutilisable partout | ✅ |
-| Gestion de projets | `addProject` / `updateProject` / `deleteProject` + mode édition `AddProjectPage(existingProject:)` | ✅ (bonus) |
+| Gestion de projets | `addProject` / `updateProject` / `deleteProject` + stepper unifié `PitchPage(existingProject:)` + publication directe `_directPublish` | ✅ (bonus) |
 | Jauge de complétion | Indicateur 0–100%, barre toujours amber (`AppColors.amber`) | ✅ (bonus) |
 | Déconnexion sécurisée | `reset()` + cache + Firebase signOut → redirige vers LoginPage | ✅ |
 | Membres DIAPALER réels | `UsersService.listMembers()` + badge dans Matching | ✅ (bonus) |
@@ -894,9 +1051,10 @@ else
 | Stats profil rôle-spécifiques | Labels et valeurs différents pour Entrepreneur / Mentor / Investisseur | ✅ (bonus) |
 | LinkedIn cliquable | Chip dans carte "À propos" → url_launcher → profil LinkedIn | ✅ (bonus) |
 | Bouton partage profil | `ShareService.shareMyProfile()` dans AppBar — WhatsApp, Telegram… | ✅ (bonus) |
-| Badge ⭐ Premium | Affiché sous le nom si `isPremium = true` — activé via Wave (L5) | ✅ (bonus) |
-| "Mes contacts" (Entrepreneur) | Remplace "Mes demandes" — affiche les relations acceptées (mentorat + investissement) | ✅ (bonus) |
+| Badge ⭐ Premium | 3 éléments visuels : (1) étoile dorée sur l'avatar, (2) label "Entrepreneur Premium" amber sous le rôle, (3) bannière "Passer Premium" cliquable → `WavePremiumSheet` (4 900 FCFA/mois) ; si abonné : badge vert "Compte Premium actif" | ✅ (bonus) |
+| "Mes demandes" (Entrepreneur) | Bouton unique dans `page_profil.dart` → `RequestsPage` (onglets Reçues / Envoyées) | ✅ (bonus) |
 | Photo membres Firebase | `BoxFit.cover` systématique dans le widget `Avatar` | ✅ (bonus) |
 | Avatar URL Cloudinary | Widget Avatar détecte auto URL vs base64 → `Image.network` vs `Image.memory` | ✅ (bonus) |
 | Système d'avis et notation | `page_avis.dart` — StreamBuilder `reviews/`, étoiles 1–5, moyenne live, accès restreint par relation | ✅ (bonus) |
 | Note moyenne sur profil | Compteur d'avis + moyenne affichés en temps réel sur `page_detail_mentor.dart` et `page_profil.dart` | ✅ (bonus) |
+| Auto-détection localisation | `LocationService.detectCity()` (GPS + Nominatim) → pré-remplit Pays, Ville et Adresse (quartier/suburb) + SnackBar 3 niveaux "Sénégal · Dakar · Liberté 6" | ✅ (bonus) |

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/donnees_mentors.dart';
+import '../data/profil_utilisateur.dart';
 import '../services/service_base_de_donnees.dart';
 import '../services/service_cloudinary.dart';
+import '../services/service_partage.dart';
 import '../theme/theme_app.dart';
 
 /// Page de détail d'un pitch publié (vue propriétaire — entrepreneur).
@@ -290,6 +292,17 @@ class _PitchDetailPageState extends State<PitchDetailPage> {
             expandedHeight: 160,
             elevation: 0,
             actions: [
+              IconButton(
+                onPressed: () => ShareService.sharePitch(
+                  title: _title,
+                  sector: _sector,
+                  description: _description,
+                  authorName: UserProfileController.profile.value.fullName,
+                  amount: _amount.isNotEmpty ? _amount : null,
+                ),
+                icon: const Icon(Icons.share_rounded),
+                tooltip: 'Partager ce pitch',
+              ),
               IconButton(
                 onPressed: _showEditSheet,
                 icon: const Icon(Icons.edit_rounded),

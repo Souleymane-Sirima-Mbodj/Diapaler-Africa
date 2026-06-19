@@ -143,13 +143,20 @@ class AuthService {
     );
   }
 
-  /// Envoi d'un email de réinitialisation du mot de passe
-  static Future<void> sendPasswordResetEmail(String email) {
-    return _auth.sendPasswordResetEmail(email: email.trim());
-  }
-
   /// Déconnexion
   static Future<void> signOut() => _auth.signOut();
+
+  /// Envoi d'un email de réinitialisation du mot de passe
+  static Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email);
+  }
+
+  /// Vérifie si un email correspond à un compte Firebase existant.
+  /// Utilisé dans ForgotPasswordPage avant d'envoyer le lien de reset.
+  static Future<bool> isEmailRegistered(String email) async {
+    final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
+    return methods.isNotEmpty;
+  }
 
   /// Conversion des codes d'erreur Firebase en messages français lisibles
   static String humanError(Object e) {
@@ -389,7 +396,7 @@ App lancée (main.dart)
 
 ## 3. Page de Connexion (`page_connexion.dart`)
 
-La page de connexion est le point d'entrée de l'application pour les utilisateurs existants. Nous avons soigné son design — gradient navy, logo DIAPALER, bande aux couleurs du drapeau sénégalais — pour donner dès le premier regard une identité forte à l'application. Les erreurs Firebase (mauvais mot de passe, email inconnu) sont interceptées et traduites en messages compréhensibles par l'utilisateur, sans jargon technique. Un autre point important : la page utilise `AutofillGroup` pour que le gestionnaire de mots de passe du téléphone (Google, Samsung, iCloud) propose de sauvegarder et remplir automatiquement les identifiants à la prochaine connexion.
+La page de connexion est le point d'entrée de l'application pour les utilisateurs existants. Nous avons soigné son design — gradient navy, logo DIAPALER, bande aux couleurs du drapeau sénégalais — pour donner dès le premier regard une identité forte à l'application. Les erreurs Firebase (mauvais mot de passe, email inconnu) sont interceptées et traduites en messages compréhensibles par l'utilisateur, sans jargon technique. La page propose deux mécanismes de mémorisation des identifiants : l'`AutofillGroup` Flutter (délègue au gestionnaire de mots de passe du téléphone) et une case à cocher **"Se souvenir de moi"** (persistance locale via `SharedPreferences` — email et mot de passe rechargés automatiquement au prochain lancement).
 
 ### 3.1 Description complète de l'écran
 
@@ -399,11 +406,12 @@ La page de connexion est le point d'entrée de l'application pour les utilisateu
 | Sous-titre | "Bon retour ! 👋" + "Connecte-toi pour continuer ton parcours" |
 | Champ Email | Type email, `autofillHints: [username, email]`, icône mail bleue |
 | Champ Mot de passe | `obscureText`, `autofillHints: [password]`, bouton œil afficher/masquer |
-| Sauvegarde MDP | `AutofillGroup` + `TextInput.finishAutofillContext(shouldSave: true)` après succès → Google Password Manager / Samsung Pass / iCloud Keychain |
-| Lien "Mot de passe oublié ?" | Aligné à droite, couleur bleue |
+| Se souvenir de moi | Checkbox + label sur même ligne que "Mot de passe oublié ?" — si coché, email + mot de passe sauvegardés dans `SharedPreferences` et pré-remplis au prochain lancement |
+| Sauvegarde MDP système | `AutofillGroup` + `TextInput.finishAutofillContext(shouldSave: true)` après succès → Google Password Manager / Samsung Pass / iCloud Keychain |
+| Lien "Mot de passe oublié ?" | Aligné à droite (même ligne que "Se souvenir de moi"), couleur bleue |
 | Bandeau d'erreur | Fond rouge 10%, icône alerte, message humanisé Firebase |
 | Bouton SE CONNECTER | Gradient navy→bleu, glow amber en ombre, spinner pendant l'appel |
-| Lien "S'inscrire" | Navigation `pushReplacement` vers `SignUpPage` |
+| Lien "S'inscrire" | Navigation `pushReplacement` vers `RoleSelectionPage` (choix du rôle) |
 | Après déconnexion | Retour vers cette page (pas vers le choix de rôle) |
 
 > **📸 CAPTURE D'ÉCRAN — Écran de Connexion (état initial)**
@@ -426,45 +434,85 @@ Le code de la page de connexion suit un flux clair en quatre temps : validation 
 class _LoginPageState extends State<LoginPage> {
   final _email    = TextEditingController();
   final _password = TextEditingController();
-  bool _obscure = true;
-  bool _loading = false;
+  bool _obscure    = true;
+  bool _loading    = false;
+  bool _rememberMe = false;
   String? _error;
 
+  static const _kEmail    = 'saved_email';
+  static const _kPassword = 'saved_password';
+  static const _kRemember = 'remember_me';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  // Pré-remplit les champs si "Se souvenir de moi" était coché
+  Future<void> _loadSaved() async {
+    final prefs   = await SharedPreferences.getInstance();
+    final remember = prefs.getBool(_kRemember) ?? false;
+    if (!remember) return;
+    final email    = prefs.getString(_kEmail)    ?? '';
+    final password = prefs.getString(_kPassword) ?? '';
+    if (!mounted) return;
+    setState(() {
+      _rememberMe    = true;
+      _email.text    = email;
+      _password.text = password;
+    });
+  }
+
+  // Sauvegarde ou supprime les identifiants selon le choix de l'utilisateur
+  Future<void> _persistCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setBool  (_kRemember, true);
+      await prefs.setString(_kEmail,    _email.text.trim());
+      await prefs.setString(_kPassword, _password.text);
+    } else {
+      await prefs.remove(_kRemember);
+      await prefs.remove(_kEmail);
+      await prefs.remove(_kPassword);
+    }
+  }
+
   Future<void> _signIn() async {
-    // ── Validation locale (avant appel réseau)
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
       setState(() => _error = 'Email et mot de passe requis.');
       return;
     }
-
-    setState(() { _loading = true; _error = null; });
-
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      // ── 1. Authentification Firebase Auth
       final cred = await AuthService.signIn(
         email: _email.text,
         password: _password.text,
       );
-
-      // ── 2. Chargement du profil depuis Firebase Database
       final uid = cred.user?.uid;
       if (uid != null) {
-        final remote = await DatabaseService.readUserProfile(uid);
-        if (remote != null) {
-          UserProfileController.update(remote); // Cache local + état global
+        try {
+          final remote = await DatabaseService.readUserProfile(uid);
+          if (remote != null) {
+            UserProfileController.update(remote);
+          }
+        } catch (_) {
+          // Le profil sera rechargé au démarrage — ne pas bloquer la connexion
         }
       }
-
-      // ── 3. Redirection (supprime la pile de navigation)
+      await _persistCredentials();   // Sauvegarde ou efface selon la case
+      TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const RootShell()),
         (_) => false,
       );
-
     } catch (e) {
-      // ── 4. Message d'erreur humanisé
       if (!mounted) return;
+      TextInput.finishAutofillContext(shouldSave: false);
       setState(() => _error = AuthService.humanError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -539,15 +587,31 @@ class _LoginPageState extends State<LoginPage> {
                     ]),
                   ),
 
-                  // Lien mot de passe oublié
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                      child: const Text('Mot de passe oublié ?',
+                  // Se souvenir de moi + Mot de passe oublié (même ligne)
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberMe,
+                        activeColor: AppColors.blue,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _rememberMe = !_rememberMe),
+                        child: const Text('Se souvenir de moi',
+                            style: TextStyle(fontSize: 13,
+                                color: AppColors.navyDeep,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
+                        child: const Text('Mot de passe oublié ?',
                           style: TextStyle(color: AppColors.blue)),
-                    ),
+                      ),
+                    ],
                   ),
 
                   // Bandeau d'erreur conditionnel
@@ -570,32 +634,71 @@ class _LoginPageState extends State<LoginPage> {
                   ],
 
                   // Bouton SE CONNECTER avec gradient + glow amber
-                  Container(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(
-                        color: AppColors.amber.withValues(alpha: 0.35),
-                        blurRadius: 18, offset: const Offset(0, 8),
-                      )],
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.amber.withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _signIn,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.navyDeep, AppColors.navy, AppColors.blue],
+                          ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'SE CONNECTER',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Icon(Icons.arrow_forward_rounded, size: 18),
+                                  ],
+                                ),
+                        ),
                       ),
-                      child: _loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('SE CONNECTER',
-                              style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Lien S'inscrire
+                  // Lien S'inscrire → choix du rôle en premier
                   Center(
                     child: GestureDetector(
                       onTap: () => Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (_) => const SignUpPage())),
+                          MaterialPageRoute(builder: (_) => const RoleSelectionPage())),
                       child: const Text.rich(TextSpan(children: [
                         TextSpan(text: 'Pas encore de compte ? ',
                             style: TextStyle(color: AppColors.muted)),
@@ -636,13 +739,13 @@ L'inscription a été conçue en 4 étapes progressives pour ne pas décourager 
 
 ### 4.2 Étape 1 — Identité
 
-La première étape réunit les informations de base qui définissent l'identité de l'utilisateur sur la plateforme. Nous avons volontairement regroupé ici le nom, l'email, le sexe et la date de naissance, car ce sont des informations que l'utilisateur connaît par cœur et peut saisir rapidement. Le choix du sexe s'effectue via trois pills animés avec l'option « Non précisé » sélectionnée par défaut, pour ne pas forcer une déclaration. L'âge minimum de 13 ans est imposé par le DatePicker via la contrainte `lastDate`, conformément aux règles Firebase et à la réglementation sur la protection des mineurs.
+La première étape réunit les informations de base qui définissent l'identité de l'utilisateur sur la plateforme. Nous avons volontairement regroupé ici le nom, l'email, le sexe et la date de naissance, car ce sont des informations que l'utilisateur connaît par cœur et peut saisir rapidement. Le choix du sexe s'effectue via trois pills animés avec l'option « Préfère ne pas dire » sélectionnée par défaut, pour ne pas forcer une déclaration. L'âge minimum de 13 ans est imposé par le DatePicker via la contrainte `lastDate`, conformément aux règles Firebase et à la réglementation sur la protection des mineurs.
 
 **Champs :**
 - Nom complet (prénom + nom obligatoires, min 4 caractères)
 - Adresse email (validation regex)
-- Sexe (**Femme / Homme / Non précisé** — 3 pills animés, **défaut : Non précisé**)
-- Date de naissance (DatePicker natif Flutter — `helpText: 'Date de naissance'`)
+- Sexe (**Femme / Homme / Préfère ne pas dire** — 3 pills animés, **défaut : Préfère ne pas dire**)
+- Date de naissance (DatePicker natif Flutter — `helpText: 'Ta date de naissance'`)
 - Badge confirmation du rôle choisi (lecture seule)
 
 **Validations temps réel :**
@@ -689,6 +792,8 @@ La deuxième étape recueille la localisation de l'utilisateur. Nous avons limit
 // Mise à jour automatique des villes lors du changement de pays
 _InlineDropdown(
   label: 'Pays',
+  required: true,
+  icon: Icons.public_rounded,
   value: _country,
   values: supportedCountries,
   onChanged: (v) => setState(() {
@@ -698,6 +803,8 @@ _InlineDropdown(
 ),
 _InlineDropdown(
   label: 'Ville',
+  required: true,
+  icon: Icons.place_outlined,
   value: _city,
   values: citiesOf(_country),   // Villes filtrées selon le pays
   onChanged: (v) => setState(() => _city = v),
@@ -713,9 +820,9 @@ _InlineDropdown(
 
 La troisième étape est sans doute la plus riche, car elle construit le profil public de l'utilisateur sur la plateforme. C'est ici qu'il choisit son secteur d'activité, télécharge sa photo de profil, rédige sa biographie et sélectionne ses centres d'intérêt. Nous avons adapté les libellés et les champs selon le rôle : un entrepreneur n'a pas les mêmes besoins qu'un mentor ou un investisseur. La photo est redimensionnée à 512×512 pixels côté client avant envoi, pour limiter la consommation de données — un détail important dans un contexte où la connexion peut être limitée. Les chips de centres d'intérêt permettent une sélection multiple avec un retour visuel immédiat.
 
-**Champs (communs à tous les rôles) :**
+- **Champs (communs à tous les rôles) :**
 - Secteur d'activité (dropdown obligatoire — libellé adapté : "Secteur d'activité" / "Secteur principal" / "Secteur d'investissement")
-- Photo de profil (tap → galerie → `image_picker` → redimensionnement 512×512 → encodage base64)
+- Photo de profil (tap → bottom sheet **Galerie / Fichier** → `image_picker` ou `file_picker` → `CropPhotoPage` recadrage carré → redimensionnement 512×512 → upload Cloudinary à l'inscription avec fallback base64)
 - Biographie "À propos de moi" (`hintText: 'Présente-toi en quelques lignes...'`, 240 caractères max, compteur natif)
 - LinkedIn (URL, optionnel)
 - Centres d'intérêt / domaines d'expertise (chips multi-sélection — au moins 1 obligatoire)
@@ -723,22 +830,100 @@ La troisième étape est sans doute la plus riche, car elle construit le profil 
 **Champs spécifiques selon le rôle :**
 - **Mentor uniquement** : Années d'expérience (champ numérique optionnel)
 - **Investisseur uniquement** : Ticket d'investissement (ex. "500 000 – 5 000 000 FCFA", optionnel)
+- **Mentor et Investisseur** : Entreprises fondées/possédées (liste dynamique — ajout/suppression de noms d'entreprises via `_companyCtrl`, stocké dans `_companies`)
 
 ```dart
+enum _PhotoSource { gallery, file }
+
 Future<void> _pickProfilePhoto() async {
-  final picker = ImagePicker();
-  final image = await picker.pickImage(
-    source: ImageSource.gallery,
-    imageQuality: 80,   // Compression JPEG 80%
-    maxWidth: 512,      // Redimensionnement automatique
-    maxHeight: 512,
+  final source = await showModalBottomSheet<_PhotoSource>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+    ),
+    builder: (_) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.photo_library_rounded),
+          title: const Text('Galerie'),
+          onTap: () => Navigator.of(context).pop(_PhotoSource.gallery),
+        ),
+        ListTile(
+          leading: const Icon(Icons.folder_open_rounded),
+          title: const Text('Fichier'),
+          onTap: () => Navigator.of(context).pop(_PhotoSource.file),
+        ),
+        const SizedBox(height: 12),
+      ],
+    ),
   );
-  if (image != null) {
-    final bytes = await image.readAsBytes();
-    setState(() {
-      _photoBytes   = bytes;
-      _photoBase64  = base64Encode(bytes); // Format stockable dans Firebase
-    });
+  if (source == null) return;
+  if (source == _PhotoSource.gallery) {
+    await _pickProfilePhotoFromGallery();
+  } else {
+    await _pickProfilePhotoFromFile();
+  }
+}
+
+Future<void> _pickProfilePhotoFromGallery() async {
+  try {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    final croppedBytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+    );
+    if (croppedBytes != null && mounted) {
+      setState(() {
+        _photoBytes = croppedBytes;
+        _photoBase64 = base64Encode(croppedBytes);
+      });
+    }
+  } catch (_) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible de charger la photo.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+Future<void> _pickProfilePhotoFromFile() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+    if (!mounted) return;
+    final croppedBytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => CropPhotoPage(imageBytes: bytes)),
+    );
+    if (croppedBytes != null && mounted) {
+      setState(() {
+        _photoBytes = croppedBytes;
+        _photoBase64 = base64Encode(croppedBytes);
+      });
+    }
+  } catch (_) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible de charger la photo.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }
 
@@ -773,18 +958,21 @@ La quatrième et dernière étape de l'inscription rassemble les informations de
 - Confirmation du mot de passe (indicateur correspondance ✓/✗)
 - Case à cocher CGU (obligatoire pour valider)
 
-Le téléphone est auto-formaté via un `TextInputFormatter` custom adapté à la longueur du pays. La force du mot de passe est calculée sur 5 niveaux (longueur, majuscule, chiffre, caractère spécial) et affichée via des segments `AnimatedContainer` colorés.
+Le téléphone est auto-formaté via un `TextInputFormatter` custom (`_PhoneFormatter`) qui insère des espaces aux positions 2, 5 et 7 (format `XX XXX XX XX` — adapté au format sénégalais). La force du mot de passe est calculée sur 5 niveaux (longueur, majuscule, chiffre, caractère spécial) et affichée via des segments `AnimatedContainer` colorés.
 
 ```dart
 // Calcul de la force (0 → 4) : longueur, casse, chiffre, caractère spécial
 int _computeStrength(String pwd) {
   if (pwd.length < 6) return 0;
-  int s = 1;
-  if (pwd.length >= 10) s++;
-  if (RegExp(r'[A-Z]').hasMatch(pwd) && RegExp(r'[a-z]').hasMatch(pwd)) s++;
-  if (RegExp(r'\d').hasMatch(pwd)) s++;
-  if (RegExp(r'[^A-Za-z0-9]').hasMatch(pwd)) s++;
-  return s.clamp(0, 4);
+  int score = 0;
+  if (pwd.length >= 6) score++;
+  if (pwd.length >= 10) score++;
+  if (RegExp(r'[A-Z]').hasMatch(pwd) && RegExp(r'[a-z]').hasMatch(pwd)) {
+    score++;
+  }
+  if (RegExp(r'\d').hasMatch(pwd)) score++;
+  if (RegExp(r'[^A-Za-z0-9]').hasMatch(pwd)) score++;
+  return score.clamp(0, 4);
 }
 ```
 
@@ -812,6 +1000,9 @@ Future<void> _submit() async {
       password: _password.text,
     );
     final uid = cred.user!.uid;
+    final parts = _name.text.trim().split(RegExp(r'\s+'));
+    final firstName = parts.first;
+    final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
     // ── 2. Upload photo vers Cloudinary (si disponible), sinon fallback base64
     String photoData = _photoBase64;
@@ -821,27 +1012,23 @@ Future<void> _submit() async {
           bytes: _photoBytes!,
           filename: 'avatar_$uid.jpg',
         );
-        // photoData contient maintenant une URL HTTPS Cloudinary
       } catch (_) {
-        // En cas d'erreur réseau, on garde le base64 temporairement
+        // En cas d'erreur Cloudinary, on garde le base64 temporairement
       }
     }
 
     // ── 3. Construction du profil complet
-    final parts = _name.text.trim().split(RegExp(r'\s+'));
-    // Préfixe dynamique selon le pays choisi à l'étape 2
-    final dialCode = countryDialCode[_country] ?? '+221';
     final profile = UserProfile(
-      firstName:       parts.first,
-      lastName:        parts.length > 1 ? parts.sublist(1).join(' ') : '',
+      firstName:       firstName,
+      lastName:        lastName,
       email:           _email.text.trim(),
-      phone:           '$dialCode ${_phone.text.trim()}',
+      phone:           '${countryDialCode[_country] ?? '+221'} ${_phone.text.trim()}',
       gender:          _gender,
       birthDate:       _birthDate,
       address:         _address.text.trim(),
       city:            _city,
       country:         _country,
-      role:            _roleLabel(_role),   // Entrepreneur / Mentor / Investisseur
+      role:            _roleLabel(_role),
       sector:          _sector,
       yearsExperience: _role == UserRole.mentor
                          ? (int.tryParse(_yearsExp.text.trim()) ?? 0) : 0,
@@ -849,17 +1036,22 @@ Future<void> _submit() async {
                          ? _investmentRange.text.trim() : '',
       bio:             _bio.text.trim(),
       linkedin:        _linkedin.text.trim(),
-      photoBase64:     photoData,   // URL Cloudinary ou base64 selon disponibilité
+      photoBase64:     photoData,
       interests:       _interests.toList()..sort(),
       projects:        const [],
+      companies:       (_role == UserRole.mentor || _role == UserRole.investor)
+                         ? List<String>.from(_companies)
+                         : const [],
     );
-
-    // ── 3. Sauvegarde dans Firebase Database (CREATE)
+    // ── 4. Sauvegarde dans Firebase Database (CREATE)
     await DatabaseService.createUserProfile(uid, profile);
 
-    // ── 4. Mise à jour état local + cache automatique
+    // ── 5. Mise à jour état local + cache automatique
     UserProfileController.update(profile);
 
+    // Demande au gestionnaire de mots de passe du téléphone de sauvegarder
+    TextInput.finishAutofillContext();
+    
     // ── 5. Redirection vers l'onboarding
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -868,6 +1060,8 @@ Future<void> _submit() async {
     );
 
   } catch (e) {
+    if (!mounted) return;
+    TextInput.finishAutofillContext(shouldSave: false);
     setState(() => _error = AuthService.humanError(e));
   } finally {
     if (mounted) setState(() => _loading = false);
@@ -885,102 +1079,229 @@ Future<void> _submit() async {
 
 ## 5. Page Mot de passe oublié (`page_mot_de_passe_oublie.dart`)
 
-La page de réinitialisation du mot de passe est volontairement simple : un champ email, un bouton, et deux états possibles — le formulaire ou la confirmation. Lorsque l'utilisateur soumet son email, Firebase envoie automatiquement un lien de réinitialisation à l'adresse indiquée. Côté application, on bascule sur un écran de confirmation avec une icône verte et un message rassurant qui indique l'adresse à laquelle le lien a été envoyé. On a fait le choix de ne pas distinguer le cas « email inconnu » du cas « email valide », pour éviter d'exposer la liste des comptes existants — c'est une bonne pratique de sécurité courante.
+La page de réinitialisation du mot de passe comporte une étape de vérification préalable : avant d'envoyer le lien, `isEmailRegistered()` vérifie que l'adresse correspond à un compte Firebase existant. Si l'email est inconnu, un message d'erreur explicite est affiché sans envoyer de lien. En cas de succès, un bandeau vert confirme l'envoi à l'adresse indiquée, sans quitter la page — l'utilisateur peut ainsi renvoyer un lien si besoin. La validation de l'email se fait en temps réel avec une icône vert/rouge dans le champ.
 
 ```dart
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final _email  = TextEditingController();
+  final _email = TextEditingController();
   bool _loading = false;
-  bool _sent    = false;
   String? _error;
+  String? _success;
 
-  Future<void> _reset() async {
-    if (_email.text.trim().isEmpty) {
-      setState(() => _error = 'Entre ton adresse email.');
+  static final _emailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+  bool get _emailValid => _emailRegex.hasMatch(_email.text.trim());
+
+  Future<void> _sendReset() async {
+    if (!_emailValid) {
+      setState(() => _error = 'Adresse e-mail invalide.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
-
+    setState(() {
+      _loading = true;
+      _error = null;
+      _success = null;
+    });
+    final email = _email.text.trim();
     try {
-      // Appel Firebase : envoi d'un email de réinitialisation
-      await AuthService.sendPasswordResetEmail(_email.text.trim());
-      setState(() => _sent = true); // Affiche le message de succès
+      // Vérification préalable : le compte doit exister dans Firebase
+      final exists = await AuthService.isEmailRegistered(email);
+      if (!exists) {
+        setState(() {
+          _error = 'Aucun compte n\'est lié à cette adresse e-mail.';
+          _loading = false;
+        });
+        return;
+      }
+      await AuthService.sendPasswordResetEmail(email);
+      setState(() {
+        _success = 'Un lien de réinitialisation a été envoyé à $email';
+        _email.clear();
+      });
     } catch (e) {
       setState(() => _error = AuthService.humanError(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && _loading) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_sent) {
-      // ── Message de confirmation (email envoyé)
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.mark_email_read_rounded,
-                    size: 72, color: AppColors.green),
-                const SizedBox(height: 20),
-                const Text('Email envoyé !',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text(
-                  'Un lien de réinitialisation a été envoyé à ${_email.text.trim()}.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.muted),
-                ),
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Retour à la connexion'),
-                ),
-              ],
-            ),
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+        ),
+        title: const Text(
+          'Réinitialiser mot de passe',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: AppColors.navyDeep,
           ),
         ),
-      );
-    }
-
-    // ── Formulaire de reset
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mot de passe oublié')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
           children: [
-            const Icon(Icons.lock_reset_rounded, size: 64, color: AppColors.amber),
-            const SizedBox(height: 16),
-            const Text(
-              'Entre ton email pour recevoir un lien de réinitialisation.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.muted),
+            // Encart d'information
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.blueTint,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.blue.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: AppColors.blue, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Saisis l\'adresse e-mail associée à ton compte. Tu recevras un lien pour réinitialiser ton mot de passe.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.blue.withValues(alpha: 0.9),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            const Text(
+              'Adresse e-mail',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'ton@email.sn',
-                prefixIcon: Icon(Icons.email_outlined),
+              autocorrect: false,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.mail_outline_rounded,
+                    color: AppColors.subtle, size: 20),
+                hintText: 'nom@téki.sn',
+                // Icône validité email en temps réel
+                suffixIcon: _email.text.isEmpty
+                    ? null
+                    : Container(
+                        width: 22,
+                        height: 22,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: _emailValid ? AppColors.green : AppColors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _emailValid ? Icons.check_rounded : Icons.close_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
               ),
             ),
+            // Bandeau d'erreur
             if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: AppColors.red)),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _reset,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('ENVOYER LE LIEN'),
+            // Bandeau de succès
+            if (_success != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.green.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline_rounded,
+                        color: AppColors.green, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _success!,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: (_loading || !_emailValid) ? null : _sendReset,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.navy,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      AppColors.navy.withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white,
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 22, height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        'ENVOYER LE LIEN',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
+              ),
             ),
           ],
         ),
@@ -1075,17 +1396,18 @@ static void reset() {
 | Critère du sujet | Implémentation | Statut |
 |---|---|---|
 | Page de Connexion | Email + mot de passe, validation, gradient button + glow | ✅ |
-| Lien inscription | `pushReplacement` vers SignUpPage | ✅ |
+| Lien inscription | `pushReplacement` vers `RoleSelectionPage` (choix du rôle) | ✅ |
 | Redirection après connexion | `pushAndRemoveUntil` vers RootShell | ✅ |
 | Page d'Inscription | Nom, téléphone, email, mot de passe + secteur + champs rôle — 4 étapes | ✅ |
 | Champs rôle-spécifiques | Années d'expérience (Mentor) + ticket investissement (Investisseur) à l'étape 3 | ✅ |
 | Redirection vers la connexion | Lien "J'ai déjà un compte" + déconnexion → LoginPage | ✅ |
-| Sauvegarde mot de passe | `AutofillGroup` + `finishAutofillContext(shouldSave: true)` — Google/Samsung/iCloud | ✅ |
+| Se souvenir de moi | Checkbox `SharedPreferences` — email + mot de passe pré-remplis au prochain lancement | ✅ |
+| Sauvegarde mot de passe système | `AutofillGroup` + `finishAutofillContext(shouldSave: true)` — Google/Samsung/iCloud | ✅ |
 | Gestion des erreurs Firebase | Messages humanisés pour tous les codes d'erreur | ✅ |
 | Reset mot de passe | `sendPasswordResetEmail()` + confirmation visuelle | ✅ |
 | Persistance de session | Cache local offline-first + `_bootstrap()` Firebase | ✅ |
 | Cache offline-first | `CacheService` (SharedPreferences) | ✅ (bonus) |
 | Déconnexion | Dialog + 6 étapes (cache + notifs + agenda + profil + tab + Auth) | ✅ |
 | Jauge de force mot de passe | 5 niveaux animés + indicateurs couleur | ✅ (bonus) |
-| Auto-format téléphone | `_PhoneFormatter` format adaptatif selon le pays | ✅ (bonus) |
+| Auto-format téléphone | `_PhoneFormatter` — espaces aux positions 2/5/7 (format sénégalais `XX XXX XX XX`) | ✅ (bonus) |
 | Préfixe téléphone dynamique | `countryDialCode` / `countryPhoneLength` — +221 SN / +220 GM / +223 ML | ✅ (bonus) |
