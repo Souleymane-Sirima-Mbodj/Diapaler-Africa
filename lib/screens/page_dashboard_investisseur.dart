@@ -324,49 +324,49 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
                       Expanded(
                         child: ValueListenableBuilder<int>(
                           valueListenable: pendingRequestsCount,
-                          builder: (context, pending, _) => Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const RequestsPage()),
-                                ),
-                                icon: const Icon(Icons.mail_rounded, size: 18),
-                                label: const Text(
-                                  'Demandes',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.green,
-                                  side: const BorderSide(color: AppColors.green),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                              if (pending > 0)
-                                Positioned(
-                                  top: -4,
-                                  right: 4,
-                                  child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$pending',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
+                          builder: (context, pending, _) => OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const RequestsPage()),
+                            ),
+                            icon: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.mail_rounded, size: 18),
+                                if (pending > 0)
+                                  Positioned(
+                                    top: -5,
+                                    right: -6,
+                                    child: Container(
+                                      width: 14,
+                                      height: 14,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          pending > 9 ? '9+' : '$pending',
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
+                            label: const Text(
+                              'Demandes',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.green,
+                              side: const BorderSide(color: AppColors.green),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
                       ),
@@ -501,12 +501,12 @@ class _MesEntrepreneursPage extends StatelessWidget {
           }
           final entrepreneurs = snap.data ?? [];
           if (entrepreneurs.isEmpty) {
-            return Center(
+            return const Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(Icons.people_outline_rounded,
                         size: 56, color: AppColors.subtle),
                     SizedBox(height: 14),

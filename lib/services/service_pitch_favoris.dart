@@ -43,7 +43,7 @@ class PitchFavoriteService {
       }
       try {
         final list = data.values
-            .where((v) => v is Map)
+            .whereType<Map>()
             .map<Map<String, dynamic>>(
                 (v) => Map<String, dynamic>.from(v as Map))
             .toList()

@@ -73,7 +73,7 @@ class InteractionsService {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .where((v) => v is Map)
+          .whereType<Map>()
           .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -92,7 +92,7 @@ class InteractionsService {
       final data = event.snapshot.value as Map?;
       if (data == null) return [];
       return data.values
-          .where((v) => v is Map)
+          .whereType<Map>()
           .map<MentorRequest>((v) => MentorRequest.fromJson(Map<String, dynamic>.from(v as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));

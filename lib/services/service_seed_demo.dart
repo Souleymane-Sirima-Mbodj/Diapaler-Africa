@@ -20,6 +20,9 @@ class SeedDemoService {
   // Entrepreneurs qui reçoivent des offres de Mohamed (pour son onglet Envoyées)
   static const _alioubadBarryUid = 'demo_entr_alioune_badara_barry';
   static const _oumarKaneUid     = 'demo_entr_oumar_kane';
+  // Mentor rejeté + investisseur en attente (pour couvrir tous les statuts)
+  static const _seydouBaUid      = 'demo_mentor_seydou_ba';
+  static const _moussaFallUid    = 'demo_investor_moussa_fall';
 
   // UIDs réels de vrais comptes Firebase
   static const _mohamedNiangUid = 'iBu5zkFzocPW8yuRGcXB9pCH3ss2'; // Mentor
@@ -113,6 +116,27 @@ class SeedDemoService {
       'investmentRange': '2M - 20M FCFA',
     });
 
+    await _tryPutProfile(_seydouBaUid, {
+      'firstName': 'Seydou', 'lastName': 'Ba',
+      'email': 'seydou.ba@demo.sn',
+      'role': 'Mentor', 'gender': 'male',
+      'city': 'Dakar', 'country': 'Sénégal', 'sector': 'Leadership & Management',
+      'bio': 'Coach certifié ICF et mentor en leadership entrepreneurial. A accompagné plus de 80 porteurs de projets depuis 2015.',
+      'interests': ['Leadership', 'Stratégie', 'Développement personnel'],
+      'score': 4.3, 'yearsExperience': 9,
+    });
+
+    await _tryPutProfile(_moussaFallUid, {
+      'firstName': 'Moussa', 'lastName': 'Fall',
+      'email': 'moussa.fall@demo.sn',
+      'role': 'Investisseur', 'gender': 'male',
+      'city': 'Saint-Louis', 'country': 'Sénégal', 'sector': 'Capital-risque',
+      'bio': 'Investisseur en capital-risque, fondateur du fonds SenVentures. Focus sur les startups en phase seed dans les domaines de la FinTech et de la MobilTech.',
+      'interests': ['FinTech', 'MobilTech', 'B2B SaaS'],
+      'score': 0.0, 'yearsExperience': 5,
+      'investmentRange': '5M - 25M FCFA',
+    });
+
     // ── 2. Relations acceptées (mentorRequests) ────────────────────
     final short = myUid.length >= 8 ? myUid.substring(0, 8) : myUid;
     final req1 = 'demo_mr_pd_$short';
@@ -189,6 +213,7 @@ class SeedDemoService {
       _M(_selfUid,       'Merci ! Vos conseils sur la stratégie B2B m\'ont vraiment ouvert les yeux. Je vais retravailler le go-to-market.', 13),
       _M(_papeDioufUid,  'On se retrouve dans 2 semaines. D\'ici là, contactez au moins 3 commerçants potentiels.', 12),
       _M(_selfUid,       'J\'ai déjà contacté 5 commerçants du marché Sandaga ! 3 sont très intéressés pour tester l\'app.', 2),
+      _M(_papeDioufUid,  'Excellent ! 5 contacts en 2 jours, c\'est une belle exécution. Préparez des retours qualitatifs pour notre prochaine session — on va construire votre go-to-market sur ces apprentissages terrain.', 0, isRead: false),
     ]);
 
     await _seedConv(myUid, _aminataNianeUid, 'Souleymane Sirima Mbodj', 'Aminata Niane', const [
@@ -213,6 +238,7 @@ class SeedDemoService {
       _M(_selfUid,          'C\'est une excellente nouvelle ! J\'attends votre term sheet avec impatience. Merci de la confiance !', 15),
       _M(_yassineDialloUid, 'Term sheet envoyée par email. Prenez le temps de la lire. On se rappelle vendredi ?', 14),
       _M(_selfUid,          'Parfait, vendredi 10h vous convient-il ?', 14),
+      _M(_yassineDialloUid, 'Vendredi 10h c\'est parfait. J\'apporterai nos projections de portefeuille et on pourra discuter des conditions d\'entrée. Bonne lecture du term sheet !', 13, isRead: false),
     ]);
 
     await _seedConv(myUid, _awaCisseUid, 'Souleymane Sirima Mbodj', 'Awa Cissé', const [
@@ -222,8 +248,7 @@ class SeedDemoService {
       _M(_selfUid,     'Âge moyen 38 ans, revenus entre 80 000 et 250 000 FCFA/mois. Aucune n\'avait de compte bancaire avant notre app.', 5),
       _M(_awaCisseUid, 'Ces données sont remarquables. DiafrikInvest est très intéressé. Je vous propose une réunion avec toute mon équipe.', 4),
       _M(_selfUid,     'Avec plaisir ! Dites-moi quel jour vous convient. Je préparerai une présentation complète.', 4),
-      _M(_awaCisseUid, 'Mercredi 14h à nos bureaux à la Cité Keur Gorgui. Je vous envoie l\'adresse.', 3),
-      _M(_selfUid,     'Très bien, je serai là avec mon associé technique. Merci de cet intérêt, Awa !', 3),
+      _M(_awaCisseUid, 'Suite au report de la semaine dernière, je vous propose jeudi prochain à 14h. Cité Keur Gorgui, Immeuble Diamniadio 3ème étage — demandez DiafrikInvest à l\'accueil.', 1, isRead: false),
     ]);
 
     // ── 4. Notifications ───────────────────────────────────────────
@@ -300,6 +325,91 @@ class SeedDemoService {
           'Volume : 4,2M FCFA sur 3 mois.',
       'amount': '8 000 000 FCFA',
       'createdAt': DateTime.now().subtract(const Duration(days: 10)).millisecondsSinceEpoch,
+    });
+
+    // Pitchs publics des entrepreneurs fictifs (pour remplir la liste publique)
+    const p3 = 'demo_pitch_farmlink';
+    await _db.child('pitches/$p3').set({
+      'id': p3,
+      'userId': _ibrahimaSarrUid,
+      'userName': 'Ibrahima Sarr',
+      'title': 'FarmLink — Connecter les producteurs aux marchés locaux',
+      'sector': 'AgriTech',
+      'description':
+          'FarmLink est une plateforme mobile qui met en relation directe les petits producteurs agricoles '
+          'de la région de Thiès avec les acheteurs locaux (restaurants, supermarchés, particuliers).\n\n'
+          'Le problème : 40% des récoltes sont perdues faute de débouchés commerciaux dans les zones rurales. '
+          'Notre solution : un catalogue digital des récoltes disponibles, une messagerie intégrée et '
+          'un système de notation pour bâtir la confiance entre producteurs et acheteurs.\n\n'
+          '47 producteurs partenaires actifs, 120 transactions réalisées en phase pilote, '
+          'revenu moyen augmenté de 35% pour les agriculteurs participants.\n\n'
+          'Recherche : 8M FCFA pour le développement de l\'app mobile, la formation des producteurs '
+          'et l\'extension à 3 nouvelles régions (Kaolack, Ziguinchor, Diourbel).',
+      'amount': '8 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 18)).millisecondsSinceEpoch,
+    });
+
+    const p4 = 'demo_pitch_santedirect';
+    await _db.child('pitches/$p4').set({
+      'id': p4,
+      'userId': _fatouBaUid,
+      'userName': 'Fatou Ba',
+      'title': 'SantéDirect — Téléconsultation médicale pour zones périurbaines',
+      'sector': 'HealthTech',
+      'description':
+          'SantéDirect est une application de téléconsultation médicale conçue pour les populations '
+          'des zones périurbaines et rurales du Sénégal, où l\'accès aux médecins est limité.\n\n'
+          'Via l\'app, un patient peut consulter un médecin en vidéo en moins de 15 minutes, '
+          'recevoir une ordonnance numérique et être orienté vers la pharmacie partenaire la plus proche.\n\n'
+          'Résultats depuis le lancement : 920 consultations réalisées, taux de satisfaction 94%, '
+          'partenariats avec 12 médecins généralistes et 3 spécialistes (pédiatrie, cardiologie, gynécologie).\n\n'
+          'Levée recherchée : 12M FCFA pour développer l\'infrastructure serveur, '
+          'recruter 20 médecins supplémentaires et couvrir 5 nouvelles communes.',
+      'amount': '12 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 8)).millisecondsSinceEpoch,
+    });
+
+    const p5 = 'demo_pitch_shopafrik';
+    await _db.child('pitches/$p5').set({
+      'id': p5,
+      'userId': _alioubadBarryUid,
+      'userName': 'Alioune Badara Barry',
+      'title': 'ShopAfrik — Marketplace des artisans et boutiques de quartier',
+      'sector': 'E-commerce',
+      'description':
+          'ShopAfrik est une marketplace locale qui connecte les artisans et boutiques de quartier '
+          'aux consommateurs urbains de Dakar et de sa banlieue.\n\n'
+          'Le commerce de proximité représente 70% des achats des ménages sénégalais, '
+          'mais ces commerçants n\'ont aucune visibilité digitale. ShopAfrik leur offre '
+          'une vitrine en ligne, un système de commande et une livraison coordonnée '
+          'grâce à un réseau de coursiers partenaires.\n\n'
+          '150 marchands référencés, 2 ans d\'activité, volume mensuel de 6M FCFA. '
+          'Note moyenne des commerçants : 4,6/5.\n\n'
+          'Objectif de la levée (10M FCFA) : application mobile native, expansion à Saint-Louis '
+          'et Thiès, et développement d\'un module de paiement intégré.',
+      'amount': '10 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 5)).millisecondsSinceEpoch,
+    });
+
+    const p6 = 'demo_pitch_solarker';
+    await _db.child('pitches/$p6').set({
+      'id': p6,
+      'userId': _oumarKaneUid,
+      'userName': 'Oumar Kane',
+      'title': 'SolarKër — Kits solaires abordables pour ménages ruraux',
+      'sector': 'CleanTech',
+      'description':
+          'SolarKër installe des kits solaires tout-en-un (panneau + batterie + ampoules LED + prise USB) '
+          'dans les ménages ruraux non connectés au réseau électrique national.\n\n'
+          'Le modèle économique repose sur un paiement échelonné via Mobile Money : '
+          'l\'utilisateur paie 2 500 FCFA/semaine pendant 18 mois, puis devient propriétaire du kit. '
+          'Zéro avance, zéro banque nécessaire.\n\n'
+          '87 kits installés dans la région de Thiès, taux de remboursement de 91%, '
+          'économie moyenne de 15 000 FCFA/mois sur les dépenses de pétrole et bougies.\n\n'
+          'Recherche 6M FCFA pour importer un stock de 300 kits supplémentaires '
+          'et recruter 5 techniciens d\'installation locaux.',
+      'amount': '6 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 14)).millisecondsSinceEpoch,
     });
 
     // ── 6. Favoris ─────────────────────────────────────────────────
@@ -449,6 +559,8 @@ class SeedDemoService {
       _M(_selfUid,         'C\'est exactement ce dont j\'avais besoin ! Merci infiniment Mohamed.', 17),
       _M(_mohamedNiangUid, 'De rien. Préparez un dossier complet sur votre modèle de transaction pour notre prochaine session.', 10),
       _M(_selfUid,         'En cours ! Notre taux de transaction moyen est de 450 FCFA par opération.', 8),
+      _M(_mohamedNiangUid, 'Bon travail. Je vous transmets les coordonnées de Maître Diallo cette semaine — il a déjà traité deux dossiers EME avec succès. Préparez bien les statuts de votre société pour notre session.', 6),
+      _M(_selfUid,         'Merci Mohamed ! Les statuts sont en cours de finalisation. J\'ai aussi préparé le tableau des flux de transaction comme vous me l\'aviez demandé.', 4),
     ]);
 
     // Demande de session EN ATTENTE avec Mohamed Moctar Niang (dans 6 j.)
@@ -463,6 +575,24 @@ class SeedDemoService {
       'sessionTheme': 'Dossier réglementaire EME — agrément FinTech',
       'createdAt': _daysAgo(1), 'respondedAt': null,
     });
+
+    // Nouvelle conversation avec Moussa Fall (investisseur qui a envoyé une offre)
+    await _seedConv(myUid, _moussaFallUid, 'Souleymane Sirima Mbodj', 'Moussa Fall', const [
+      _M(_moussaFallUid, 'Bonjour Souleymane ! J\'espère que ma demande via l\'application vous est bien parvenue. Votre projet PayFlow m\'a vraiment convaincu — les métriques beta sont solides pour un seed. Quelle est votre disponibilité cette semaine pour un premier échange ?', 1, isRead: false),
+    ]);
+
+    await _notif(myUid, 'Nouveau message',
+        'Pape Diouf vous a répondu sur votre terrain au marché Sandaga.',
+        'message', fromUserId: _papeDioufUid, fromName: 'Pape Diouf');
+    await _notif(myUid, 'Nouveau message',
+        'Yassine Diallo a confirmé votre rendez-vous de vendredi.',
+        'message', fromUserId: _yassineDialloUid, fromName: 'Yassine Diallo');
+    await _notif(myUid, 'Nouveau message',
+        'Awa Cissé vous propose un nouveau créneau pour la réunion DiafrikInvest.',
+        'message', fromUserId: _awaCisseUid, fromName: 'Awa Cissé');
+    await _notif(myUid, 'Nouveau message',
+        'Moussa Fall (SenVentures) vous a contacté suite à son offre d\'investissement.',
+        'message', fromUserId: _moussaFallUid, fromName: 'Moussa Fall');
 
     await _notif(myUid, 'Demande acceptée ✓',
         'Mohamed Moctar Niang a accepté votre demande de mentorat.',
@@ -571,6 +701,252 @@ class SeedDemoService {
         'mentor_request_accepted', fromUserId: _alioubadBarryUid,
         fromName: 'Alioune Badara Barry', requestId: reqInvPropAbb, daysAgo: 4);
 
+    // ── 10. Demandes PENDING + REJETÉE envoyées par Souleymane ────────
+    final reqPendingSoul = 'demo_mr_soul_abb_pending_$short';
+    await _db.child('mentorRequests/$reqPendingSoul').set({
+      'id': reqPendingSoul,
+      'fromUserId': myUid, 'toUserId': _alioubadBarryUid,
+      'fromName': 'Souleymane Sirima Mbodj', 'toName': 'Alioune Badara Barry',
+      'message': 'Bonjour Alioune Badara, votre expérience en e-commerce et votre projet ShopAfrik sont très complémentaires à PayFlow. J\'aimerais bénéficier de votre retour d\'expérience sur la commercialisation et la distribution.',
+      'type': 'mentor', 'status': 'pending',
+      'createdAt': _daysAgo(4), 'respondedAt': null,
+    });
+
+    final reqRejSoul = 'demo_mr_soul_sb_rej_$short';
+    await _db.child('mentorRequests/$reqRejSoul').set({
+      'id': reqRejSoul,
+      'fromUserId': myUid, 'toUserId': _seydouBaUid,
+      'fromName': 'Souleymane Sirima Mbodj', 'toName': 'Seydou Ba',
+      'message': 'Bonjour Seydou, votre expertise en leadership et management correspond exactement à ce dont j\'ai besoin pour structurer mon équipe. J\'aimerais bénéficier de votre accompagnement.',
+      'type': 'mentor', 'status': 'rejected',
+      'createdAt': _daysAgo(40), 'respondedAt': _daysAgo(38),
+      'rejectionReason': 'Je suis malheureusement à pleine capacité de mentorat (6 mentorés actifs). N\'hésitez pas à me recontacter dans 3 mois.',
+    });
+    await _notif(myUid, 'Demande refusée',
+        'Seydou Ba n\'est pas disponible pour le mentorat actuellement.',
+        'mentor_request_rejected',
+        fromUserId: _seydouBaUid, fromName: 'Seydou Ba',
+        requestId: reqRejSoul, daysAgo: 38);
+
+    // ── 11. Offre d'investissement PENDING reçue par Souleymane ────
+    final reqPendingInvest = 'demo_inv_mf_soul_$short';
+    await _db.child('mentorRequests/$reqPendingInvest').set({
+      'id': reqPendingInvest,
+      'fromUserId': _moussaFallUid, 'toUserId': myUid,
+      'fromName': 'Moussa Fall', 'toName': 'Souleymane Sirima Mbodj',
+      'message': 'Bonjour Souleymane, votre pitch PayFlow m\'a vraiment impressionné. Le marché des paiements informels en Afrique de l\'Ouest est une opportunité massive et vous avez les bons indicateurs pour une phase seed. SenVentures souhaite vous proposer un investissement de 12M FCFA. Seriez-vous disponible pour un échange cette semaine ?',
+      'type': 'investment', 'status': 'accepted',
+      'createdAt': _daysAgo(1), 'respondedAt': _daysAgo(1),
+    });
+    await _notif(myUid, 'Offre d\'investissement acceptée ✓',
+        'Vous avez accepté l\'offre d\'investissement de Moussa Fall (SenVentures).',
+        'investment_offer',
+        fromUserId: _moussaFallUid, fromName: 'Moussa Fall',
+        requestId: reqPendingInvest, daysAgo: 1);
+
+    // ── 12. Avis (reviews) ─────────────────────────────────────────
+    // Avis reçus par Souleymane
+    final revTs1 = DateTime.now().subtract(const Duration(days: 10)).millisecondsSinceEpoch;
+    await _db.child('reviews/$myUid/$revTs1').set({
+      'id': revTs1.toString(),
+      'fromUid': _papeDioufUid, 'fromName': 'Pape Diouf',
+      'text': 'Souleymane est un entrepreneur exceptionnellement rigoureux. Il applique les conseils avec une rapidité remarquable et sa compréhension du marché informel sénégalais est un vrai avantage concurrentiel. Je recommande vivement PayFlow.',
+      'createdAt': revTs1,
+    });
+    final revTs2 = DateTime.now().subtract(const Duration(days: 8)).millisecondsSinceEpoch;
+    await _db.child('reviews/$myUid/$revTs2').set({
+      'id': revTs2.toString(),
+      'fromUid': _aminataNianeUid, 'fromName': 'Aminata Niane',
+      'text': 'C\'est un profil rare : technique ET commercial. Il a rapidement implémenté les recommandations sur l\'architecture offline-first. Très grande capacité d\'apprentissage.',
+      'createdAt': revTs2,
+    });
+    final revTs3 = DateTime.now().subtract(const Duration(days: 3)).millisecondsSinceEpoch;
+    await _db.child('reviews/$myUid/$revTs3').set({
+      'id': revTs3.toString(),
+      'fromUid': _mohamedNiangUid, 'fromName': 'Mohamed Moctar Niang',
+      'text': 'Souleymane a une vision très claire de son marché et une exécution impressionnante pour un premier projet. PayFlow adresse un vrai problème avec une solution pragmatique. Un entrepreneur à suivre.',
+      'createdAt': revTs3,
+    });
+
+    // Avis donné par Souleymane sur Mohamed
+    final revMmnTs = DateTime.now().subtract(const Duration(days: 5)).millisecondsSinceEpoch;
+    await _db.child('reviews/$_mohamedNiangUid/$revMmnTs').set({
+      'id': revMmnTs.toString(),
+      'fromUid': myUid, 'fromName': 'Souleymane Sirima Mbodj',
+      'text': 'Mohamed est un mentor d\'exception. Son expertise en réglementation FinTech et son réseau m\'ont permis de débloquer des situations que je pensais insolubles. Il est disponible, pertinent et vraiment investi dans la réussite de ses mentorés. Je recommande sans réserve.',
+      'createdAt': revMmnTs,
+    });
+
+    // ── 13. Notes (ratings) ────────────────────────────────────────
+    await _db.child('ratings/$myUid/$_papeDioufUid').set(5);
+    await _db.child('ratings/$myUid/$_aminataNianeUid').set(4);
+    await _db.child('ratings/$myUid/$_mohamedNiangUid').set(5);
+    await _db.child('ratings/$myUid/$_yassineDialloUid').set(4);
+    // Note donnée par Souleymane à Mohamed
+    await _db.child('ratings/$_mohamedNiangUid/$myUid').set(5);
+
+    // ── 14. Disponibilité de Mohamed Moctar Niang ──────────────────
+    await _db.child('availability/$_mohamedNiangUid').set({
+      'userId': _mohamedNiangUid,
+      'schedule': {
+        'Monday': {
+          'day': 'Monday', 'isAvailable': true,
+          'timeSlots': [
+            {'startHour': 9, 'startMinute': 0, 'endHour': 12, 'endMinute': 0},
+            {'startHour': 14, 'startMinute': 0, 'endHour': 17, 'endMinute': 0},
+          ],
+        },
+        'Tuesday': {
+          'day': 'Tuesday', 'isAvailable': true,
+          'timeSlots': [
+            {'startHour': 10, 'startMinute': 0, 'endHour': 13, 'endMinute': 0},
+          ],
+        },
+        'Wednesday': {
+          'day': 'Wednesday', 'isAvailable': false,
+          'timeSlots': <Map<String, dynamic>>[],
+        },
+        'Thursday': {
+          'day': 'Thursday', 'isAvailable': true,
+          'timeSlots': [
+            {'startHour': 14, 'startMinute': 0, 'endHour': 18, 'endMinute': 0},
+          ],
+        },
+        'Friday': {
+          'day': 'Friday', 'isAvailable': true,
+          'timeSlots': [
+            {'startHour': 9, 'startMinute': 0, 'endHour': 12, 'endMinute': 0},
+          ],
+        },
+        'Saturday': {
+          'day': 'Saturday', 'isAvailable': false,
+          'timeSlots': <Map<String, dynamic>>[],
+        },
+        'Sunday': {
+          'day': 'Sunday', 'isAvailable': false,
+          'timeSlots': <Map<String, dynamic>>[],
+        },
+      },
+      'lastUpdated': DateTime.now().toIso8601String(),
+    });
+
+    // ── 15. Pitchs favoris pour l'investisseur et Mohamed ──────────
+    final payflowSnapshot = {
+      'id': p1, 'userId': myUid, 'userName': 'Souleymane Sirima Mbodj',
+      'title': 'PayFlow — Paiement digital pour le commerce informel',
+      'sector': 'FinTech',
+      'description': 'PayFlow est une solution de paiement mobile sans compte bancaire destinée aux commerçants du secteur informel en Afrique de l\'Ouest.',
+      'amount': '15 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 35)).millisecondsSinceEpoch,
+    };
+    final agriSnapshot = {
+      'id': p2, 'userId': myUid, 'userName': 'Souleymane Sirima Mbodj',
+      'title': 'AgriConnect — Marketplace B2B pour l\'agriculture locale',
+      'sector': 'AgriTech',
+      'description': 'AgriConnect met en relation directe les producteurs agricoles locaux avec les restaurateurs, hôtels et supermarchés de Dakar.',
+      'amount': '8 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 10)).millisecondsSinceEpoch,
+    };
+    await _db.child('pitchFavorites/$_testInvestUid/$p1').set({
+      ...payflowSnapshot,
+      'savedAt': DateTime.now().subtract(const Duration(days: 6)).millisecondsSinceEpoch,
+    });
+    await _db.child('pitchFavorites/$_testInvestUid/$p2').set({
+      ...agriSnapshot,
+      'savedAt': DateTime.now().subtract(const Duration(days: 3)).millisecondsSinceEpoch,
+    });
+    await _db.child('pitchFavorites/$_mohamedNiangUid/$p1').set({
+      ...payflowSnapshot,
+      'savedAt': DateTime.now().subtract(const Duration(days: 18)).millisecondsSinceEpoch,
+    });
+
+    // Awa Cissé — pitchs favoris (impact social)
+    await _db.child('pitchFavorites/$_awaCisseUid/$p4').set({
+      'id': p4, 'userId': _fatouBaUid, 'userName': 'Fatou Ba',
+      'title': 'SantéDirect — Téléconsultation médicale pour zones périurbaines',
+      'sector': 'HealthTech',
+      'description': 'SantéDirect est une application de téléconsultation médicale pour les zones périurbaines.',
+      'amount': '12 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 8)).millisecondsSinceEpoch,
+      'savedAt': DateTime.now().subtract(const Duration(days: 5)).millisecondsSinceEpoch,
+    });
+    await _db.child('pitchFavorites/$_awaCisseUid/$p3').set({
+      'id': p3, 'userId': _ibrahimaSarrUid, 'userName': 'Ibrahima Sarr',
+      'title': 'FarmLink — Connecter les producteurs aux marchés locaux',
+      'sector': 'AgriTech',
+      'description': 'FarmLink met en relation les petits producteurs agricoles de Thiès avec les acheteurs locaux.',
+      'amount': '8 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 18)).millisecondsSinceEpoch,
+      'savedAt': DateTime.now().subtract(const Duration(days: 2)).millisecondsSinceEpoch,
+    });
+
+    // Mohamed — SolarKër en favori
+    await _db.child('pitchFavorites/$_mohamedNiangUid/$p6').set({
+      'id': p6, 'userId': _oumarKaneUid, 'userName': 'Oumar Kane',
+      'title': 'SolarKër — Kits solaires abordables pour ménages ruraux',
+      'sector': 'CleanTech',
+      'description': 'SolarKër installe des kits solaires tout-en-un dans les ménages ruraux via paiement Mobile Money.',
+      'amount': '6 000 000 FCFA',
+      'createdAt': DateTime.now().subtract(const Duration(days: 14)).millisecondsSinceEpoch,
+      'savedAt': DateTime.now().subtract(const Duration(days: 10)).millisecondsSinceEpoch,
+    });
+
+    // ── 16. Conversation Test investisseur ↔ Alioune Badara Barry ──
+    await _seedConv(_testInvestUid, _alioubadBarryUid, 'Test', 'Alioune Badara Barry', const [
+      _M(_selfUid,          'Bonjour Alioune Badara, j\'ai consulté votre pitch ShopAfrik et nous sommes très intéressés. Pouvons-nous en discuter ?', 6),
+      _M(_alioubadBarryUid, 'Bonjour ! Je suis ravi de votre intérêt. Je suis disponible cette semaine pour un échange.', 5),
+      _M(_selfUid,          'Parfait. Notre proposition : 10M FCFA pour 15% de participation. C\'est une base de discussion.', 5),
+      _M(_alioubadBarryUid, 'C\'est en ligne avec nos attentes. J\'aimerais comprendre votre vision pour le développement à 18 mois.', 4),
+      _M(_selfUid,          'Notre thèse : expansion sur 3 marchés francophones d\'ici 18 mois. Côte d\'Ivoire, Cameroun, Mali. Vous avez les bons indicateurs.', 4),
+      _M(_alioubadBarryUid, 'J\'accepte votre proposition ! J\'attends le term sheet pour signature.', 3),
+      _M(_selfUid,          'Excellent ! Je vous envoie les documents par email d\'ici demain. Bienvenue dans le portefeuille SenVentures !', 3),
+    ]);
+
+    // ── 17. Sessions réservées pour Mohamed ────────────────────────
+    final bsMmnId = 'demo_bs_mmn_$short';
+    final bsMmnDate = DateTime.now().add(const Duration(days: 6));
+    await _db.child('bookedSessions/$_mohamedNiangUid/$bsMmnId').set({
+      'id': bsMmnId,
+      'mentorName': 'Souleymane Sirima Mbodj',
+      'mentorInitials': 'SS',
+      'scheduledAt': bsMmnDate
+          .copyWith(hour: 11, minute: 0, second: 0, millisecond: 0)
+          .toIso8601String(),
+      'otherUid': myUid,
+    });
+    const bsMmnAbbId = 'demo_bs_mmn_abb';
+    final bsMmnAbbDate = DateTime.now().add(const Duration(days: 3));
+    await _db.child('bookedSessions/$_mohamedNiangUid/$bsMmnAbbId').set({
+      'id': bsMmnAbbId,
+      'mentorName': 'Alioune Badara Barry',
+      'mentorInitials': 'AB',
+      'scheduledAt': bsMmnAbbDate
+          .copyWith(hour: 14, minute: 0, second: 0, millisecond: 0)
+          .toIso8601String(),
+      'otherUid': _alioubadBarryUid,
+    });
+
+    // ── 18. Notifications supplémentaires pour Mohamed ─────────────
+    await _notif(_mohamedNiangUid, 'Nouvelle note reçue ⭐',
+        'Souleymane Sirima Mbodj vous a attribué 5 étoiles.',
+        'new_rating', fromUserId: myUid, fromName: 'Souleymane Sirima Mbodj', daysAgo: 5);
+    await _notif(_mohamedNiangUid, 'Nouvel avis reçu 💬',
+        'Souleymane Sirima Mbodj a laissé un avis sur votre profil.',
+        'new_review', fromUserId: myUid, fromName: 'Souleymane Sirima Mbodj', daysAgo: 5);
+    await _notif(_mohamedNiangUid, 'Offre de mentorat acceptée ✓',
+        'Alioune Badara Barry a accepté votre offre de mentorat.',
+        'mentor_request_accepted',
+        fromUserId: _alioubadBarryUid, fromName: 'Alioune Badara Barry',
+        requestId: reqMmnOffer, daysAgo: 3);
+
+    // ── 19. Notifications supplémentaires pour l'investisseur ──────
+    await _notif(_testInvestUid, 'Nouveau message',
+        'Souleymane Sirima Mbodj vous a envoyé un message.',
+        'message', fromUserId: myUid, fromName: 'Souleymane Sirima Mbodj', daysAgo: 7);
+    await _notif(_testInvestUid, 'Pitch consulté 👀',
+        'Vous avez 2 pitchs en favori. Retrouvez-les dans votre espace.',
+        'pitch_viewed', daysAgo: 3);
+
     // Mise à jour compteur mentorsActive + projets du profil
     await _db.child('users/$myUid').update({
       'mentorsActive': 6,
@@ -646,6 +1022,7 @@ class SeedDemoService {
     String lastMsg = '';
     String lastSender = '';
     DateTime? lastTime;
+    int unreadCount = 0;
 
     // Ajouter un offset en minutes pour que les IDs soient uniques même sur le même jour
     int minuteOffset = 0;
@@ -665,8 +1042,9 @@ class SeedDemoService {
         'recipientId': recipId,
         'text': m.text,
         'timestamp': ts.toIso8601String(),
-        'isRead': true,
+        'isRead': m.isRead,
       });
+      if (!m.isRead && senderId != myUid) unreadCount++;
       lastMsg    = m.text;
       lastSender = senderId;
       lastTime   = ts;
@@ -681,7 +1059,7 @@ class SeedDemoService {
         'user2Name': ids[0] == myUid ? otherName : myName,
         'lastMessage':     lastMsg,
         'lastMessageTime': lastTime.toIso8601String(),
-        'unreadCount': 0,
+        'unreadCount': unreadCount,
         'lastSenderId': lastSender,
       });
     }
@@ -728,5 +1106,6 @@ class _M {
   final String sender;  // UID réel ou '__SELF__'
   final String text;
   final int daysAgo;
-  const _M(this.sender, this.text, this.daysAgo);
+  final bool isRead;
+  const _M(this.sender, this.text, this.daysAgo, {this.isRead = true});
 }

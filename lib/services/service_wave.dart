@@ -51,10 +51,9 @@ class WaveService {
   /// Ouvre l'URL Wave (app ou navigateur).
   static Future<void> openPayment(PremiumPlan plan) async {
     final uri = Uri.parse(plan.waveUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw Exception('Impossible d\'ouvrir Wave. Vérifie que l\'app Wave est installée.');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      throw Exception('Impossible d\'ouvrir Wave. Vérifie ta connexion ou installe l\'app Wave.');
     }
   }
 

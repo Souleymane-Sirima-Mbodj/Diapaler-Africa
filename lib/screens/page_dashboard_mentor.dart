@@ -341,53 +341,49 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       Expanded(
                         child: ValueListenableBuilder<int>(
                           valueListenable: pendingRequestsCount,
-                          builder: (context, pending, _) => Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const RequestsPage()),
-                                ),
-                                icon: const Icon(Icons.mail_rounded, size: 18),
-                                label: const Text(
-                                  'Demandes',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.roleMentor,
-                                  side: const BorderSide(
-                                      color: AppColors.roleMentor),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                              ),
-                              if (pending > 0)
-                                Positioned(
-                                  top: -4,
-                                  right: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 5, vertical: 2),
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                        minWidth: 18, minHeight: 18),
-                                    child: Center(
-                                      child: Text(
-                                        pending > 9 ? '9+' : '$pending',
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
+                          builder: (context, pending, _) => OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const RequestsPage()),
+                            ),
+                            icon: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.mail_rounded, size: 18),
+                                if (pending > 0)
+                                  Positioned(
+                                    top: -5,
+                                    right: -6,
+                                    child: Container(
+                                      width: 14,
+                                      height: 14,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          pending > 9 ? '9+' : '$pending',
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
+                            label: const Text(
+                              'Demandes',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.roleMentor,
+                              side: const BorderSide(color: AppColors.roleMentor),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
                       ),
@@ -661,92 +657,3 @@ class _MentoreListTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Carte d'un entrepreneur (partagée entre mentor et investisseur)
-// ─────────────────────────────────────────────────────────────────
-class _EntrepreneurCard extends StatelessWidget {
-  final String name;
-  final Color accentColor;
-  final VoidCallback onDelete;
-
-  const _EntrepreneurCard({
-    required this.name,
-    required this.accentColor,
-    required this.onDelete,
-  });
-
-  String get _initials {
-    final parts = name.trim().split(' ');
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: accentColor.withValues(alpha: 0.15),
-            child: Text(
-              _initials,
-              style: TextStyle(
-                color: accentColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.only(top: 3),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.roleEntrepreneur.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Entrepreneur',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.roleEntrepreneur,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_remove_rounded, size: 20),
-            color: AppColors.red.withValues(alpha: 0.7),
-            tooltip: 'Retirer',
-            onPressed: onDelete,
-          ),
-        ],
-      ),
-    );
-  }
-}

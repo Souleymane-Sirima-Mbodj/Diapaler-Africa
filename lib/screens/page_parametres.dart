@@ -27,7 +27,7 @@ class ParametresPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           // ── Compte ──────────────────────────────────────────────
-          _SectionHeader('Compte'),
+          const _SectionHeader('Compte'),
           _SettingsTile(
             icon: Icons.lock_reset_rounded,
             label: 'Changer le mot de passe',
@@ -40,18 +40,18 @@ class ParametresPage extends StatelessWidget {
           const SizedBox(height: 4),
 
           // ── Application ──────────────────────────────────────────
-          _SectionHeader('Application'),
-          _SettingsTile(
+          const _SectionHeader('Application'),
+          const _SettingsTile(
             icon: Icons.language_rounded,
             label: 'Langue',
             trailing: 'Français',
           ),
-          _SettingsTile(
+          const _SettingsTile(
             icon: Icons.info_outline_rounded,
             label: 'Version',
             trailing: '1.0.0',
           ),
-          _SettingsTile(
+          const _SettingsTile(
             icon: Icons.apartment_rounded,
             label: 'Développé par',
             subtitle: 'BNKMTN (Barry, Niang, Kama, Mbodj, Tine, Ndiaye) L3GLSIB',
@@ -60,7 +60,7 @@ class ParametresPage extends StatelessWidget {
           const SizedBox(height: 4),
 
           // ── Aide ─────────────────────────────────────────────────
-          _SectionHeader('Support'),
+          const _SectionHeader('Support'),
           _SettingsTile(
             icon: Icons.help_outline_rounded,
             label: 'Aide & support',
@@ -80,7 +80,7 @@ class ParametresPage extends StatelessWidget {
           const SizedBox(height: 4),
 
           // ── Zone de danger ───────────────────────────────────────
-          _SectionHeader('Zone de danger', danger: true),
+          const _SectionHeader('Zone de danger', danger: true),
           _SettingsTile(
             icon: Icons.delete_forever_rounded,
             iconColor: AppColors.red,
