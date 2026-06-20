@@ -3,16 +3,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/profil_utilisateur.dart';
 import '../services/service_authentification.dart';
 import '../services/service_base_de_donnees.dart';
-import '../services/service_seed_demo.dart';
 import '../theme/theme_app.dart';
 import 'page_aide.dart';
 
 /// Page Paramètres — changer le mot de passe, infos app, support, suppression compte.
 class ParametresPage extends StatelessWidget {
   const ParametresPage({super.key});
-
-  static const _demoEmail  = 'sirimambodj@gmail.com';
-  static const _demoEmail2 = 'souleymanesirimambodj@esp.sn';
 
   @override
   Widget build(BuildContext context) {
@@ -69,13 +65,6 @@ class ParametresPage extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const AidePage()),
             ),
           ),
-
-          // ── Démo ────────────────────────────────────────────────────
-          if (email == _demoEmail || email == _demoEmail2) ...[
-            const SizedBox(height: 4),
-            const _SectionHeader('Données de démo'),
-            const _SeedButton(),
-          ],
 
           const SizedBox(height: 4),
 
@@ -217,76 +206,6 @@ class ParametresPage extends StatelessWidget {
 // Composants
 // ─────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────
-// Bouton de seed démo
-// ─────────────────────────────────────────────────────────────────
-class _SeedButton extends StatefulWidget {
-  const _SeedButton();
-
-  @override
-  State<_SeedButton> createState() => _SeedButtonState();
-}
-
-class _SeedButtonState extends State<_SeedButton> {
-  bool _loading = false;
-  bool _done = false;
-
-  Future<void> _run() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Injecter les données démo ?'),
-        content: const Text(
-          'Cette action va créer des relations de mentorat, des messages, des notifications et des pitchs de démonstration dans Firebase.\n\nElle est idempotente : re-taper écrasera les données existantes.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Injecter')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() { _loading = true; _done = false; });
-    try {
-      await SeedDemoService.seed();
-      // Recharger le profil depuis Firebase pour que les projets apparaissent
-      final uid = AuthService.currentUid;
-      if (uid != null) {
-        final remote = await DatabaseService.readUserProfile(uid);
-        if (remote != null) UserProfileController.update(remote);
-      }
-      if (mounted) setState(() { _loading = false; _done = true; });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Données démo injectées avec succès !'),
-          backgroundColor: AppColors.green,
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-    } catch (e) {
-      if (mounted) setState(() => _loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur : $e'),
-          backgroundColor: AppColors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SettingsTile(
-      icon: _done ? Icons.check_circle_rounded : Icons.science_rounded,
-      iconColor: _done ? AppColors.green : AppColors.purple,
-      label: _done ? 'Données injectées ✓' : 'Injecter les données démo',
-      subtitle: 'Mentors, investisseurs, messages, notifications, pitchs',
-      onTap: _loading ? null : _run,
-    );
-  }
-}
 
 class _SectionHeader extends StatelessWidget {
   final String title;
